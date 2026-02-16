@@ -41,7 +41,7 @@ jobs:
   build-checks:
     runs-on: ubuntu-latest
     name: Build Checks
-    if: ${{ !inputs.skip_build_checks }}
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_build_checks != 'true' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
