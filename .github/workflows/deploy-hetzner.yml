@@ -38,7 +38,7 @@ jobs:
   # ============================================================================
   # Pre-deploy: build checks
   # ============================================================================
-  build-checks:
+  build_checks:
     runs-on: ubuntu-latest
     name: Build Checks
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_build_checks != 'true' }}
@@ -66,8 +66,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Deploy to Hetzner
-    needs: [build-checks]
-    if: always() && (needs.build-checks.result == 'success' || needs.build-checks.result == 'skipped')
+    needs: [build_checks]
+    if: always() && (needs.build_checks.result == 'success' || needs.build_checks.result == 'skipped')
     environment:
       name: production
       url: ${{ secrets.APP_BASE_URL }}
