@@ -145,18 +145,23 @@ async function bootstrap(): Promise<void> {
           ]
         : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'];
 
-    const allowedOrigins = Array.from(
-      new Set(
-        (configuredCorsOrigins
-          ? configuredCorsOrigins.split(',')
-          : defaultOriginsByEnv.filter((origin): origin is string => Boolean(origin))
-        )
-          .map((origin) => origin.trim())
-          .filter(Boolean),
-      ),
+    const configuredOrigins = configuredCorsOrigins ? configuredCorsOrigins.split(',') : [];
+    const defaultOrigins = defaultOriginsByEnv.filter((origin): origin is string =>
+      Boolean(origin),
     );
 
-    if (config.NODE_ENV === 'production' && !configuredCorsOrigins) {
+    const originPool =
+      config.NODE_ENV === 'production'
+        ? [...configuredOrigins, ...defaultOrigins]
+        : configuredOrigins.length > 0
+          ? configuredOrigins
+          : defaultOrigins;
+
+    const allowedOrigins = Array.from(
+      new Set(originPool.map((origin) => origin.trim()).filter(Boolean)),
+    );
+
+    if (config.NODE_ENV === 'production' && configuredOrigins.length === 0) {
       bootstrapLogger.warn(
         'CORS_ORIGINS is not configured; using production-safe domain defaults.',
       );
