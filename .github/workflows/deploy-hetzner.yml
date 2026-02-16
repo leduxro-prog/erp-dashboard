@@ -70,7 +70,7 @@ jobs:
     if: always() && (needs.build_checks.result == 'success' || needs.build_checks.result == 'skipped')
     environment:
       name: production
-      url: ${{ secrets.APP_BASE_URL }}
+      url: ${{ vars.APP_BASE_URL }}
 
     steps:
       - name: Checkout code
