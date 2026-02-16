@@ -52,6 +52,59 @@ export const campaignActionSchema = Joi.object({
 });
 
 /**
+ * Email sequence schemas
+ */
+export const createEmailSequenceSchema = Joi.object({
+  campaign_id: Joi.string().required(),
+  name: Joi.string().max(255).required(),
+  trigger_event: Joi.string().required(),
+  steps: Joi.array()
+    .items(
+      Joi.object({
+        order: Joi.number().integer().min(0).required(),
+        delay_days: Joi.number().integer().min(0).optional(),
+        delay_hours: Joi.number().integer().min(0).max(23).optional(),
+        template_id: Joi.string().required(),
+        subject: Joi.string().max(255).optional(),
+        body: Joi.string().required(),
+        condition: Joi.string()
+          .valid('IF_OPENED_PREVIOUS', 'IF_NOT_OPENED', 'IF_CLICKED', 'ALWAYS')
+          .optional(),
+      }),
+    )
+    .min(1)
+    .required(),
+});
+
+export const listEmailSequencesSchema = Joi.object({
+  campaign_id: Joi.string().optional(),
+  status: Joi.string().valid('DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED').optional(),
+  trigger_event: Joi.string().optional(),
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(100).optional(),
+});
+
+export const updateEmailSequenceSchema = Joi.object({
+  name: Joi.string().max(255).optional(),
+  status: Joi.string().valid('DRAFT', 'ACTIVE', 'PAUSED').optional(),
+  steps: Joi.array()
+    .items(
+      Joi.object({
+        id: Joi.string().required(),
+        order: Joi.number().integer().min(0).required(),
+        delay_days: Joi.number().integer().min(0).optional(),
+        delay_hours: Joi.number().integer().min(0).max(23).optional(),
+        condition: Joi.string()
+          .valid('IF_OPENED_PREVIOUS', 'IF_NOT_OPENED', 'IF_CLICKED', 'ALWAYS')
+          .optional(),
+      }),
+    )
+    .optional(),
+});
+
+export const deleteEmailSequenceSchema = Joi.object({});
+
+/**
  * Campaign completion schema
  */
 export const campaignCompletionSchema = Joi.object({
@@ -144,43 +197,6 @@ export const applyDiscountCodeSchema = Joi.object({
   code: Joi.string().uppercase().alphanum().required(),
   order_id: Joi.string().uuid().required(),
   customer_id: Joi.string().uuid().optional(),
-});
-
-/**
- * Email sequence creation schema
- */
-export const createEmailSequenceSchema = Joi.object({
-  name: Joi.string().max(255).required(),
-  description: Joi.string().optional(),
-  trigger_type: Joi.string()
-    .valid('ABANDONED_CART', 'POST_PURCHASE', 'WELCOME', 'REENGAGEMENT', 'VIP', 'CUSTOM')
-    .required(),
-  sequence_emails: Joi.array()
-    .items(
-      Joi.object({
-        order: Joi.number().positive().required(),
-        delay_hours: Joi.number().min(0).required(),
-        template_id: Joi.string().uuid().required(),
-        subject: Joi.string().max(255).optional(),
-        preview_text: Joi.string().optional(),
-      }),
-    )
-    .min(1)
-    .required(),
-  trigger_conditions: Joi.object().optional(),
-  target_segment: Joi.string().optional(),
-  is_active: Joi.boolean().optional().default(true),
-});
-
-/**
- * List email sequences schema
- */
-export const listEmailSequencesSchema = Joi.object({
-  page: Joi.number().integer().min(1).optional().default(1),
-  limit: Joi.number().integer().min(1).max(100).optional().default(20),
-  trigger_type: Joi.string().optional(),
-  search: Joi.string().optional(),
-  is_active: Joi.boolean().optional(),
 });
 
 // ─── WS-A: Campaign Orchestrator Validators ──────────────────

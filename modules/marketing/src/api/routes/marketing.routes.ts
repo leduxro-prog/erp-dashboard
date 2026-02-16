@@ -18,6 +18,8 @@ import {
   applyDiscountCodeSchema,
   createEmailSequenceSchema,
   listEmailSequencesSchema,
+  updateEmailSequenceSchema,
+  deleteEmailSequenceSchema,
   addCampaignStepSchema,
   previewAudienceSchema,
   scheduleCampaignSchema,
@@ -61,6 +63,10 @@ export function createMarketingRoutes(controller: MarketingController): Router {
   );
 
   /**
+   * EMAIL SEQUENCE ROUTES
+   */
+
+  /**
    * GET /api/v1/marketing/email-sequences/:id
    * Get email sequence details
    * Auth: admin
@@ -70,6 +76,58 @@ export function createMarketingRoutes(controller: MarketingController): Router {
     requireRole(['admin']),
     (req: Request, res: Response, next: NextFunction) =>
       controller.getEmailSequenceDetails(req, res, next),
+  );
+
+  /**
+   * POST /api/v1/marketing/email-sequences
+   * Create a new email sequence
+   * Auth: admin
+   */
+  router.post(
+    '/email-sequences',
+    requireRole(['admin']),
+    validateRequest(createEmailSequenceSchema),
+    (req: Request, res: Response, next: NextFunction) =>
+      controller.createEmailSequence(req, res, next),
+  );
+
+  /**
+   * GET /api/v1/marketing/email-sequences
+   * List all email sequences
+   * Auth: admin
+   * Query params: campaign_id, status, trigger_event, page, limit
+   */
+  router.get(
+    '/email-sequences',
+    requireRole(['admin']),
+    validateRequest(listEmailSequencesSchema),
+    (req: Request, res: Response, next: NextFunction) =>
+      controller.listEmailSequences(req, res, next),
+  );
+
+  /**
+   * PUT /api/v1/marketing/email-sequences/:id
+   * Update an email sequence
+   * Auth: admin
+   */
+  router.put(
+    '/email-sequences/:id',
+    requireRole(['admin']),
+    validateRequest(updateEmailSequenceSchema),
+    (req: Request, res: Response, next: NextFunction) =>
+      controller.updateEmailSequence(req, res, next),
+  );
+
+  /**
+   * DELETE /api/v1/marketing/email-sequences/:id
+   * Delete an email sequence
+   * Auth: admin
+   */
+  router.delete(
+    '/email-sequences/:id',
+    requireRole(['admin']),
+    (req: Request, res: Response, next: NextFunction) =>
+      controller.deleteEmailSequence(req, res, next),
   );
 
   // ─── WS-A: Campaign Orchestrator Routes ──────────────────

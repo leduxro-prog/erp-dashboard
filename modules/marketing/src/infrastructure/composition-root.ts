@@ -1,7 +1,17 @@
+/**
+ * Marketing Composition Root
+ *
+ * Orchestrates dependency injection and creates configured Express router.
+ *
+ * @module marketing/infrastructure/composition-root
+ */
+
+import { Router } from 'express';
 import { DataSource } from 'typeorm';
 import { Logger } from 'winston';
 import { IEventBus } from '@shared/module-system/module.interface';
 
+// Domain repositories
 import { ICampaignRepository } from '../domain/repositories/ICampaignRepository';
 import { IDiscountCodeRepository } from '../domain/repositories/IDiscountCodeRepository';
 import { ISequenceRepository } from '../domain/repositories/ISequenceRepository';
@@ -13,6 +23,7 @@ import { ICustomerConsentRepository } from '../domain/repositories/ICustomerCons
 import { IAttributionEventRepository } from '../domain/repositories/IAttributionEventRepository';
 import { ICampaignAuditLogRepository } from '../domain/repositories/ICampaignAuditLogRepository';
 
+// Infrastructure repositories
 import { TypeOrmCampaignRepository } from './repositories/TypeOrmCampaignRepository';
 import { TypeOrmDiscountCodeRepository } from './repositories/TypeOrmDiscountCodeRepository';
 import { TypeOrmMarketingEventRepository } from './repositories/TypeOrmMarketingEventRepository';
@@ -22,9 +33,11 @@ import { TypeOrmChannelDeliveryRepository } from './repositories/TypeOrmChannelD
 import { TypeOrmCampaignAuditLogRepository } from './repositories/TypeOrmCampaignAuditLogRepository';
 import { TypeOrmAttributionEventRepository } from './repositories/TypeOrmAttributionEventRepository';
 
+// Domain services
 import { AudienceSegmentationService } from '../domain/services/AudienceSegmentationService';
 import { DiscountCalculationService } from '../domain/services/DiscountCalculationService';
 
+// Use cases (existing)
 import { CreateCampaign } from '../application/use-cases/CreateCampaign';
 import { ActivateCampaign } from '../application/use-cases/ActivateCampaign';
 import { ValidateDiscountCode } from '../application/use-cases/ValidateDiscountCode';
@@ -39,10 +52,18 @@ import { GetDeliveries } from '../application/use-cases/GetDeliveries';
 import { GetAttributionAnalytics } from '../application/use-cases/GetAttributionAnalytics';
 import { GetFunnelAnalytics } from '../application/use-cases/GetFunnelAnalytics';
 
+// Use cases (NEW - Email Sequences)
+import { CreateEmailSequence } from '../application/use-cases/CreateEmailSequence';
+import { ListEmailSequences } from '../application/use-cases/ListEmailSequences';
+import { GetEmailSequenceDetails } from '../application/use-cases/GetEmailSequenceDetails';
+import { UpdateEmailSequence } from '../application/use-cases/UpdateEmailSequence';
+import { DeleteEmailSequence } from '../application/use-cases/DeleteEmailSequence';
+
+// Infrastructure
 import { CampaignJobRunner } from './jobs/CampaignJobRunner';
 
 /**
- * MarketingCompositionRoot
+ * Marketing Composition Root
  * Factory for creating and wiring all marketing module dependencies
  */
 export class MarketingCompositionRoot {
@@ -70,16 +91,19 @@ export class MarketingCompositionRoot {
   private createDiscountCodeUseCase!: CreateDiscountCode;
   private generateDiscountCodesUseCase!: GenerateDiscountCodes;
   private getCampaignAnalyticsUseCase!: GetCampaignAnalytics;
-
-  // Use cases (WS-A)
   private addCampaignStepUseCase!: AddCampaignStep;
   private previewAudienceUseCase!: PreviewAudience;
   private scheduleCampaignUseCase!: ScheduleCampaign;
   private getDeliveriesUseCase!: GetDeliveries;
-
-  // Use cases (WS-D)
   private getAttributionAnalyticsUseCase!: GetAttributionAnalytics;
   private getFunnelAnalyticsUseCase!: GetFunnelAnalytics;
+
+  // Use cases (NEW - Email Sequences)
+  private createEmailSequenceUseCase!: any;
+  private listEmailSequencesUseCase!: any;
+  private getEmailSequenceDetailsUseCase!: any;
+  private updateEmailSequenceUseCase!: any;
+  private deleteEmailSequenceUseCase!: any;
 
   // Infrastructure
   private jobRunner!: CampaignJobRunner;
@@ -93,15 +117,17 @@ export class MarketingCompositionRoot {
     logger: Logger;
     eventBus: IEventBus;
   }): void {
-    // ─── Initialize repositories ──────────────────────────────
-    this.campaignRepository = new TypeOrmCampaignRepository(config.dataSource);
-    this.discountCodeRepository = new TypeOrmDiscountCodeRepository(config.dataSource);
-    this.marketingEventRepository = new TypeOrmMarketingEventRepository(config.dataSource);
-    this.campaignStepRepository = new TypeOrmCampaignStepRepository(config.dataSource);
-    this.audienceSegmentRepository = new TypeOrmAudienceSegmentRepository(config.dataSource);
-    this.channelDeliveryRepository = new TypeOrmChannelDeliveryRepository(config.dataSource);
-    this.campaignAuditLogRepository = new TypeOrmCampaignAuditLogRepository(config.dataSource);
-    this.attributionEventRepository = new TypeOrmAttributionEventRepository(config.dataSource);
+    const { dataSource, logger } = config;
+
+    // Initialize repositories
+    this.campaignRepository = new TypeOrmCampaignRepository(dataSource);
+    this.discountCodeRepository = new TypeOrmDiscountCodeRepository(dataSource);
+    this.marketingEventRepository = new TypeOrmMarketingEventRepository(dataSource);
+    this.campaignStepRepository = new TypeOrmCampaignStepRepository(dataSource);
+    this.audienceSegmentRepository = new TypeOrmAudienceSegmentRepository(dataSource);
+    this.channelDeliveryRepository = new TypeOrmChannelDeliveryRepository(dataSource);
+    this.campaignAuditLogRepository = new TypeOrmCampaignAuditLogRepository(dataSource);
+    this.attributionEventRepository = new TypeOrmAttributionEventRepository(dataSource);
 
     // Sequence repository still a stub until email sequences are fully implemented
     this.sequenceRepository = {} as any;
@@ -109,37 +135,31 @@ export class MarketingCompositionRoot {
     // Consent repository stub (no TypeORM impl yet)
     this.customerConsentRepository = {} as any;
 
-    // ─── Initialize domain services ──────────────────────────
+    // Initialize domain services
     this.audienceSegmentationService = new AudienceSegmentationService();
     this.discountCalculationService = new DiscountCalculationService();
 
-    // ─── Initialize existing use cases ───────────────────────
+    // Initialize existing use cases
     this.createCampaignUseCase = new CreateCampaign(
       this.campaignRepository,
       this.audienceSegmentationService,
     );
-
     this.activateCampaignUseCase = new ActivateCampaign(
       this.campaignRepository,
       this.discountCodeRepository,
       this.sequenceRepository,
     );
-
     this.validateDiscountCodeUseCase = new ValidateDiscountCode(
       this.discountCodeRepository,
       this.discountCalculationService,
     );
-
-    this.createDiscountCodeUseCase = new CreateDiscountCode(this.discountCodeRepository);
-
     this.applyDiscountCodeUseCase = new ApplyDiscountCode(
       this.discountCodeRepository,
       this.marketingEventRepository,
       this.discountCalculationService,
     );
-
+    this.createDiscountCodeUseCase = new CreateDiscountCode(this.discountCodeRepository);
     this.generateDiscountCodesUseCase = new GenerateDiscountCodes(this.discountCodeRepository);
-
     this.getCampaignAnalyticsUseCase = new GetCampaignAnalytics(
       this.campaignRepository,
       this.marketingEventRepository,
@@ -166,15 +186,26 @@ export class MarketingCompositionRoot {
 
     this.getDeliveriesUseCase = new GetDeliveries(this.channelDeliveryRepository);
 
-    // ─── Initialize WS-D use cases ──────────────────────────
+    // ─── Initialize WS-D use cases ───────────────────────────
     this.getAttributionAnalyticsUseCase = new GetAttributionAnalytics(
       this.attributionEventRepository,
     );
 
     this.getFunnelAnalyticsUseCase = new GetFunnelAnalytics(this.attributionEventRepository);
 
+    // ─── Initialize NEW email sequence use cases ───────────────────
+    this.createEmailSequenceUseCase = new CreateEmailSequence(this.sequenceRepository);
+
+    this.listEmailSequencesUseCase = new ListEmailSequences(this.sequenceRepository);
+
+    this.getEmailSequenceDetailsUseCase = new GetEmailSequenceDetails(this.sequenceRepository);
+
+    this.updateEmailSequenceUseCase = new UpdateEmailSequence(this.sequenceRepository);
+
+    this.deleteEmailSequenceUseCase = new DeleteEmailSequence(this.sequenceRepository);
+
     // ─── Initialize job runner ───────────────────────────────
-    this.jobRunner = new CampaignJobRunner(config.dataSource, config.logger);
+    this.jobRunner = new CampaignJobRunner(dataSource, logger);
   }
 
   // ─── Repository getters ──────────────────────────────────────
@@ -251,8 +282,20 @@ export class MarketingCompositionRoot {
     return this.getFunnelAnalyticsUseCase;
   }
 
-  // ─── Job runner ──────────────────────────────────────────────
-  getJobRunner(): CampaignJobRunner {
-    return this.jobRunner;
+  // ─── NEW EMAIL SEQUENCE use case getters ───────────────────────────
+  getCreateEmailSequenceUseCase(): any {
+    return this.createEmailSequenceUseCase;
+  }
+  getListEmailSequencesUseCase(): any {
+    return this.listEmailSequencesUseCase;
+  }
+  getGetEmailSequenceDetailsUseCase(): any {
+    return this.getEmailSequenceDetailsUseCase;
+  }
+  getUpdateEmailSequenceUseCase(): any {
+    return this.updateEmailSequenceUseCase;
+  }
+  getDeleteEmailSequenceUseCase(): any {
+    return this.deleteEmailSequenceUseCase;
   }
 }
