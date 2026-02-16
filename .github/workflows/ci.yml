@@ -1,0 +1,284 @@
+name: CI Pipeline
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # Linting job
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint Code
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: false
+
+      - name: Run frontend ESLint
+        run: npm --prefix frontend run lint
+        continue-on-error: false
+
+      - name: Check code formatting with Prettier
+        run: npx prettier --check 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'
+        continue-on-error: false
+
+  # Testing job
+  test:
+    runs-on: ubuntu-latest
+    name: Run Tests
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: cypher_erp_test
+          POSTGRES_USER: cypher_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run changed-module tests (PR)
+        if: github.event_name == 'pull_request'
+        run: npm run test:changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: cypher_erp_test
+          DB_USER: cypher_user
+          DB_PASSWORD: test_password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Run tests with coverage (push)
+        if: github.event_name != 'pull_request'
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: cypher_erp_test
+          DB_USER: cypher_user
+          DB_PASSWORD: test_password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Archive test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: coverage/
+          retention-days: 30
+
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    name: Build Application
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Build TypeScript incrementally (PR)
+        if: github.event_name == 'pull_request'
+        run: npm run build:incremental
+
+      - name: Build TypeScript (push)
+        if: github.event_name != 'pull_request'
+        run: npm run build
+
+      - name: Build frontend
+        run: npm --prefix frontend run build
+
+      - name: Check build output
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "Build failed: dist directory not created"
+            exit 1
+          fi
+          echo "Build successful. Files created:"
+          find dist -type f -name "*.js" | head -10
+
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-dist
+          path: dist/
+          retention-days: 7
+
+  # Security scanning job
+  security:
+    runs-on: ubuntu-latest
+    name: Security Checks
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Check for vulnerable dependencies
+        run: npm audit --json > audit.json 2>&1 || true
+        continue-on-error: true
+
+      - name: Archive audit report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit
+          path: audit.json
+          retention-days: 30
+
+  # Docker build job (on main and develop branches)
+  docker:
+    runs-on: ubuntu-latest
+    name: Build Docker Image
+    needs: [lint, test, build, security]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: cypher-erp:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan Docker image for vulnerabilities
+        run: |
+          docker build -t cypher-erp:test .
+          # Using grype for vulnerability scanning (if available)
+          if command -v grype &> /dev/null; then
+            grype cypher-erp:test --fail-on medium || true
+          fi
+        continue-on-error: true
+
+  # Job status notification
+  status:
+    runs-on: ubuntu-latest
+    name: CI Pipeline Status
+    needs: [lint, test, build, security, docker]
+    if: always()
+
+    steps:
+      - name: Check CI status
+        run: |
+          if [ "${{ needs.lint.result }}" = "failure" ] || \
+             [ "${{ needs.test.result }}" = "failure" ] || \
+             [ "${{ needs.build.result }}" = "failure" ]; then
+            echo "CI Pipeline failed"
+            exit 1
+          fi
+          echo "CI Pipeline completed successfully"

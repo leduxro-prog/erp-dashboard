@@ -1,0 +1,67 @@
+groups:
+  - name: cypher_erp_alerts
+    interval: 30s
+    rules:
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(cypher_errors_total[5m]))
+            /
+            sum(rate(cypher_http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Slow response time alert
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95,
+            rate(cypher_http_request_duration_seconds_bucket[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High response time (p95)"
+          description: "95th percentile response time is {{ $value }}s (threshold: 2s)"
+
+      # Database connection pool exhaustion
+      - alert: DatabasePoolExhausted
+        expr: |
+          (cypher_db_pool_active / (cypher_db_pool_active + cypher_db_pool_idle)) > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Pool usage is {{ $value | humanizePercentage }} (threshold: 90%)"
+
+      # Redis connection down
+      - alert: RedisDown
+        expr: cypher_redis_connected == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Redis connection lost"
+          description: "Redis is not connected"
+
+      # Application down
+      - alert: ApplicationDown
+        expr: up{job="cypher-erp-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "CYPHER ERP application is down"
+          description: "Application has been down for more than 1 minute"

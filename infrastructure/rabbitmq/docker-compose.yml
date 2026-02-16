@@ -1,0 +1,214 @@
+# ==============================================================================
+# Cypher ERP - RabbitMQ Local Development
+# Docker Compose Configuration
+#
+# Description:
+#   This Docker Compose file sets up RabbitMQ with Management UI for local
+#   development and testing. It includes all necessary plugins for
+#   enterprise-grade event bus operations.
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose up -d rabbitmq    # Start only RabbitMQ
+#   docker-compose logs -f            # Follow logs
+#   docker-compose down               # Stop and remove containers
+#   docker-compose down -v            # Stop, remove containers and volumes
+#
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ==============================================================================
+  # RabbitMQ Service
+  # ==============================================================================
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: cypher-rabbitmq-dev
+    hostname: rabbitmq-dev
+
+    ports:
+      # AMQP protocol port
+      - "5672:5672"
+      # Management UI port
+      - "15672:15672"
+      # Prometheus metrics port (optional)
+      - "15692:15692"
+
+    environment:
+      # Default user and password for Management UI
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_DEFAULT_VHOST: /
+
+      # Enable plugins
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit log_levels [{connection,error},{default,warning}]"
+
+      # Memory and disk thresholds
+      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: 0.4
+      RABBITMQ_DISK_FREE_LIMIT: 1GB
+
+    volumes:
+      # Persist data across container restarts
+      - rabbitmq-data:/var/lib/rabbitmq
+      # Persist configuration
+      - rabbitmq-config:/etc/rabbitmq
+
+      # Optional: Custom configuration files
+      # - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      # - ./definitions.json:/etc/rabbitmq/definitions.json:ro
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    networks:
+      - rabbitmq-network
+
+    restart: unless-stopped
+
+    labels:
+      - "com.cypher.service=rabbitmq"
+      - "com.cypher.environment=dev"
+      - "com.cypher.managed-by=docker-compose"
+
+  # ==============================================================================
+  # Prometheus (Optional - for metrics collection)
+  # ==============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cypher-prometheus-dev
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+    depends_on:
+      - rabbitmq
+
+    networks:
+      - rabbitmq-network
+
+    restart: unless-stopped
+
+    labels:
+      - "com.cypher.service=prometheus"
+      - "com.cypher.environment=dev"
+      - "com.cypher.managed-by=docker-compose"
+
+    # Comment this section if you don't want Prometheus
+    profiles:
+      - monitoring
+
+  # ==============================================================================
+  # Grafana (Optional - for visualization)
+  # ==============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cypher-grafana-dev
+    ports:
+      - "3000:3000"
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=redis-datasource
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+    depends_on:
+      - prometheus
+
+    networks:
+      - rabbitmq-network
+
+    restart: unless-stopped
+
+    labels:
+      - "com.cypher.service=grafana"
+      - "com.cypher.environment=dev"
+      - "com.cypher.managed-by=docker-compose"
+
+    # Comment this section if you don't want Grafana
+    profiles:
+      - monitoring
+
+  # ==============================================================================
+  # RabbitMQ Management (Additional tools)
+  # ==============================================================================
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter:latest
+    container_name: cypher-rabbitmq-exporter-dev
+    ports:
+      - "9091:9090"
+
+    environment:
+      - RABBIT_URL=http://rabbitmq:15672
+      - RABBIT_USER=admin
+      - RABBIT_PASSWORD=admin
+      - RABBIT_EXPORTER_CAPABILITIES=dlx,dripdrop,sort
+
+    depends_on:
+      - rabbitmq
+
+    networks:
+      - rabbitmq-network
+
+    restart: unless-stopped
+
+    labels:
+      - "com.cypher.service=rabbitmq-exporter"
+      - "com.cypher.environment=dev"
+      - "com.cypher.managed-by=docker-compose"
+
+    profiles:
+      - monitoring
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  rabbitmq-network:
+    name: cypher-rabbitmq-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  rabbitmq-data:
+    name: cypher-rabbitmq-data
+    driver: local
+
+  rabbitmq-config:
+    name: cypher-rabbitmq-config
+    driver: local
+
+  prometheus-data:
+    name: cypher-prometheus-data
+    driver: local
+
+  grafana-data:
+    name: cypher-grafana-data
+    driver: local

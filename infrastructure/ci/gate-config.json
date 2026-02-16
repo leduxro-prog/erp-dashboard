@@ -1,0 +1,95 @@
+{
+  "name": "cypher-erp-release-gate",
+  "version": "1.0.0",
+  "description": "Release gate configuration for Cypher ERP",
+  "gates": {
+    "pre-deployment": {
+      "required_checks": [
+        "code_quality",
+        "security_scan",
+        "dependency_audit",
+        "license_check",
+        "api_contract_validation"
+      ],
+      "timeout": 1800
+    },
+    "smoke_tests": {
+      "required_checks": [
+        "api_health",
+        "database_connectivity",
+        "event_bus_connectivity",
+        "authentication_flow",
+        "core_endpoints"
+      ],
+      "timeout": 300,
+      "max_retries": 3
+    },
+    "post_deployment": {
+      "required_checks": [
+        "integration_tests",
+        "performance_baselines",
+        "error_rate_check",
+        "log_validation"
+      ],
+      "timeout": 600
+    },
+    "manual_approval": {
+      "required_approvers": 1,
+      "timeout": 7200,
+      "notification_channels": ["slack", "email"]
+    }
+  },
+  "thresholds": {
+    "code_coverage": {
+      "minimum": 70,
+      "block_on_failure": true
+    },
+    "security": {
+      "max_vulnerability_level": "moderate",
+      "block_on_critical": true,
+      "block_on_high": true
+    },
+    "performance": {
+      "api_response_time_p95_ms": 500,
+      "api_response_time_p99_ms": 1000,
+      "error_rate_percent": 0.5,
+      "db_query_time_p95_ms": 100
+    },
+    "smoke_tests": {
+      "min_success_rate": 100,
+      "max_failure_count": 0
+    }
+  },
+  "rollback": {
+    "automatic": {
+      "enabled": true,
+      "triggers": [
+        "smoke_test_failure",
+        "error_rate_threshold_exceeded",
+        "performance_degradation",
+        "health_check_failure"
+      ],
+      "cooldown_seconds": 60
+    },
+    "manual": {
+      "enabled": true,
+      "max_versions_kept": 5
+    }
+  },
+  "notifications": {
+    "slack": {
+      "enabled": true,
+      "channel": "#deployments",
+      "on_success": true,
+      "on_failure": true,
+      "on_rollback": true
+    },
+    "email": {
+      "enabled": true,
+      "recipients": ["devops@cypher.ro"],
+      "on_success": false,
+      "on_failure": true,
+      "on_rollback": true
+    }
+  }
+}

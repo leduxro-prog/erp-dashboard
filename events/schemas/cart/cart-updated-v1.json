@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.cypher.ro/events/cart/cart-updated-v1.json",
+  "title": "Cart Updated Event v1",
+  "description": "Emitted when a shopping cart is modified. This includes additions, removals, quantity updates, and cart clearing operations.",
+  "type": "object",
+  "required": [
+    "cart_id",
+    "user_id",
+    "action",
+    "updated_at"
+  ],
+  "properties": {
+    "cart_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the cart"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User ID who owns the cart (null for guest carts)"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session ID for guest carts"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "item_added",
+        "item_removed",
+        "quantity_updated",
+        "cart_cleared",
+        "coupon_applied",
+        "coupon_removed",
+        "shipping_updated",
+        "metadata_updated"
+      ],
+      "description": "Type of cart action that triggered this event"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the cart was updated"
+    },
+    "items": {
+      "type": "array",
+      "description": "Current state of cart items",
+      "items": {
+        "$ref": "#/definitions/CartItem"
+      }
+    },
+    "changed_item": {
+      "$ref": "#/definitions/CartItem",
+      "description": "The specific item that was changed (for item-specific actions)"
+    },
+    "previous_quantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Previous quantity of the changed item (for quantity updates)"
+    },
+    "new_quantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "New quantity of the changed item (for quantity updates)"
+    },
+    "coupon_code": {
+      "type": "string",
+      "description": "Coupon code that was applied or removed"
+    },
+    "totals": {
+      "$ref": "#/definitions/CartTotals",
+      "description": "Current cart totals after the update"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional cart metadata"
+    }
+  },
+  "definitions": {
+    "CartItem": {
+      "type": "object",
+      "required": [
+        "item_id",
+        "product_id",
+        "variant_id",
+        "quantity",
+        "unit_price"
+      ],
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for the cart item"
+        },
+        "product_id": {
+          "type": "string",
+          "description": "Product identifier"
+        },
+        "variant_id": {
+          "type": "string",
+          "description": "Product variant identifier (if applicable)"
+        },
+        "sku": {
+          "type": "string",
+          "description": "SKU of the product/variant"
+        },
+        "product_name": {
+          "type": "string",
+          "description": "Name of the product"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Quantity of the item in cart"
+        },
+        "unit_price": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per unit before discounts"
+        },
+        "unit_price_with_tax": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per unit including tax"
+        },
+        "tax_rate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Tax rate as percentage"
+        },
+        "discount_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Discount amount per unit"
+        },
+        "line_total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total price for this line item"
+        },
+        "stock_status": {
+          "type": "string",
+          "enum": ["in_stock", "low_stock", "out_of_stock", "backordered"],
+          "description": "Current stock status of the product"
+        }
+      }
+    },
+    "CartTotals": {
+      "type": "object",
+      "required": [
+        "subtotal",
+        "tax_amount",
+        "total"
+      ],
+      "properties": {
+        "subtotal": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Subtotal of all items"
+        },
+        "discount_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total discount amount"
+        },
+        "tax_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total tax amount"
+        },
+        "shipping_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Shipping cost"
+        },
+        "total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Final total amount"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Currency code (e.g., EUR, RON, USD)"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "cart_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "user_id": "usr-12345",
+      "action": "item_added",
+      "updated_at": "2026-02-13T12:00:00.000Z",
+      "items": [
+        {
+          "item_id": "f1e2d3c4-b5a6-9876-fedc-987654321098",
+          "product_id": "PRD-001",
+          "variant_id": "VAR-001-A",
+          "sku": "PRD-001-A",
+          "product_name": "Product Name",
+          "quantity": 2,
+          "unit_price": 150.00,
+          "unit_price_with_tax": 180.00,
+          "tax_rate": 20,
+          "line_total": 360.00,
+          "stock_status": "in_stock"
+        }
+      ],
+      "changed_item": {
+        "item_id": "f1e2d3c4-b5a6-9876-fedc-987654321098",
+        "product_id": "PRD-001",
+        "variant_id": "VAR-001-A",
+        "sku": "PRD-001-A",
+        "product_name": "Product Name",
+        "quantity": 2,
+        "unit_price": 150.00,
+        "unit_price_with_tax": 180.00,
+        "tax_rate": 20,
+        "line_total": 360.00
+      },
+      "totals": {
+        "subtotal": 300.00,
+        "discount_amount": 30.00,
+        "tax_amount": 54.00,
+        "shipping_amount": 15.00,
+        "total": 339.00,
+        "currency": "EUR"
+      }
+    }
+  ]
+}

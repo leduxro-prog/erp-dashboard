@@ -1,0 +1,284 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.cypher.ro/events/price/price-changed-v1.json",
+  "title": "Price Changed Event v1",
+  "description": "Emitted when product prices change. This is a critical P0 event that triggers price updates across all sales channels, affects active quotes, and may require order repricing. Separate from product.updated which handles non-price attributes.",
+  "type": "object",
+  "required": [
+    "product_id",
+    "sku",
+    "changed_at",
+    "price_type",
+    "currency"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Product identifier"
+    },
+    "variant_id": {
+      "type": "string",
+      "description": "Variant identifier (null for products without variants)"
+    },
+    "sku": {
+      "type": "string",
+      "description": "SKU of the product/variant"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the price changed"
+    },
+    "changed_by": {
+      "type": "string",
+      "description": "User ID who initiated the price change"
+    },
+    "changed_by_type": {
+      "type": "string",
+      "enum": ["admin", "system", "import", "pricing_engine", "automation"],
+      "default": "admin",
+      "description": "Type of entity that initiated the change"
+    },
+    "price_type": {
+      "type": "string",
+      "enum": [
+        "base_price",
+        "list_price",
+        "sale_price",
+        "cost_price",
+        "tier_price",
+        "group_price",
+        "currency_price",
+        "bulk_discount"
+      ],
+      "description": "Type of price that changed"
+    },
+    "previous_price": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Previous price value (null for new prices)"
+    },
+    "new_price": {
+      "type": "number",
+      "minimum": 0,
+      "description": "New price value"
+    },
+    "price": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Current price value"
+    },
+    "price_difference": {
+      "type": "number",
+      "description": "Difference between new and old price (positive for increase, negative for decrease)"
+    },
+    "percentage_change": {
+      "type": "number",
+      "description": "Percentage change from previous price"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "Currency code (e.g., EUR, RON, USD)"
+    },
+    "tax_inclusive": {
+      "type": "boolean",
+      "description": "Whether the price includes tax"
+    },
+    "tax_rate": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Tax rate applied (if tax_inclusive is true)"
+    },
+    "tier_pricing": {
+      "type": "object",
+      "description": "Tier pricing details (for tier_price changes)",
+      "properties": {
+        "customer_group": {
+          "type": "string",
+          "description": "Customer group for tier pricing"
+        },
+        "minimum_quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minimum quantity for this tier"
+        },
+        "maximum_quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum quantity for this tier (null for unlimited)"
+        }
+      }
+    },
+    "sale_price": {
+      "type": "object",
+      "description": "Sale pricing details (for sale_price changes)",
+      "properties": {
+        "sale_starts_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the sale price becomes effective"
+        },
+        "sale_ends_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the sale price ends (null for indefinite)"
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Whether the sale price is currently active"
+        }
+      }
+    },
+    "bulk_discount": {
+      "type": "object",
+      "description": "Bulk discount details (for bulk_discount changes)",
+      "properties": {
+        "minimum_quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minimum quantity for bulk discount"
+        },
+        "discount_type": {
+          "type": "string",
+          "enum": ["percentage", "fixed"],
+          "description": "Type of discount"
+        },
+        "discount_value": {
+          "type": "number",
+          "description": "Discount value (percentage or fixed amount)"
+        }
+      }
+    },
+    "price_schedule": {
+      "type": "object",
+      "description": "Scheduled pricing information",
+      "properties": {
+        "effective_from": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the new price becomes effective"
+        },
+        "effective_until": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this price expires (null for indefinite)"
+        },
+        "is_scheduled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this is a scheduled price change"
+        }
+      }
+    },
+    "affects_active_quotes": {
+      "type": "boolean",
+      "description": "Whether this price change affects active quotes"
+    },
+    "affects_pending_orders": {
+      "type": "boolean",
+      "description": "Whether this price change affects pending orders"
+    },
+    "requote_required": {
+      "type": "boolean",
+      "description": "Whether affected quotes require re-quoting"
+    },
+    "channels_affected": {
+      "type": "array",
+      "description": "Sales channels affected by this price change",
+      "items": {
+        "type": "string",
+        "enum": ["web", "mobile", "pos", "api", "marketplace", "b2b_portal"]
+      }
+    },
+    "related_promotion": {
+      "type": "object",
+      "description": "Related promotion that caused the price change",
+      "properties": {
+        "promotion_id": {
+          "type": "string",
+          "description": "Promotion identifier"
+        },
+        "promotion_code": {
+          "type": "string",
+          "description": "Promotion code"
+        },
+        "promotion_name": {
+          "type": "string",
+          "description": "Promotion name"
+        }
+      }
+    },
+    "previous_msrp": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Previous MSRP (Manufacturer's Suggested Retail Price)"
+    },
+    "new_msrp": {
+      "type": "number",
+      "minimum": 0,
+      "description": "New MSRP"
+    },
+    "cost_price": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Cost price (for internal pricing calculations)"
+    },
+    "margin_percentage": {
+      "type": "number",
+      "description": "Profit margin percentage based on cost price"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about the price change"
+    },
+    "reason_code": {
+      "type": "string",
+      "enum": [
+        "manual_adjustment",
+        "cost_increase",
+        "competitive_pricing",
+        "clearance",
+        "promotion",
+        "currency_fluctuation",
+        "seasonal_adjustment",
+        "vendor_pricing",
+        "inventory_clearance",
+        "pricing_algorithm",
+        "bulk_pricing"
+      ],
+      "description": "Reason code for the price change"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata"
+    }
+  },
+  "examples": [
+    {
+      "product_id": "PRD-00123",
+      "variant_id": "VAR-001-A",
+      "sku": "PRD-001-A",
+      "changed_at": "2026-02-13T10:00:00.000Z",
+      "changed_by": "user-456",
+      "changed_by_type": "admin",
+      "price_type": "base_price",
+      "previous_price": 150.00,
+      "new_price": 165.00,
+      "price": 165.00,
+      "price_difference": 15.00,
+      "percentage_change": 10,
+      "currency": "EUR",
+      "tax_inclusive": false,
+      "tax_rate": 19,
+      "affects_active_quotes": true,
+      "affects_pending_orders": false,
+      "requote_required": true,
+      "channels_affected": ["web", "mobile", "pos", "b2b_portal"],
+      "cost_price": 100.00,
+      "margin_percentage": 39.39,
+      "reason_code": "cost_increase",
+      "notes": "Price increased due to supplier cost increase"
+    }
+  ]
+}

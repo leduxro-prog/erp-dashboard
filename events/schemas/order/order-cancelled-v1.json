@@ -1,0 +1,275 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.cypher.ro/events/order/order-cancelled-v1.json",
+  "title": "Order Cancelled Event v1",
+  "description": "Emitted when an order is cancelled. This triggers inventory adjustments, payment refunds, and notification workflows. This is a critical P0 event.",
+  "type": "object",
+  "required": [
+    "order_id",
+    "order_number",
+    "cancelled_at",
+    "cancellation_reason",
+    "items",
+    "refund_amount"
+  ],
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the cancelled order"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "Human-readable order number"
+    },
+    "quote_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Quote ID if order was created from a quote"
+    },
+    "quote_number": {
+      "type": "string",
+      "description": "Quote number if order was created from a quote"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Customer identifier"
+    },
+    "customer_type": {
+      "type": "string",
+      "enum": ["b2b", "b2c", "guest"],
+      "description": "Type of customer"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Name of the customer"
+    },
+    "customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Customer email address"
+    },
+    "cancelled_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the order was cancelled"
+    },
+    "cancelled_by": {
+      "type": "string",
+      "description": "User ID who cancelled the order"
+    },
+    "cancelled_by_type": {
+      "type": "string",
+      "enum": ["customer", "admin", "system", "automated"],
+      "default": "admin",
+      "description": "Type of entity that cancelled the order"
+    },
+    "cancellation_reason": {
+      "type": "string",
+      "enum": [
+        "customer_request",
+        "out_of_stock",
+        "payment_failed",
+        "fraud_detected",
+        "address_issue",
+        "pricing_error",
+        "duplicate_order",
+        "system_error",
+        "other"
+      ],
+      "description": "Primary reason for cancellation"
+    },
+    "cancellation_notes": {
+      "type": "string",
+      "description": "Additional details about the cancellation"
+    },
+    "previous_status": {
+      "type": "string",
+      "enum": ["pending", "confirmed", "processing", "ready_to_ship", "shipped", "delivered"],
+      "description": "Status of the order before cancellation"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": ["pending", "authorized", "paid", "partial", "refunded", "failed"],
+      "description": "Payment status at time of cancellation"
+    },
+    "fulfillment_status": {
+      "type": "string",
+      "enum": ["unfulfilled", "partial", "fulfilled"],
+      "description": "Fulfillment status at time of cancellation"
+    },
+    "items": {
+      "type": "array",
+      "description": "Items in the cancelled order",
+      "items": {
+        "$ref": "#/definitions/OrderItem"
+      }
+    },
+    "refund_amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total amount to be refunded"
+    },
+    "refund_currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "Currency of the refund"
+    },
+    "refund_status": {
+      "type": "string",
+      "enum": ["pending", "processing", "completed", "partial", "failed"],
+      "default": "pending",
+      "description": "Status of the refund process"
+    },
+    "refund_method": {
+      "type": "string",
+      "description": "Method used for the refund"
+    },
+    "partial_cancellation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is a partial cancellation of some items only"
+    },
+    "cancelled_items": {
+      "type": "array",
+      "description": "List of item IDs that were cancelled (for partial cancellations)",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "restock_items": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether cancelled items should be restocked"
+    },
+    "notify_customer": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether customer should be notified of cancellation"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional cancellation metadata"
+    }
+  },
+  "definitions": {
+    "OrderItem": {
+      "type": "object",
+      "required": [
+        "item_id",
+        "product_id",
+        "quantity",
+        "unit_price",
+        "line_total"
+      ],
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for the order item"
+        },
+        "product_id": {
+          "type": "string",
+          "description": "Product identifier"
+        },
+        "variant_id": {
+          "type": "string",
+          "description": "Product variant identifier (if applicable)"
+        },
+        "sku": {
+          "type": "string",
+          "description": "SKU of the product"
+        },
+        "product_name": {
+          "type": "string",
+          "description": "Name of the product"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Quantity that was cancelled"
+        },
+        "unit_price": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per unit"
+        },
+        "tax_rate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Tax rate as percentage"
+        },
+        "tax_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Tax amount for this line"
+        },
+        "discount_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Discount amount for this line"
+        },
+        "line_total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total price for this line item"
+        },
+        "was_shipped": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this item was already shipped"
+        },
+        "requires_return": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this item needs to be returned"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "order_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "order_number": "ORD-00012345",
+      "quote_id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "quote_number": "QT-000123",
+      "customer_id": "CUST-00123",
+      "customer_type": "b2b",
+      "customer_name": "Acme Corporation",
+      "customer_email": "contact@acme.com",
+      "cancelled_at": "2026-02-13T15:30:00.000Z",
+      "cancelled_by": "user-456",
+      "cancelled_by_type": "admin",
+      "cancellation_reason": "customer_request",
+      "cancellation_notes": "Customer requested cancellation due to change in requirements",
+      "previous_status": "pending",
+      "payment_status": "paid",
+      "fulfillment_status": "unfulfilled",
+      "items": [
+        {
+          "item_id": "f1e2d3c4-b5a6-9876-fedc-987654321098",
+          "product_id": "PRD-001",
+          "variant_id": "VAR-001-A",
+          "sku": "PRD-001-A",
+          "product_name": "Product Name",
+          "quantity": 10,
+          "unit_price": 150.00,
+          "tax_rate": 19,
+          "tax_amount": 285.00,
+          "discount_amount": 0,
+          "line_total": 1785.00,
+          "was_shipped": false,
+          "requires_return": false
+        }
+      ],
+      "refund_amount": 1631.50,
+      "refund_currency": "EUR",
+      "refund_status": "pending",
+      "refund_method": "bank_transfer",
+      "partial_cancellation": false,
+      "restock_items": true,
+      "notify_customer": true
+    }
+  ]
+}

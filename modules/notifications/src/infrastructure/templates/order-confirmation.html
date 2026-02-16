@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmare Comandă</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background: #f9fafb; }
+    .email-container { background: #ffffff; }
+    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 40px 20px; text-align: center; color: white; }
+    .logo { max-width: 150px; height: auto; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .content { padding: 40px 20px; }
+    .content h2 { color: #1e40af; font-size: 22px; margin-bottom: 15px; font-weight: 600; }
+    .content p { margin-bottom: 15px; color: #555; font-size: 14px; }
+    .order-number { background: #f0f4f8; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; }
+    .order-number strong { color: #16a34a; display: block; font-size: 20px; margin-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+    table th { background: #f3f4f6; padding: 12px; text-align: left; font-weight: 600; color: #1f2937; border-bottom: 2px solid #e5e7eb; }
+    table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+    table tr:last-child td { border-bottom: none; }
+    .price-right { text-align: right; }
+    .summary-section { background: #f9fafb; padding: 20px; border-radius: 6px; margin: 20px 0; }
+    .summary-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+    .summary-row.total { border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 12px; font-weight: 700; color: #1e40af; font-size: 16px; }
+    .delivery-info { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .delivery-info strong { color: #16a34a; display: block; margin-bottom: 8px; }
+    .delivery-info p { font-size: 13px; margin: 5px 0; color: #555; }
+    .button { display: inline-block; background: #1e40af; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 500; margin-top: 15px; font-size: 14px; }
+    .button:hover { background: #1e3a8a; }
+    .footer { background: #1f2937; color: #e5e7eb; padding: 30px 20px; text-align: center; font-size: 12px; }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { max-width: 100%; }
+      .header { padding: 30px 15px; }
+      .content { padding: 25px 15px; }
+      table { font-size: 12px; }
+      table th, table td { padding: 8px; }
+      .summary-row { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <img src="https://ledux.ro/logo.png" alt="Ledux.ro" class="logo">
+        <h1>Comandă Confirmată</h1>
+        <p>Multumim pentru plasarea comenzii dvs.</p>
+      </div>
+
+      <div class="content">
+        <h2>Bună, {{customerName}}!</h2>
+        <p>Comandă dvs. a fost primită și confirmată cu succes. Detaliile complete sunt prezentate mai jos.</p>
+
+        <div class="order-number">
+          <strong>{{orderNumber}}</strong>
+          <div style="font-size: 12px; color: #666;">Data comenzii: {{orderDate}}</div>
+        </div>
+
+        <h3 style="color: #1f2937; font-size: 16px; margin-top: 25px; margin-bottom: 15px;">Articole Comandate</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Articol</th>
+              <th>Cantitate</th>
+              <th class="price-right">Preț Unitar</th>
+              <th class="price-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each items}}
+            <tr>
+              <td>{{this.name}}<br><small style="color: #999;">SKU: {{this.sku}}</small></td>
+              <td>{{this.quantity}}</td>
+              <td class="price-right">{{this.unitPrice}}</td>
+              <td class="price-right"><strong>{{this.total}}</strong></td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <div class="summary-section">
+          <div class="summary-row">
+            <span>Subtotal:</span>
+            <span>{{subtotal}}</span>
+          </div>
+          <div class="summary-row">
+            <span>Taxa (VAT {{vatRate}}%):</span>
+            <span>{{taxAmount}}</span>
+          </div>
+          <div class="summary-row">
+            <span>Costuri de Transport:</span>
+            <span>{{shippingCost}}</span>
+          </div>
+          {{#if discountAmount}}
+          <div class="summary-row" style="color: #16a34a;">
+            <span>Reducere:</span>
+            <span>-{{discountAmount}}</span>
+          </div>
+          {{/if}}
+          <div class="summary-row total">
+            <span>Total:</span>
+            <span>{{totalPrice}}</span>
+          </div>
+        </div>
+
+        <div class="delivery-info">
+          <strong>Informații Livrare</strong>
+          <p>{{customerName}}</p>
+          <p>{{deliveryAddress}}<br>
+          {{deliveryCity}}, {{deliveryPostcode}}</p>
+          <p><strong>Metoda de livrare:</strong> {{shippingMethod}}</p>
+          <p><strong>Data estimată de livrare:</strong> {{estimatedDeliveryDate}}</p>
+        </div>
+
+        <p style="margin-top: 25px;">Puteți urmări starea comenzii dvs. în orice moment accesând contul dvs. pe site-ul nostru.</p>
+
+        <a href="{{orderTrackingLink}}" class="button">Urmărește Comanda</a>
+
+        <p style="margin-top: 25px; font-size: 13px; color: #999;">Dacă aveți întrebări, vă rugăm să ne contactați la <a href="mailto:{{supportEmail}}" style="color: #1e40af;">{{supportEmail}}</a></p>
+      </div>
+
+      <div class="footer">
+        <div style="margin-bottom: 15px;">
+          <strong>Ledux.ro</strong><br>
+          Soluții Premium pentru Iluminat LED<br>
+          <a href="https://ledux.ro">www.ledux.ro</a>
+        </div>
+        <div>
+          <a href="{{unsubscribeLink}}">Dezabonare</a> |
+          <a href="{{preferencesLink}}">Preferințe Email</a>
+        </div>
+        <div style="margin-top: 15px; opacity: 0.8;">
+          Copyright &copy; {{currentYear}} Ledux.ro. Toate drepturile rezervate.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

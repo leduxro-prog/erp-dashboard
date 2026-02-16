@@ -1,0 +1,7 @@
+Continua pe P3 ramas in /opt/cypher-erp, focus doar pe frontend/B2B auth UX si routing consistency:
+1) verifica separarea reala ERP login (/login) vs B2B login (/b2b-store/login)
+2) verifica toate redirect-urile spre login in frontend/src (sa nu trimita useri B2B la /login ERP)
+3) verifica daca exista confuzii de session/token intre apiClient si b2bApi (interceptori 401)
+4) propune si aplica fix-uri minime, fara redesign
+5) ruleaza npx tsc --noEmit si testele relevante frontend daca exista
+6) raporteaza exact fisierele schimbate + ce bug concret a fost rezolvat

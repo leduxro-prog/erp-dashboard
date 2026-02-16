@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-02-13T12:00:00.000Z",
+  "schemas": {
+    "https://schemas.cypher.ro/events/common/envelope-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/common/envelope-v1.json",
+      "event_type": "common.envelope",
+      "version": "v1",
+      "title": "Event Envelope v1",
+      "description": "Standard event envelope structure for all events in the Cypher ERP system. Provides unique identification, versioning, traceability, routing information, and priority-based processing.",
+      "path": "/opt/cypher-erp/events/schemas/common/envelope-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    },
+    "https://schemas.cypher.ro/events/cart/cart-updated-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/cart/cart-updated-v1.json",
+      "event_type": "cart.updated",
+      "version": "v1",
+      "title": "Cart Updated Event v1",
+      "description": "Emitted when a shopping cart is modified. This includes additions, removals, quantity updates, and cart clearing operations.",
+      "path": "/opt/cypher-erp/events/schemas/cart/cart-updated-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    },
+    "https://schemas.cypher.ro/events/quote/quote-created-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/quote/quote-created-v1.json",
+      "event_type": "quote.created",
+      "version": "v1",
+      "title": "Quote Created Event v1",
+      "description": "Emitted when a new quote is created in the system. Quotes are preliminary price estimates that can be converted to orders.",
+      "path": "/opt/cypher-erp/events/schemas/quote/quote-created-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    },
+    "https://schemas.cypher.ro/events/order/order-created-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/order/order-created-v1.json",
+      "event_type": "order.created",
+      "version": "v1",
+      "title": "Order Created Event v1",
+      "description": "Emitted when a new order is created in the system. This is a critical P0 event that triggers inventory updates, payment processing, and order fulfillment workflows.",
+      "path": "/opt/cypher-erp/events/schemas/order/order-created-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    },
+    "https://schemas.cypher.ro/events/order/order-cancelled-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/order/order-cancelled-v1.json",
+      "event_type": "order.cancelled",
+      "version": "v1",
+      "title": "Order Cancelled Event v1",
+      "description": "Emitted when an order is cancelled. This triggers inventory adjustments, payment refunds, and notification workflows. This is a critical P0 event.",
+      "path": "/opt/cypher-erp/events/schemas/order/order-cancelled-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    },
+    "https://schemas.cypher.ro/events/credit/credit-changed-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/credit/credit-changed-v1.json",
+      "event_type": "credit.changed",
+      "version": "v1",
+      "title": "Credit Changed Event v1",
+      "description": "Emitted when a customer's credit status, credit limit, or balance changes. This is a critical P0 event for B2B customers and affects order processing and payment workflows.",
+      "path": "/opt/cypher-erp/events/schemas/credit/credit-changed-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    },
+    "https://schemas.cypher.ro/events/product/product-updated-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/product/product-updated-v1.json",
+      "event_type": "product.updated",
+      "version": "v1",
+      "title": "Product Updated Event v1",
+      "description": "Emitted when a product's details are modified. This includes name, description, pricing, categorization, and other product attributes. Price changes are emitted separately as price.changed events.",
+      "path": "/opt/cypher-erp/events/schemas/product/product-updated-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    },
+    "https://schemas.cypher.ro/events/stock/stock-changed-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/stock/stock-changed-v1.json",
+      "event_type": "stock.changed",
+      "version": "v1",
+      "title": "Stock Changed Event v1",
+      "description": "Emitted when inventory levels change for a product or variant. This is a critical P0 event that triggers stock level updates, reorder notifications, and backorder processing.",
+      "path": "/opt/cypher-erp/events/schemas/stock/stock-changed-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    },
+    "https://schemas.cypher.ro/events/price/price-changed-v1.json": {
+      "$id": "https://schemas.cypher.ro/events/price/price-changed-v1.json",
+      "event_type": "price.changed",
+      "version": "v1",
+      "title": "Price Changed Event v1",
+      "description": "Emitted when product prices change. This is a critical P0 event that triggers price updates across all sales channels, affects active quotes, and may require order repricing. Separate from product.updated which handles non-price attributes.",
+      "path": "/opt/cypher-erp/events/schemas/price/price-changed-v1.json",
+      "active": true,
+      "registered_at": "2026-02-13T12:00:00.000Z"
+    }
+  }
+}

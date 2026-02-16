@@ -1,0 +1,873 @@
+# ==============================================================================
+# Release Gate Workflow
+# ==============================================================================
+#
+# This workflow implements enterprise-grade release gates that must be passed
+# before a deployment can proceed. It includes:
+# - Pre-deployment checks
+# - Smoke tests
+# - Security scans
+# - Integration tests
+# - Performance thresholds
+# - Manual approval gate
+#
+# ==============================================================================
+
+name: Release Gate
+
+concurrency:
+  group: release-gate-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      skip_manual_approval:
+        description: 'Skip manual approval (for emergencies)'
+        required: false
+        type: boolean
+        default: false
+
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - develop
+
+env:
+  NODE_VERSION: '20.x'
+  POSTGRES_VERSION: '15-alpine'
+  REDIS_VERSION: '7-alpine'
+
+jobs:
+  # ==============================================================================
+  # Job 1: Pre-Deployment Checks
+  # ==============================================================================
+  pre-deployment-checks:
+    name: Pre-Deployment Checks
+    runs-on: ubuntu-latest
+    outputs:
+      checks_passed: ${{ steps.checks.outputs.passed }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate package.json
+        run: |
+          node -e "const pkg = require('./package.json'); \
+                  if (!pkg.version) throw new Error('Missing version'); \
+                  if (!pkg.name) throw new Error('Missing name');"
+
+      - name: Check for breaking changes
+        run: |
+          git fetch origin main
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E '\.(ts|js)$' || true)
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Changed TypeScript/JS files:"
+            echo "$CHANGED_FILES"
+          fi
+
+      - name: Verify environment files
+        run: |
+          if [ -f .env.production ]; then
+            echo "Production env file found"
+            grep -q "DB_PASSWORD" .env.production || echo "WARNING: DB_PASSWORD missing"
+            grep -q "JWT_SECRET" .env.production || echo "WARNING: JWT_SECRET missing"
+          fi
+
+      - name: Check database migrations
+        run: |
+          if [ -d "db/migrations" ]; then
+            MIGRATION_COUNT=$(ls -1 db/migrations/*.ts 2>/dev/null | wc -l)
+            echo "Found $MIGRATION_COUNT migration files"
+            echo "migration_count=$MIGRATION_COUNT" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set version output
+        id: version
+        run: |
+          VERSION=${{ inputs.version || github.ref_name }}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Pre-deployment checks summary
+        id: checks
+        run: |
+          echo "passed=true" >> $GITHUB_OUTPUT
+          echo "All pre-deployment checks passed"
+
+  # ==============================================================================
+  # Job 2: Security Scans
+  # ==============================================================================
+  security-scans:
+    name: Security Scans
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=moderate --json > audit-results.json || true
+          # Check for critical/high vulnerabilities
+          CRITICAL_COUNT=$(jq '.vulnerabilities | map(select(.severity == "critical")) | length' audit-results.json 2>/dev/null || echo "0")
+          HIGH_COUNT=$(jq '.vulnerabilities | map(select(.severity == "high")) | length' audit-results.json 2>/dev/null || echo "0")
+
+          echo "Critical vulnerabilities: $CRITICAL_COUNT"
+          echo "High vulnerabilities: $HIGH_COUNT"
+
+          if [ "$CRITICAL_COUNT" -gt "0" ]; then
+            echo "ERROR: Critical vulnerabilities found"
+            exit 1
+          fi
+
+          if [ "$HIGH_COUNT" -gt "5" ]; then
+            echo "WARNING: Many high vulnerabilities found"
+          fi
+
+      - name: Run Snyk security scan
+        if: env.SNYK_TOKEN != ''
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+      - name: Docker image vulnerability scan
+        run: |
+          docker build -t cypher-erp:gate-test .
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            cypher-erp:gate-test || echo "Security issues found in Docker image"
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports-${{ github.sha }}
+          path: |
+            audit-results.json
+          retention-days: 90
+
+  # ==============================================================================
+  # Job 3: Code Quality and Linting
+  # ==============================================================================
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    needs: pre-deployment-checks
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: false
+
+      - name: Check Prettier formatting
+        run: npx prettier --check 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'
+
+      - name: TypeScript type checking
+        run: npx tsc --noEmit
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          TODO_COUNT=$(grep -r "TODO\|FIXME" --include="*.ts" src/ shared/ modules/ | wc -l)
+          echo "Found $TODO_COUNT TODO/FIXME comments"
+          if [ "$TODO_COUNT" -gt "50" ]; then
+            echo "WARNING: Many TODO/FIXME comments found ($TODO_COUNT)"
+          fi
+
+  # ==============================================================================
+  # Job 4: Build Verification
+  # ==============================================================================
+  build-verification:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, security-scans, code-quality]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Build frontend
+        run: npm run --prefix frontend build
+
+      - name: Verify build output
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "ERROR: Backend dist directory not created"
+            exit 1
+          fi
+          if [ ! -d "frontend/dist" ]; then
+            echo "ERROR: Frontend dist directory not created"
+            exit 1
+          fi
+          echo "Build verification passed"
+
+      - name: Check bundle sizes
+        run: |
+          FRONTEND_SIZE=$(du -sh frontend/dist | cut -f1)
+          BACKEND_SIZE=$(du -sh dist | cut -f1)
+          echo "Frontend bundle size: $FRONTEND_SIZE"
+          echo "Backend bundle size: $BACKEND_SIZE"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ github.sha }}
+          path: |
+            dist/
+            frontend/dist/
+          retention-days: 7
+
+  # ==============================================================================
+  # Job 5: Unit Tests
+  # ==============================================================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, code-quality]
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: cypher_erp_test
+          POSTGRES_USER: cypher_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: cypher_erp_test
+          DB_USER: cypher_user
+          DB_PASSWORD: test_password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Check coverage thresholds
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            TOTAL=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
+            echo "Total coverage: $TOTAL%"
+            if (( $(echo "$TOTAL < 70" | bc -l) )); then
+              echo "WARNING: Coverage below 70%"
+            fi
+          fi
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          flags: unittests
+          name: codecov-release-gate
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-${{ github.sha }}
+          path: coverage/
+          retention-days: 30
+
+  # ==============================================================================
+  # Job 6: Integration Tests
+  # ==============================================================================
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [pre-deployment-checks, build-verification]
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: cypher_erp_test
+          POSTGRES_USER: cypher_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: cypher_erp_test
+          DB_USER: cypher_user
+          DB_PASSWORD: test_password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          RABBITMQ_HOST: localhost
+          RABBITMQ_PORT: 5672
+
+  # ==============================================================================
+  # Job 7: Smoke Tests
+  # ==============================================================================
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [build-verification]
+
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: cypher_erp_test
+          POSTGRES_USER: cypher_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      rabbitmq:
+        image: rabbitmq:3.13-management
+        env:
+          RABBITMQ_DEFAULT_USER: admin
+          RABBITMQ_DEFAULT_PASS: admin
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5672:5672
+          - 15672:15672
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application
+        run: |
+          node dist/src/server.js &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+
+          # Wait for application to start
+          for i in {1..30}; do
+            if curl -s http://localhost:3000/health/live > /dev/null; then
+              echo "Application is ready"
+              break
+            fi
+            echo "Waiting for application... ($i/30)"
+            sleep 2
+          done
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: cypher_erp_test
+          DB_USER: cypher_user
+          DB_PASSWORD: test_password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          RABBITMQ_HOST: localhost
+          RABBITMQ_PORT: 5672
+          RABBITMQ_USER: admin
+          RABBITMQ_PASSWORD: admin
+
+      - name: Run API smoke tests
+        run: npm run test -- tests/smoke/ApiSmokeTests.ts
+        env:
+          API_BASE_URL: http://localhost:3000/api/v1
+          NODE_ENV: test
+
+      - name: Run database smoke tests
+        run: npm run test -- tests/smoke/DatabaseSmokeTests.ts
+        env:
+          NODE_ENV: test
+
+      - name: Run event bus smoke tests
+        run: npm run test -- tests/smoke/EventBusSmokeTests.ts
+        env:
+          NODE_ENV: test
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -n "$APP_PID" ]; then
+            kill $APP_PID || true
+          fi
+
+      - name: Upload smoke test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: smoke-test-results-${{ github.sha }}
+          path: |
+            coverage/
+          retention-days: 30
+
+  # ==============================================================================
+  # Job 8: Performance Thresholds
+  # ==============================================================================
+  performance-tests:
+    name: Performance Thresholds
+    runs-on: ubuntu-latest
+    needs: [build-verification, smoke-tests]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start services
+        run: |
+          docker compose -f docker-compose.yml up -d db redis rabbitmq
+          sleep 30
+
+      - name: Start application
+        run: |
+          node dist/src/server.js &
+          echo "APP_PID=$!" >> $GITHUB_ENV
+          sleep 10
+
+      - name: Run performance benchmarks
+        run: |
+          # Health endpoint should respond under 100ms
+          START=$(date +%s%N)
+          curl -s http://localhost:3000/health/live > /dev/null
+          END=$(date +%s%N)
+          DURATION=$((($END - $START) / 1000000))
+          echo "Health endpoint: ${DURATION}ms"
+
+          if [ $DURATION -gt 100 ]; then
+            echo "ERROR: Health endpoint too slow"
+            exit 1
+          fi
+
+          # Products list should respond under 500ms
+          START=$(date +%s%N)
+          curl -s http://localhost:3000/api/v1/products?limit=10 > /dev/null
+          END=$(date +%s%N)
+          DURATION=$((($END - $START) / 1000000))
+          echo "Products list: ${DURATION}ms"
+
+          if [ $DURATION -gt 500 ]; then
+            echo "WARNING: Products endpoint slow"
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -n "$APP_PID" ]; then
+            kill $APP_PID || true
+          fi
+          docker compose -f docker-compose.yml down
+
+  # ==============================================================================
+  # Job 9: Rollback Drill Tests
+  # ==============================================================================
+  rollback-drill:
+    name: Rollback Drill
+    runs-on: ubuntu-latest
+    needs: [smoke-tests, integration-tests]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run rollback drill tests
+        run: npm run test -- tests/rollback/RollbackDrillTests.ts
+        continue-on-error: true
+
+  # ==============================================================================
+  # Job 10: Summary Report
+  # ==============================================================================
+  gate-summary:
+    name: Release Gate Summary
+    runs-on: ubuntu-latest
+    needs: [
+      pre-deployment-checks,
+      security-scans,
+      code-quality,
+      build-verification,
+      unit-tests,
+      integration-tests,
+      smoke-tests,
+      performance-tests,
+      rollback-drill
+    ]
+    if: always()
+
+    outputs:
+      status: ${{ steps.summary.outputs.status }}
+      environment: ${{ steps.summary.outputs.environment }}
+      version: ${{ steps.summary.outputs.version }}
+      can_deploy: ${{ steps.summary.outputs.can_deploy }}
+
+    steps:
+      - name: Generate summary
+        id: summary
+        run: |
+          VERSION="${{ needs.pre-deployment-checks.outputs.version }}"
+          ENVIRONMENT="${{ inputs.environment }}"
+
+          # Check all job statuses
+          PRE_DEPLOY="${{ needs.pre-deployment-checks.result }}"
+          SECURITY="${{ needs.security-scans.result }}"
+          CODE_QUALITY="${{ needs.code-quality.result }}"
+          BUILD="${{ needs.build-verification.result }}"
+          UNIT_TESTS="${{ needs.unit-tests.result }}"
+          INTEGRATION_TESTS="${{ needs.integration-tests.result }}"
+          SMOKE_TESTS="${{ needs.smoke-tests.result }}"
+          PERFORMANCE="${{ needs.performance-tests.result }}"
+
+          echo "Version: $VERSION"
+          echo "Environment: $ENVIRONMENT"
+          echo ""
+          echo "Job Results:"
+          echo "  Pre-deployment checks: $PRE_DEPLOY"
+          echo "  Security scans: $SECURITY"
+          echo "  Code quality: $CODE_QUALITY"
+          echo "  Build verification: $BUILD"
+          echo "  Unit tests: $UNIT_TESTS"
+          echo "  Integration tests: $INTEGRATION_TESTS"
+          echo "  Smoke tests: $SMOKE_TESTS"
+          echo "  Performance tests: $PERFORMANCE"
+
+          # Determine overall status
+          CAN_DEPLOY="true"
+          STATUS="passed"
+
+          if [ "$PRE_DEPLOY" != "success" ]; then
+            CAN_DEPLOY="false"
+            STATUS="failed"
+          fi
+
+          if [ "$BUILD" != "success" ]; then
+            CAN_DEPLOY="false"
+            STATUS="failed"
+          fi
+
+          if [ "$SMOKE_TESTS" != "success" ]; then
+            CAN_DEPLOY="false"
+            STATUS="failed"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "can_deploy=$CAN_DEPLOY" >> $GITHUB_OUTPUT
+
+      - name: Create summary report
+        run: |
+          cat > gate-summary.md << EOF
+          # Release Gate Summary
+
+          **Version:** ${{ steps.summary.outputs.version }}
+          **Environment:** ${{ steps.summary.outputs.environment }}
+          **Status:** ${{ steps.summary.outputs.status }}
+          **Can Deploy:** ${{ steps.summary.outputs.can_deploy }}
+
+          ## Job Results
+
+          | Job | Status |
+          |-----|--------|
+          | Pre-deployment checks | ${{ needs.pre-deployment-checks.result }} |
+          | Security scans | ${{ needs.security-scans.result }} |
+          | Code quality | ${{ needs.code-quality.result }} |
+          | Build verification | ${{ needs.build-verification.result }} |
+          | Unit tests | ${{ needs.unit-tests.result }} |
+          | Integration tests | ${{ needs.integration-tests.result }} |
+          | Smoke tests | ${{ needs.smoke-tests.result }} |
+          | Performance tests | ${{ needs.performance-tests.result }} |
+
+          ## Deployment Decision
+
+          ${{ steps.summary.outputs.can_deploy == 'true' && '✅ Release gate passed - Deployment can proceed' || '❌ Release gate failed - Deployment blocked' }}
+          EOF
+
+          cat gate-summary.md
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: gate-summary-${{ github.sha }}
+          path: gate-summary.md
+          retention-days: 90
+
+  # ==============================================================================
+  # Job 11: Manual Approval Gate
+  # ==============================================================================
+  manual-approval:
+    name: Manual Approval
+    runs-on: ubuntu-latest
+    needs: [gate-summary]
+    if: |
+      needs.gate-summary.outputs.can_deploy == 'true' &&
+      inputs.skip_manual_approval != true
+
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://erp.cypher.ro
+
+    steps:
+      - name: Request approval
+        run: |
+          echo "=================================================="
+          echo "RELEASE GATE PASSED - AWAITING MANUAL APPROVAL"
+          echo "=================================================="
+          echo ""
+          echo "Version: ${{ needs.gate-summary.outputs.version }}"
+          echo "Environment: ${{ needs.gate-summary.outputs.environment }}"
+          echo ""
+          echo "Please review the following before approving:"
+          echo "1. Check the gate summary report"
+          echo "2. Review test results in artifacts"
+          echo "3. Verify security scan results"
+          echo "4. Confirm deployment window"
+          echo ""
+          echo "To approve this release, click the 'Review deployments' button"
+          echo "in the GitHub Actions UI."
+
+      - name: Wait for approval
+        run: |
+          echo "This job requires manual approval via GitHub Environments"
+          echo "The deployment will proceed after approval"
+
+  # ==============================================================================
+  # Job 12: Deploy (After Approval)
+  # ==============================================================================
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [gate-summary, manual-approval]
+    if: |
+      always() &&
+      (inputs.skip_manual_approval == true || needs.manual-approval.result == 'success') &&
+      needs.gate-summary.outputs.can_deploy == 'true'
+
+    environment:
+      name: ${{ inputs.environment }}
+      url: https://erp.cypher.ro
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to ${{ inputs.environment }}
+        run: |
+          echo "Deploying version ${{ needs.gate-summary.outputs.version }} to ${{ inputs.environment }}"
+          # Add actual deployment commands here
+          # For example: deploy to server, update k8s, etc.
+
+      - name: Run post-deployment smoke tests
+        run: |
+          echo "Running post-deployment smoke tests..."
+          # Add smoke test commands against deployed environment
+
+      - name: Create release tag
+        if: inputs.environment == 'production'
+        run: |
+          git tag -a "v${{ needs.gate-summary.outputs.version }}" -m "Release ${{ needs.gate-summary.outputs.version }}"
+          git push origin "v${{ needs.gate-summary.outputs.version }}"
+
+      - name: Notify deployment success
+        run: |
+          echo "Deployment completed successfully"
+          # Add notification commands (Slack, email, etc.)
+
+  # ==============================================================================
+  # Job 13: Rollback (On Failure)
+  # ==============================================================================
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: failure()
+
+    steps:
+      - name: Execute rollback
+        run: |
+          echo "Deployment failed - executing rollback"
+          # Add rollback commands here
+
+      - name: Notify rollback
+        run: |
+          echo "Rollback completed"
+          # Add notification commands

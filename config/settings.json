@@ -1,0 +1,26 @@
+{
+  "general": {
+    "company_name": "Test Company"
+  },
+  "b2b": {
+    "catalogVisibility": "public",
+    "showPrices": false,
+    "showStock": false,
+    "allowRegistration": true,
+    "autoApprove": false,
+    "minOrderValue": "500",
+    "defaultCreditLimit": "5000"
+  },
+  "integrations": {
+    "smartbill": {
+      "username": "test@ledux.ro",
+      "token": "test-token-123",
+      "cif": "RO35194414"
+    },
+    "woocommerce": {
+      "url": "https://ledux.ro",
+      "consumerKey": "ck_test",
+      "consumerSecret": "cs_test"
+    }
+  }
+}

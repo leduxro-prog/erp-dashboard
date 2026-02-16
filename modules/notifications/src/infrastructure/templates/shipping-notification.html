@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comanda Expediată</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background: #f9fafb; }
+    .email-container { background: #ffffff; }
+    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 40px 20px; text-align: center; color: white; }
+    .logo { max-width: 150px; height: auto; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .content { padding: 40px 20px; }
+    .content h2 { color: #1e40af; font-size: 22px; margin-bottom: 15px; font-weight: 600; }
+    .content p { margin-bottom: 15px; color: #555; font-size: 14px; }
+    .tracking-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #16a34a; padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .tracking-box h3 { color: #16a34a; margin-bottom: 10px; font-size: 16px; }
+    .tracking-number { background: white; border-radius: 4px; padding: 12px; margin: 10px 0; font-family: 'Courier New', monospace; font-weight: 700; color: #1e40af; word-break: break-all; }
+    .shipping-carrier { color: #666; font-size: 13px; margin-top: 8px; }
+    .info-box { background: #f0f4f8; border-left: 4px solid #1e40af; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; }
+    .timeline { margin: 25px 0; }
+    .timeline-item { display: flex; margin-bottom: 15px; }
+    .timeline-marker { width: 24px; height: 24px; background: #16a34a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; flex-shrink: 0; margin-right: 15px; margin-top: 2px; font-size: 12px; }
+    .timeline-marker.pending { background: #cbd5e1; }
+    .timeline-marker.inactive { background: #e5e7eb; }
+    .timeline-content { flex-grow: 1; }
+    .timeline-content h4 { font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 3px; }
+    .timeline-content p { font-size: 13px; color: #666; margin: 0; }
+    .delivery-estimate { background: #f9fafb; border: 1px solid #e5e7eb; padding: 15px; border-radius: 6px; margin: 20px 0; }
+    .delivery-estimate strong { display: block; color: #1e40af; margin-bottom: 8px; font-size: 15px; }
+    .delivery-estimate p { font-size: 13px; color: #555; margin: 5px 0; }
+    .button { display: inline-block; background: #1e40af; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 500; margin-top: 15px; font-size: 14px; }
+    .button:hover { background: #1e3a8a; }
+    .button-secondary { background: #64748b; }
+    .button-secondary:hover { background: #475569; }
+    .footer { background: #1f2937; color: #e5e7eb; padding: 30px 20px; text-align: center; font-size: 12px; }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { max-width: 100%; }
+      .header { padding: 30px 15px; }
+      .content { padding: 25px 15px; }
+      .timeline-item { margin-bottom: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <img src="https://ledux.ro/logo.png" alt="Ledux.ro" class="logo">
+        <h1>Comanda în Curs de Livrare</h1>
+        <p>Coletul dvs. a fost expediat!</p>
+      </div>
+
+      <div class="content">
+        <h2>Bună, {{customerName}}!</h2>
+        <p>Comandă dvs. {{orderNumber}} a fost expediată cu succes și este în curs de livrare.</p>
+
+        <div class="tracking-box">
+          <h3>Urmărire Colet</h3>
+          <p style="font-size: 13px; margin-bottom: 10px; color: #666;">Codul de urmărire pentru comanda dvs.:</p>
+          <div class="tracking-number">{{trackingNumber}}</div>
+          <div class="shipping-carrier">
+            <strong>Cărăuș:</strong> {{carrierName}}<br>
+            <strong>Data expedierii:</strong> {{shippingDate}}<br>
+            {{#if carrierUrl}}
+            <a href="{{carrierUrl}}/{{trackingNumber}}" style="color: #1e40af; text-decoration: none;">Urmărire directă la {{carrierName}} →</a>
+            {{/if}}
+          </div>
+        </div>
+
+        <h3 style="color: #1f2937; font-size: 16px; margin-top: 25px; margin-bottom: 15px;">Starea Livrării</h3>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-marker">✓</div>
+            <div class="timeline-content">
+              <h4>Comandă Plasată</h4>
+              <p>{{orderDate}}</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker">✓</div>
+            <div class="timeline-content">
+              <h4>Comandă Procesată</h4>
+              <p>{{processingDate}}</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker">✓</div>
+            <div class="timeline-content">
+              <h4>Expediat</h4>
+              <p>{{shippingDate}}</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker pending">⧗</div>
+            <div class="timeline-content">
+              <h4>În Tranzit</h4>
+              <p>Coletul se află în drumul către dvs.</p>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-marker inactive">○</div>
+            <div class="timeline-content">
+              <h4>Livrat</h4>
+              <p>Data estimată: {{estimatedDeliveryDate}}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="delivery-estimate">
+          <strong>Data Estimată de Livrare</strong>
+          <p>{{estimatedDeliveryDate}}</p>
+          <p style="font-size: 12px; color: #999; margin-top: 8px;">*Data poate varia în funcție de condițiile de transport și localizarea dvs.</p>
+        </div>
+
+        <div class="info-box">
+          <strong>Informații de Livrare</strong><br>
+          {{customerName}}<br>
+          {{deliveryAddress}}<br>
+          {{deliveryCity}}, {{deliveryPostcode}}<br>
+          Telefon: {{customerPhone}}
+        </div>
+
+        <p style="margin-top: 25px;">Pentru urmărire în timp real și actualizări de stare, apăsați butonul de mai jos:</p>
+
+        <a href="{{trackingLink}}" class="button">Urmărește Coletul</a>
+
+        <p style="margin-top: 25px; font-size: 13px; color: #999;">Pentru probleme legate de livrare, contactați <a href="mailto:{{supportEmail}}" style="color: #1e40af;">echipa noastră de suport</a></p>
+      </div>
+
+      <div class="footer">
+        <div style="margin-bottom: 15px;">
+          <strong>Ledux.ro</strong><br>
+          Soluții Premium pentru Iluminat LED<br>
+          <a href="https://ledux.ro">www.ledux.ro</a>
+        </div>
+        <div>
+          <a href="{{unsubscribeLink}}">Dezabonare</a> |
+          <a href="{{preferencesLink}}">Preferințe Email</a>
+        </div>
+        <div style="margin-top: 15px; opacity: 0.8;">
+          Copyright &copy; {{currentYear}} Ledux.ro. Toate drepturile rezervate.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

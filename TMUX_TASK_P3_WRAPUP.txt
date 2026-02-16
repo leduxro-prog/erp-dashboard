@@ -1,0 +1,19 @@
+P3 este implementat si validarile principale sunt verzi.
+
+Te rog fa doar wrap-up final in /opt/cypher-erp:
+
+1) investigheaza warning-ul Jest legat de open handles (non-blocking)
+   - ruleaza testele cu --detectOpenHandles pe suitele afectate
+   - identifica sursa probabila
+   - aplica fix minim daca e clar si sigur
+
+2) ruleaza din nou validarea finala:
+   - npx tsc --noEmit
+   - npx jest modules/orders/tests tests/unit/TwoFactorAuthService.test.ts modules/smartbill/tests/application/CreateInvoice.test.ts modules/marketing/tests/application/ValidateDiscountCode.test.ts --passWithNoTests
+
+3) NU face commit
+
+Output cerut:
+- ce cauza are open handle warning (sau best effort daca nu e determinist)
+- ce fisiere ai schimbat (daca ai schimbat)
+- status final: pass/fail pentru comenzi

@@ -1,0 +1,253 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.cypher.ro/events/stock/stock-changed-v1.json",
+  "title": "Stock Changed Event v1",
+  "description": "Emitted when inventory levels change for a product or variant. This is a critical P0 event that triggers stock level updates, reorder notifications, and backorder processing.",
+  "type": "object",
+  "required": [
+    "product_id",
+    "sku",
+    "changed_at",
+    "change_type",
+    "quantity_change",
+    "new_quantity"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Product identifier"
+    },
+    "variant_id": {
+      "type": "string",
+      "description": "Variant identifier (null for products without variants)"
+    },
+    "sku": {
+      "type": "string",
+      "description": "SKU of the product/variant"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the stock changed"
+    },
+    "changed_by": {
+      "type": "string",
+      "description": "User ID or system identifier that caused the change"
+    },
+    "changed_by_type": {
+      "type": "string",
+      "enum": ["admin", "system", "customer", "import", "sync", "reorder"],
+      "default": "admin",
+      "description": "Type of entity that caused the change"
+    },
+    "change_type": {
+      "type": "string",
+      "enum": [
+        "order_reserved",
+        "order_released",
+        "order_shipped",
+        "purchase_received",
+        "manual_adjustment",
+        "stock_take",
+        "transfer_received",
+        "transfer_sent",
+        "return_received",
+        "return_sent",
+        "damage_recorded",
+        "loss_recorded",
+        "reorder_received",
+        "bulk_update"
+      ],
+      "description": "Type of stock change"
+    },
+    "quantity_change": {
+      "type": "number",
+      "description": "Amount of stock changed (positive for increase, negative for decrease)"
+    },
+    "previous_quantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Stock quantity before the change"
+    },
+    "new_quantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Stock quantity after the change"
+    },
+    "previous_on_hand": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "On-hand quantity before the change"
+    },
+    "new_on_hand": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "On-hand quantity after the change"
+    },
+    "previous_reserved": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Reserved quantity before the change"
+    },
+    "new_reserved": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Reserved quantity after the change"
+    },
+    "previous_available": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Available quantity (on-hand - reserved) before the change"
+    },
+    "new_available": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Available quantity (on-hand - reserved) after the change"
+    },
+    "stock_status": {
+      "type": "string",
+      "enum": ["in_stock", "low_stock", "out_of_stock", "backordered", "discontinued"],
+      "description": "Current stock status after the change"
+    },
+    "previous_stock_status": {
+      "type": "string",
+      "enum": ["in_stock", "low_stock", "out_of_stock", "backordered", "discontinued"],
+      "description": "Previous stock status before the change"
+    },
+    "threshold_low_stock": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Low stock threshold configured for this product"
+    },
+    "threshold_reorder": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Reorder point configured for this product"
+    },
+    "reorder_quantity": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Quantity to reorder"
+    },
+    "should_reorder": {
+      "type": "boolean",
+      "description": "Whether this change triggers a reorder"
+    },
+    "location": {
+      "type": "object",
+      "description": "Stock location information",
+      "properties": {
+        "warehouse_id": {
+          "type": "string",
+          "description": "Warehouse identifier"
+        },
+        "warehouse_name": {
+          "type": "string",
+          "description": "Warehouse name"
+        },
+        "bin_location": {
+          "type": "string",
+          "description": "Bin/shelf location"
+        },
+        "zone": {
+          "type": "string",
+          "description": "Zone within warehouse"
+        }
+      }
+    },
+    "related_document": {
+      "type": "object",
+      "description": "Related document that caused the stock change",
+      "properties": {
+        "document_type": {
+          "type": "string",
+          "enum": ["order", "purchase_order", "transfer", "return", "adjustment", "stock_take"],
+          "description": "Type of related document"
+        },
+        "document_id": {
+          "type": "string",
+          "description": "Document identifier"
+        },
+        "document_number": {
+          "type": "string",
+          "description": "Document number"
+        },
+        "document_line_id": {
+          "type": "string",
+          "description": "Line item identifier within the document"
+        }
+      }
+    },
+    "lot_number": {
+      "type": "string",
+      "description": "Lot/batch number (for products with lot tracking)"
+    },
+    "serial_number": {
+      "type": "string",
+      "description": "Serial number (for products with serial tracking)"
+    },
+    "expiration_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Expiration date (for products with expiration tracking)"
+    },
+    "unit_cost": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Unit cost for stock valuation"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "Currency code (e.g., EUR, RON, USD)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about the stock change"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata"
+    }
+  },
+  "examples": [
+    {
+      "product_id": "PRD-00123",
+      "variant_id": "VAR-001-A",
+      "sku": "PRD-001-A",
+      "changed_at": "2026-02-13T10:00:00.000Z",
+      "changed_by": "system",
+      "changed_by_type": "system",
+      "change_type": "order_reserved",
+      "quantity_change": -10,
+      "previous_quantity": 50,
+      "new_quantity": 40,
+      "previous_on_hand": 50,
+      "new_on_hand": 50,
+      "previous_reserved": 0,
+      "new_reserved": 10,
+      "previous_available": 50,
+      "new_available": 40,
+      "stock_status": "in_stock",
+      "previous_stock_status": "in_stock",
+      "threshold_low_stock": 10,
+      "threshold_reorder": 15,
+      "reorder_quantity": 50,
+      "should_reorder": false,
+      "location": {
+        "warehouse_id": "WH-001",
+        "warehouse_name": "Main Warehouse",
+        "bin_location": "A-10-05",
+        "zone": "Zone A"
+      },
+      "related_document": {
+        "document_type": "order",
+        "document_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "document_number": "ORD-00012345",
+        "document_line_id": "f1e2d3c4-b5a6-9876-fedc-987654321098"
+      },
+      "unit_cost": 100.00,
+      "currency": "EUR"
+    }
+  ]
+}

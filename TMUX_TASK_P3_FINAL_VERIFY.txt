@@ -1,0 +1,23 @@
+Ruleaza FINAL VERIFICATION pentru P3 in /opt/cypher-erp si livreaza raport scurt, factual.
+
+Obiectiv:
+1) confirma ce item-uri P3 sunt inchise
+2) identifica exact ce item-uri mai raman (daca exista)
+3) valideaza ca nu sunt regresii pe zonele modificate
+
+Pasi:
+- ruleaza npx tsc --noEmit
+- ruleaza testele relevante pe modulele afectate:
+  - modules/orders/tests
+  - tests/unit/TwoFactorAuthService.test.ts
+  - modules/smartbill/tests/application/CreateInvoice.test.ts
+  - modules/marketing/tests/application/ValidateDiscountCode.test.ts
+  - ce exista relevant pentru financial-accounting si ai-assistant
+- daca ceva pica, fixeaza minim si reruleaza
+- NU face commit
+
+Output cerut:
+- lista "Closed P3"
+- lista "Remaining P3" (sau explicit "none")
+- comenzi rulate + rezultat (pass/fail)
+- fisiere modificate in acest ultim pas

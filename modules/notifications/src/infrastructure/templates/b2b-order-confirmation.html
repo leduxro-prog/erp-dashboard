@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirmare Comandă B2B</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background: #f9fafb; }
+    .email-container { background: #ffffff; }
+    .header { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 40px 20px; text-align: center; color: white; }
+    .logo { max-width: 150px; height: auto; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .content { padding: 40px 20px; }
+    .content h2 { color: #1e40af; font-size: 22px; margin-bottom: 15px; font-weight: 600; }
+    .content h3 { color: #1f2937; font-size: 16px; margin: 20px 0 15px 0; font-weight: 600; }
+    .content p { margin-bottom: 15px; color: #555; font-size: 14px; }
+    .order-info { background: #f0f4f8; border-left: 4px solid #1e40af; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; }
+    .order-info strong { color: #1e40af; display: block; margin-bottom: 8px; }
+    .order-info p { margin: 5px 0; color: #555; }
+    .order-number { background: #ffffff; border: 2px solid #1e40af; padding: 15px; margin-top: 10px; border-radius: 4px; text-align: center; }
+    .order-number span { font-size: 24px; font-weight: bold; color: #1e40af; letter-spacing: 2px; }
+    .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+    .items-table th { background: #f8fafc; padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb; color: #374151; }
+    .items-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+    .items-table .text-right { text-align: right; }
+    .items-table .total-row td { font-weight: bold; background: #f8fafc; border-top: 2px solid #1e40af; }
+    .payment-info { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .payment-info strong { color: #b45309; display: block; margin-bottom: 10px; }
+    .payment-info p { margin: 5px 0; color: #92400e; font-size: 13px; }
+    .shipping-info { background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .shipping-info strong { color: #047857; display: block; margin-bottom: 10px; }
+    .shipping-info p { margin: 5px 0; color: #065f46; font-size: 13px; }
+    .button { display: inline-block; background: #1e40af; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 500; margin-top: 15px; font-size: 14px; }
+    .button:hover { background: #1e3a8a; }
+    .footer { background: #1f2937; color: #e5e7eb; padding: 30px 20px; text-align: center; font-size: 12px; }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    .highlight { color: #1e40af; font-weight: 600; }
+    .divider { border-top: 1px solid #e5e7eb; margin: 20px 0; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { max-width: 100%; }
+      .header { padding: 30px 15px; }
+      .content { padding: 25px 15px; }
+      .items-table { font-size: 12px; }
+      .items-table th, .items-table td { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <img src="https://ledux.ro/logo.png" alt="Ledux.ro" class="logo">
+        <h1>Comandă Confirmată</h1>
+        <p>Vă mulțumim pentru comanda dvs. B2B!</p>
+      </div>
+
+      <div class="content">
+        <h2>Bună, {{companyName}}!</h2>
+        <p>Comanda dvs. a fost plasată cu succes și este în curs de procesare. Mai jos găsiți detaliile comenzii:</p>
+
+        <div class="order-info">
+          <strong>Număr Comandă</strong>
+          <div class="order-number">
+            <span>{{orderNumber}}</span>
+          </div>
+          <p style="margin-top: 10px;"><strong>Data comenzii:</strong> {{orderDate}}</p>
+        </div>
+
+        <h3>Produse Comandate</h3>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Produs</th>
+              <th class="text-right">Cant.</th>
+              <th class="text-right">Preț Unitar</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each items}}
+            <tr>
+              <td>
+                <strong>{{this.product_name}}</strong>
+                <br><small style="color: #6b7280;">SKU: {{this.sku}}</small>
+              </td>
+              <td class="text-right">{{this.quantity}}</td>
+              <td class="text-right">{{this.unit_price}} RON</td>
+              <td class="text-right">{{this.total_price}} RON</td>
+            </tr>
+            {{/each}}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-right">Subtotal:</td>
+              <td class="text-right">{{subtotal}} RON</td>
+            </tr>
+            {{#if discountAmount}}
+            <tr>
+              <td colspan="3" class="text-right">Discount ({{discountPercent}}%):</td>
+              <td class="text-right" style="color: #059669;">-{{discountAmount}} RON</td>
+            </tr>
+            {{/if}}
+            <tr>
+              <td colspan="3" class="text-right">TVA (19%):</td>
+              <td class="text-right">{{vatAmount}} RON</td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="3" class="text-right">TOTAL:</td>
+              <td class="text-right">{{total}} RON</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="payment-info">
+          <strong>💳 Informații Plată</strong>
+          <p><strong>Metodă:</strong> {{paymentMethodLabel}}</p>
+          <p><strong>Termen plată:</strong> Net {{paymentTermsDays}} zile</p>
+          <p><strong>Data scadenței:</strong> {{paymentDueDate}}</p>
+          <p><strong>Status:</strong> În așteptare</p>
+        </div>
+
+        <div class="shipping-info">
+          <strong>🚚 Informații Livrare</strong>
+          <p><strong>Adresa:</strong> {{shippingAddress}}</p>
+          <p><strong>Contact:</strong> {{contactName}}</p>
+          <p><strong>Telefon:</strong> {{contactPhone}}</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <h3>Credit Disponibil</h3>
+        <p>
+          Limită credit: <span class="highlight">{{creditLimit}} RON</span><br>
+          Credit utilizat: <span class="highlight">{{creditUsed}} RON</span><br>
+          Credit disponibil: <span class="highlight">{{creditAvailable}} RON</span>
+        </p>
+
+        {{#if notes}}
+        <div style="background: #f8fafc; padding: 15px; border-radius: 4px; margin-top: 20px;">
+          <strong>Observații:</strong>
+          <p style="margin: 5px 0 0 0; font-style: italic; color: #6b7280;">{{notes}}</p>
+        </div>
+        {{/if}}
+
+        <div style="margin-top: 30px;">
+          <a href="{{orderTrackingUrl}}" class="button">Urmărește Comanda</a>
+        </div>
+
+        <p style="margin-top: 25px; font-size: 13px; color: #666;">
+          Pentru întrebări sau modificări, contactați echipa noastră de suport B2B la 
+          <a href="mailto:{{supportEmail}}" style="color: #1e40af;">{{supportEmail}}</a>
+        </p>
+      </div>
+
+      <div class="footer">
+        <div style="margin-bottom: 15px;">
+          <strong>Ledux.ro</strong><br>
+          Soluții Premium pentru Iluminat LED<br>
+          <a href="https://ledux.ro">www.ledux.ro</a>
+        </div>
+        <div>
+          <a href="{{ordersUrl}}">Istoric Comenzi</a> |
+          <a href="{{profileUrl}}">Profil B2B</a> |
+          <a href="{{supportUrl}}">Suport</a>
+        </div>
+        <div style="margin-top: 15px; opacity: 0.8;">
+          Copyright &copy; {{currentYear}} Ledux.ro. Toate drepturile rezervate.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

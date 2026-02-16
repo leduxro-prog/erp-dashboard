@@ -1,0 +1,181 @@
+{
+  "module": {
+    "name": "workflow-engine",
+    "version": "1.0.0",
+    "description": "Configurable workflow and approval engine for all modules",
+    "author": "Cypher ERP Team",
+    "license": "Proprietary",
+    "keywords": [
+      "workflow",
+      "approval",
+      "engine",
+      "multi-step",
+      "generic",
+      "configurable"
+    ]
+  },
+  "system": {
+    "dependencies": ["users"],
+    "featureFlag": "WORKFLOW_ENGINE",
+    "publishedEvents": [
+      "workflow.started",
+      "workflow.step_completed",
+      "workflow.approved",
+      "workflow.rejected",
+      "workflow.escalated"
+    ],
+    "subscribedEvents": [
+      "po.created",
+      "leave.requested",
+      "journal.created",
+      "requisition.created"
+    ]
+  },
+  "database": {
+    "tables": [
+      "workflow_templates",
+      "workflow_instances",
+      "workflow_delegations",
+      "workflow_analytics"
+    ],
+    "indexes": [
+      "workflow_templates(entityType, version)",
+      "workflow_templates(entityType, isActive)",
+      "workflow_instances(entityType, entityId)",
+      "workflow_instances(templateId)",
+      "workflow_instances(status)",
+      "workflow_instances(currentStepId)",
+      "workflow_delegations(fromUserId, toUserId)",
+      "workflow_delegations(expiresAt)",
+      "workflow_analytics(templateId, entityType)",
+      "workflow_analytics(recordedAt)"
+    ]
+  },
+  "cache": {
+    "ttls": {
+      "template": 3600,
+      "instance": 300,
+      "pending_approvals": 60,
+      "analytics": 1800
+    },
+    "patterns": [
+      "wf:template:*",
+      "wf:template_entity:*",
+      "wf:instance:*",
+      "wf:instance_entity:*",
+      "wf:pending_approvals:*",
+      "wf:analytics:*"
+    ]
+  },
+  "api": {
+    "baseUrl": "/api/v1/workflow-engine",
+    "endpoints": {
+      "templates": {
+        "create": "POST /templates",
+        "list": "GET /templates",
+        "get": "GET /templates/:id",
+        "update": "PUT /templates/:id",
+        "delete": "DELETE /templates/:id"
+      },
+      "instances": {
+        "create": "POST /instances",
+        "list": "GET /instances",
+        "get": "GET /instances/:id",
+        "getByEntity": "GET /instances/entity/:entityType/:entityId"
+      },
+      "approvals": {
+        "approve": "POST /instances/:id/approve",
+        "pending": "GET /pending-approvals"
+      },
+      "escalation": {
+        "escalate": "POST /instances/:id/escalate"
+      },
+      "analytics": {
+        "getAnalytics": "GET /analytics/templates/:id"
+      }
+    }
+  },
+  "backgroundJobs": {
+    "escalationChecker": {
+      "interval": "5 minutes",
+      "description": "Check for overdue workflows and escalate",
+      "enabled": true
+    },
+    "analyticsAggregation": {
+      "interval": "1 hour",
+      "description": "Aggregate workflow analytics data",
+      "enabled": true
+    }
+  },
+  "validation": {
+    "schemas": [
+      "createTemplateSchema",
+      "updateTemplateSchema",
+      "createInstanceSchema",
+      "approveSchema",
+      "escalateSchema",
+      "delegateSchema",
+      "paginationSchema"
+    ]
+  },
+  "errors": {
+    "codes": [
+      "TEMPLATE_NOT_FOUND",
+      "INSTANCE_NOT_FOUND",
+      "INVALID_TEMPLATE",
+      "INVALID_INSTANCE_STATE",
+      "UNAUTHORIZED_APPROVAL",
+      "WORKFLOW_COMPLETED",
+      "INVALID_APPROVAL"
+    ]
+  },
+  "features": {
+    "conditionalRouting": true,
+    "multiStepApproval": true,
+    "roleBasedApprovers": true,
+    "timeoutEscalation": true,
+    "auditTrail": true,
+    "analytics": true,
+    "eventDriven": true,
+    "caching": true,
+    "delegation": true,
+    "parallelSteps": false,
+    "webhooks": false,
+    "workflowDesigner": false
+  },
+  "performance": {
+    "maxInstancesPerQuery": 1000,
+    "maxTemplatesPerQuery": 100,
+    "backgroundJobWorkers": 1,
+    "cacheLayers": 2,
+    "indexedQueries": 10
+  },
+  "security": {
+    "requireAuth": true,
+    "validateOwnership": true,
+    "auditAllApprovals": true,
+    "preventDuplicateApprovals": true,
+    "sqlInjectionProtection": true
+  },
+  "monitoring": {
+    "healthCheck": {
+      "enabled": true,
+      "interval": "30 seconds"
+    },
+    "metrics": {
+      "enabled": true,
+      "reportInterval": "60 seconds"
+    },
+    "logging": {
+      "level": "info",
+      "format": "json"
+    }
+  },
+  "testing": {
+    "unitTests": true,
+    "integrationTests": true,
+    "e2eTests": true,
+    "coverage": "80%",
+    "framework": "Jest"
+  }
+}

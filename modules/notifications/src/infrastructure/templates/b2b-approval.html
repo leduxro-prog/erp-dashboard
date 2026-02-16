@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contul B2B Aprobat</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background: #f9fafb; }
+    .email-container { background: #ffffff; }
+    .header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); padding: 40px 20px; text-align: center; color: white; }
+    .logo { max-width: 150px; height: auto; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .content { padding: 40px 20px; }
+    .content h2 { color: #16a34a; font-size: 22px; margin-bottom: 15px; font-weight: 600; }
+    .content h3 { color: #1f2937; font-size: 16px; margin: 20px 0 15px 0; font-weight: 600; }
+    .content p { margin-bottom: 15px; color: #555; font-size: 14px; }
+    .success-box { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 2px solid #16a34a; padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .success-box h2 { color: #16a34a; font-size: 20px; margin-bottom: 10px; }
+    .success-icon { display: inline-block; width: 48px; height: 48px; background: #16a34a; color: white; border-radius: 50%; text-align: center; line-height: 48px; font-size: 24px; margin-right: 15px; vertical-align: middle; }
+    .feature-list { list-style: none; margin: 20px 0; }
+    .feature-list li { padding: 10px 0; padding-left: 30px; position: relative; color: #555; font-size: 14px; }
+    .feature-list li:before { content: "✓"; position: absolute; left: 0; color: #16a34a; font-weight: bold; font-size: 18px; }
+    .account-info { background: #f0f4f8; border-left: 4px solid #1e40af; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; }
+    .account-info strong { color: #1e40af; display: block; margin-bottom: 8px; }
+    .account-info p { margin: 5px 0; color: #555; }
+    .credentials { background: #ffffff; border: 1px solid #e5e7eb; padding: 15px; margin-top: 10px; border-radius: 4px; }
+    .credentials p { margin: 8px 0; font-size: 13px; }
+    .credentials strong { color: #1f2937; }
+    .highlight-text { color: #1e40af; font-weight: 600; }
+    .button { display: inline-block; background: #16a34a; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 500; margin-top: 15px; font-size: 14px; }
+    .button:hover { background: #15803d; }
+    .next-steps { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .next-steps strong { color: #b45309; display: block; margin-bottom: 10px; }
+    .next-steps ol { margin-left: 20px; }
+    .next-steps li { margin: 8px 0; color: #92400e; font-size: 13px; }
+    .footer { background: #1f2937; color: #e5e7eb; padding: 30px 20px; text-align: center; font-size: 12px; }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { max-width: 100%; }
+      .header { padding: 30px 15px; }
+      .content { padding: 25px 15px; }
+      .success-icon { width: 40px; height: 40px; line-height: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <img src="https://ledux.ro/logo.png" alt="Ledux.ro" class="logo">
+        <h1>Contul B2B Aprobat</h1>
+        <p>Binevenit în comunitatea noastră de parteneri B2B!</p>
+      </div>
+
+      <div class="content">
+        <div class="success-box">
+          <div>
+            <span class="success-icon">✓</span>
+            <span style="vertical-align: middle;">
+              <strong>Felicitări!</strong> Cererea dvs. de cont B2B a fost aprobată cu succes.
+            </span>
+          </div>
+        </div>
+
+        <h2>Bună, {{companyName}}!</h2>
+        <p>Suntem bucuroși să anunțăm că cererea dvs. de parteneriat B2B cu Ledux.ro a fost evaluată și aprobată. Contul dvs. este acum activ și gata de utilizare.</p>
+
+        <div class="account-info">
+          <strong>Informații Cont B2B</strong>
+          <p><strong>Companie:</strong> {{companyName}}</p>
+          <p><strong>Contact Principal:</strong> {{contactName}}</p>
+          <p><strong>Email Cont:</strong> {{accountEmail}}</p>
+          <p><strong>Cod Partner:</strong> <span class="highlight-text">{{partnerCode}}</span></p>
+          <div class="credentials">
+            <p><strong>Username:</strong> {{username}}</p>
+            <p><strong>Link Acces:</strong> <a href="{{loginUrl}}" style="color: #1e40af;">Accesează Panoul de Control</a></p>
+          </div>
+        </div>
+
+        <h3>Beneficii ale Contului B2B</h3>
+        <ul class="feature-list">
+          <li>Prețuri speciale și reduceri acordate B2B</li>
+          <li>Termeni de plată personalizați (net 30, net 60, net 90)</li>
+          <li>Acces la catalogul complet cu stocuri în timp real</li>
+          <li>Posibilitatea de a crea comenzi în bloc și de a programa livrări</li>
+          <li>Manager de cont dedicat pentru suport personalizat</li>
+          <li>Acces la rapoarte și analize de comenzi</li>
+          <li>Program de loialitate cu puncte și recompense</li>
+          <li>Invitații la evenimente și lansări de produse exclusive</li>
+        </ul>
+
+        <div class="next-steps">
+          <strong>Pași Următori</strong>
+          <ol>
+            <li>Accesați <a href="{{loginUrl}}" style="color: #b45309; text-decoration: underline;">panoul de control B2B</a> cu datele de mai sus</li>
+            <li>Completați profilul companiei și date de facturare</li>
+            <li>Configurați metodele de plată preferate</li>
+            <li>Explorați catalogul de produse și comenzi anterioare</li>
+            <li>Contactați managerul de cont pentru consultații inițiale</li>
+          </ol>
+        </div>
+
+        <h3>Contact și Suport</h3>
+        <p>Managerul dvs. de cont dedicat este:</p>
+        <p>
+          <strong>{{accountManagerName}}</strong><br>
+          Email: <a href="mailto:{{accountManagerEmail}}" style="color: #1e40af;">{{accountManagerEmail}}</a><br>
+          Telefon: <a href="tel:{{accountManagerPhone}}" style="color: #1e40af;">{{accountManagerPhone}}</a>
+        </p>
+
+        <p style="margin-top: 25px; font-size: 13px; color: #999;">
+          <strong>Notă Importantă:</strong> Din motive de securitate, vă recomandăm să modificați parola la prima autentificare. Nu partajați aceste credențiale cu persoane neautorizate.
+        </p>
+
+        <a href="{{loginUrl}}" class="button">Intră în Cont B2B</a>
+
+        <p style="margin-top: 25px; font-size: 13px; color: #666;">
+          Dacă aveți întrebări sau probleme cu accesul, contactați echipa noastră de suport B2B la <a href="mailto:{{supportEmail}}" style="color: #1e40af;">{{supportEmail}}</a>
+        </p>
+      </div>
+
+      <div class="footer">
+        <div style="margin-bottom: 15px;">
+          <strong>Ledux.ro</strong><br>
+          Soluții Premium pentru Iluminat LED<br>
+          <a href="https://ledux.ro">www.ledux.ro</a>
+        </div>
+        <div>
+          <a href="{{unsubscribeLink}}">Dezabonare</a> |
+          <a href="{{preferencesLink}}">Preferințe Email</a>
+        </div>
+        <div style="margin-top: 15px; opacity: 0.8;">
+          Copyright &copy; {{currentYear}} Ledux.ro. Toate drepturile rezervate.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(psql:*)",
+      "Bash(git checkout:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(perl:*)",
+      "Bash(python3:*)",
+      "Bash(npm install:*)",
+      "Bash(/opt/cypher-erp/modules/smartbill/src/infrastructure/services/OrderServiceConnector.ts:*)",
+      "Bash(npm run build:*)",
+      "Bash(git -C /opt/cypher-erp/modules/smartbill status)",
+      "Bash(npm run type-check:*)",
+      "Bash(git -C diff HEAD src/pages/WhatsAppPage.tsx)",
+      "Bash(ls:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git config:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(chmod:*)",
+      "Bash(git ls-files:*)",
+      "Bash(GIT_TRACE=1 GIT_CURL_VERBOSE=1 git add:*)",
+      "Bash(git commit:*)",
+      "Bash(find:*)"
+    ]
+  }
+}

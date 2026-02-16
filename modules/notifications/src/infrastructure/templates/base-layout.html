@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background: #f9fafb; }
+    .email-container { background: #ffffff; }
+    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 40px 20px; text-align: center; color: white; }
+    .logo { max-width: 150px; height: auto; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; letter-spacing: -0.5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .content { padding: 40px 20px; }
+    .content h2 { color: #1e40af; font-size: 22px; margin-bottom: 15px; font-weight: 600; }
+    .content p { margin-bottom: 15px; color: #555; font-size: 14px; }
+    .content a { color: #1e40af; text-decoration: none; font-weight: 500; }
+    .content a:hover { text-decoration: underline; }
+    .section { margin-bottom: 30px; }
+    .button { display: inline-block; background: #1e40af; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 500; margin-top: 15px; font-size: 14px; }
+    .button:hover { background: #1e3a8a; }
+    .button-secondary { background: #64748b; }
+    .button-secondary:hover { background: #475569; }
+    .info-box { background: #f0f4f8; border-left: 4px solid #1e40af; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 14px; }
+    .info-box.warning { border-left-color: #dc2626; background: #fef2f2; }
+    .info-box.success { border-left-color: #16a34a; background: #f0fdf4; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+    table th { background: #f3f4f6; padding: 12px; text-align: left; font-weight: 600; color: #1f2937; border-bottom: 2px solid #e5e7eb; }
+    table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+    table tr:last-child td { border-bottom: none; }
+    .footer { background: #1f2937; color: #e5e7eb; padding: 30px 20px; text-align: center; font-size: 12px; }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+    .footer-section { margin-bottom: 15px; }
+    .social-links { margin-top: 15px; }
+    .social-links a { display: inline-block; width: 36px; height: 36px; background: #374151; border-radius: 4px; margin: 0 5px; line-height: 36px; text-align: center; }
+    .divider { border: 0; height: 1px; background: #e5e7eb; margin: 30px 0; }
+    .highlight { color: #1e40af; font-weight: 600; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { max-width: 100%; }
+      .header { padding: 30px 15px; }
+      .header h1 { font-size: 22px; }
+      .content { padding: 25px 15px; }
+      .content h2 { font-size: 18px; }
+      table { font-size: 12px; }
+      table th, table td { padding: 8px; }
+      .button { padding: 10px 25px; font-size: 13px; }
+      .footer { padding: 20px 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <img src="https://ledux.ro/logo.png" alt="Ledux.ro" class="logo">
+        <h1>{{headerTitle}}</h1>
+        <p>{{headerSubtitle}}</p>
+      </div>
+
+      <div class="content">
+        {{body}}
+      </div>
+
+      <div class="footer">
+        <div class="footer-section">
+          <strong>Ledux.ro</strong><br>
+          Premium LED Lighting Solutions<br>
+          <a href="https://ledux.ro">www.ledux.ro</a>
+        </div>
+        <div class="footer-section">
+          {{footerText}}
+        </div>
+        <div class="footer-section">
+          <a href="{{unsubscribeLink}}">Unsubscribe</a> |
+          <a href="{{preferencesLink}}">Email Preferences</a>
+        </div>
+        <div class="social-links">
+          <a href="https://facebook.com/ledux.ro" title="Facebook">f</a>
+          <a href="https://instagram.com/ledux.ro" title="Instagram">@</a>
+          <a href="https://linkedin.com/company/ledux" title="LinkedIn">in</a>
+        </div>
+        <div style="margin-top: 20px; opacity: 0.8;">
+          {{copyrightText}}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

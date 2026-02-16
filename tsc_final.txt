@@ -1,0 +1,14 @@
+modules/suppliers/src/domain/entities/SkuMapping.ts(2,3): error TS1131: Property or signature expected.
+modules/suppliers/src/domain/entities/SkuMapping.ts(2,6): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/SkuMapping.ts(3,12): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/SkuMapping.ts(5,19): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/SkuMapping.ts(10,1): error TS1128: Declaration or statement expected.
+modules/suppliers/src/domain/entities/Supplier.ts(17,3): error TS1131: Property or signature expected.
+modules/suppliers/src/domain/entities/Supplier.ts(17,6): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/Supplier.ts(19,6): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/Supplier.ts(26,13): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/Supplier.ts(27,15): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/Supplier.ts(28,10): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/Supplier.ts(29,11): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/Supplier.ts(30,11): error TS1005: ';' expected.
+modules/suppliers/src/domain/entities/Supplier.ts(31,1): error TS1128: Declaration or statement expected.

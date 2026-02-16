@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.cypher.ro/events/common/envelope-v1.json",
+  "title": "Event Envelope v1",
+  "description": "Standard event envelope structure for all events in the Cypher ERP system. Provides unique identification, versioning, traceability, routing information, and priority-based processing.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "producer",
+    "correlation_id",
+    "priority",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this specific event instance (UUID v4)"
+    },
+    "event_type": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$",
+      "description": "Type of event following pattern: domain.action (e.g., 'order.created', 'product.updated')"
+    },
+    "event_version": {
+      "type": "string",
+      "pattern": "^v\\d+$",
+      "description": "Schema version for the event payload (e.g., v1, v2)"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the event occurred"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Service/module that produced the event"
+    },
+    "producer_version": {
+      "type": "string",
+      "description": "Version of the producing service"
+    },
+    "producer_instance": {
+      "type": "string",
+      "description": "Instance identifier of the producer (useful for debugging)"
+    },
+    "correlation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Correlation ID for grouping related events (e.g., single transaction)"
+    },
+    "causation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID of the event that caused this event (causation chain)"
+    },
+    "parent_event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "ID of the parent event in a hierarchical event structure"
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed trace ID for cross-service tracing"
+    },
+    "routing_key": {
+      "type": "string",
+      "description": "RabbitMQ routing key for message routing"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high", "critical"],
+      "description": "Processing priority level"
+    },
+    "payload": {
+      "type": "object",
+      "description": "The actual event payload (structure defined by specific event schema)"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata for additional context",
+      "properties": {
+        "user_id": {
+          "type": "string",
+          "description": "User ID who triggered the event (if applicable)"
+        },
+        "session_id": {
+          "type": "string",
+          "description": "Session ID of the user session"
+        },
+        "ip_address": {
+          "type": "string",
+          "description": "Source IP address"
+        },
+        "user_agent": {
+          "type": "string",
+          "description": "User agent string"
+        },
+        "tenant_id": {
+          "type": "string",
+          "description": "Tenant ID for multi-tenant scenarios"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "event_id": "550e8400-e29b-41d4-a716-446655440000",
+      "event_type": "order.created",
+      "event_version": "v1",
+      "occurred_at": "2026-02-13T12:00:00.000Z",
+      "producer": "order-service",
+      "producer_version": "2.3.1",
+      "producer_instance": "order-service-1",
+      "correlation_id": "660e8400-e29b-41d4-a716-446655440001",
+      "causation_id": "550e8400-e29b-41d4-a716-446655440000",
+      "parent_event_id": "550e8400-e29b-41d4-a716-446655440000",
+      "trace_id": "770e8400-e29b-41d4-a716-446655440002",
+      "routing_key": "order.created.v1",
+      "priority": "normal",
+      "payload": {
+        "order_id": "ORD-001234"
+      },
+      "metadata": {
+        "user_id": "user-123",
+        "session_id": "session-abc"
+      }
+    }
+  ]
+}

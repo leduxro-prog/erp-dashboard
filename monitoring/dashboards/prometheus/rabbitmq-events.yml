@@ -1,0 +1,618 @@
+# ==============================================================================
+# Cypher ERP - RabbitMQ Events Alert Rules
+# ==============================================================================
+# Enterprise-level alerting for RabbitMQ events queue, outbox relay,
+# and message processing pipeline
+#
+# Alert Severities:
+#   - critical: Immediate action required, affects critical business operations
+#   - warning: Degraded performance, investigate soon
+#   - info: Informational, for awareness
+#
+# ==============================================================================
+
+groups:
+  # ==============================================================================
+  # Queue Depth and Lag Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_queue_depth
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsQueueDepthHigh
+        expr: |
+          (
+            outbox_queue_depth{status="pending"} > 500
+            or
+            sum(rabbitmq_queue_messages) without (queue) > 500
+          )
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+          runbook: "https://docs.cypher.ro/runbooks/rabbitmq/queue-depth-high"
+        annotations:
+          summary: "High event queue depth detected"
+          description: |
+            Event queue depth is {{ $value | humanize }} messages.
+            Current threshold: 500 messages for 5 minutes.
+            Queue: {{ $labels.queue | default("outbox_pending") }}
+          dashboard: "RabbitMQ Events Observability"
+          impact: "Events may be delayed in processing"
+
+      - alert: RabbitMQEventsQueueDepthCritical
+        expr: |
+          (
+            outbox_queue_depth{status="pending"} > 1000
+            or
+            sum(rabbitmq_queue_messages) without (queue) > 1000
+          )
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+          runbook: "https://docs.cypher.ro/runbooks/rabbitmq/queue-depth-critical"
+        annotations:
+          summary: "Critical event queue depth detected"
+          description: |
+            Event queue depth is {{ $value | humanize }} messages.
+            This indicates either a consumer slowdown or producer surge.
+            Queue: {{ $labels.queue | default("outbox_pending") }}
+            Action Required: Scale consumers or investigate bottleneck
+          dashboard: "RabbitMQ Events Observability"
+          impact: "Significant event processing delays, possible data loss"
+
+      - alert: RabbitMQEventsConsumerLag
+        expr: |
+          (
+            rate(outbox_events_published_total[5m]) -
+            rate(outbox_events_published_total[5m] offset 1m)
+          ) > rate(outbox_events_published_total[1m]) * 0.5
+          and
+          outbox_queue_depth{status="pending"} > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Consumer lag detected"
+          description: |
+            Events are being produced faster than consumed.
+            Queue depth: {{ $query.outbox_queue_depth }} messages
+            Production rate exceeds consumption rate by >50%
+          dashboard: "RabbitMQ Events Observability"
+
+  # ==============================================================================
+  # Dead Letter Queue (DLQ) Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_dlq
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsDLQMessagesDetected
+        expr: |
+          (
+            sum(outbox_events_discarded_total) > 0
+            or
+            sum(rabbitmq_queue_messages{queue=~".*dlq.*"}) > 0
+          )
+        for: 1m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+          runbook: "https://docs.cypher.ro/runbooks/rabbitmq/dlq-investigation"
+        annotations:
+          summary: "Events in Dead Letter Queue detected"
+          description: |
+            {{ $value | humanize }} events have been discarded or sent to DLQ.
+            This requires investigation to prevent data loss.
+            Queue: {{ $labels.queue | default("N/A") }}
+          dashboard: "RabbitMQ Events Observability"
+          action: "Review event logs and DLQ content"
+
+      - alert: RabbitMQEventsDLQCriticalCount
+        expr: |
+          (
+            increase(outbox_events_discarded_total[10m]) > 50
+            or
+            sum(rabbitmq_queue_messages{queue=~".*dlq.*"}) > 50
+          )
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+          runbook: "https://docs.cypher.ro/runbooks/rabbitmq/dlq-critical"
+        annotations:
+          summary: "Critical number of events in DLQ"
+          description: |
+            More than 50 events in DLQ within 10 minutes.
+            Current count: {{ $value | humanize }}
+            This indicates a systemic issue with event processing.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Immediate investigation required - pause producers if needed"
+
+      - alert: RabbitMQEventsDLQHighRate
+        expr: |
+          rate(outbox_events_discarded_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "High event discard rate"
+          description: |
+            Events are being discarded at {{ $value | humanize }} events/sec.
+            This is above the acceptable threshold of 1 event/sec.
+            Event Type: {{ $labels.event_type | default("unknown") }}
+            Domain: {{ $labels.event_domain | default("unknown") }}
+          dashboard: "RabbitMQ Events Observability"
+
+  # ==============================================================================
+  # Retry Rate Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_retries
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsHighRetryRate
+        expr: |
+          (
+            sum(rate(outbox_events_retried_total[5m])) /
+            (sum(rate(outbox_events_published_total[5m])) + 1)
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "High event retry rate detected"
+          description: |
+            Event retry rate is {{ $value | humanizePercentage }}.
+            Threshold: >10% of published events are being retried.
+            This may indicate transient failures or capacity issues.
+          dashboard: "RabbitMQ Events Observability"
+
+      - alert: RabbitMQEventsExcessiveRetries
+        expr: |
+          (
+            sum(rate(outbox_events_retried_total{attempt="3"}[5m])) /
+            (sum(rate(outbox_events_published_total[5m])) + 1)
+          ) > 0.02
+        for: 5m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Excessive 3rd+ attempt retries"
+          description: |
+            More than 2% of events are on 3rd+ retry attempt.
+            This indicates persistent failures that won't succeed with retries.
+            Review error types and consider manual intervention.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Check error logs and consider manual event replay"
+
+      - alert: RabbitMQEventsSingleEventHighRetries
+        expr: |
+          sum by (event_id) (outbox_events_retried_total) > 10
+        for: 1m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Single event with excessive retries"
+          description: |
+            Event {{ $labels.event_id }} has been retried {{ $value }} times.
+            This event may be problematic and should be investigated.
+          dashboard: "RabbitMQ Events Observability"
+
+  # ==============================================================================
+  # Error Rate Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_errors
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsHighErrorRate
+        expr: |
+          (
+            sum(rate(outbox_events_failed_total[5m])) /
+            (sum(rate(outbox_events_published_total[5m])) + 1)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "High event failure rate"
+          description: |
+            Event failure rate is {{ $value | humanizePercentage }}.
+            Threshold: >5% of events are failing.
+            Error Type: {{ $labels.error_type | default("unknown") }}
+          dashboard: "RabbitMQ Events Observability"
+
+      - alert: RabbitMQEventsCriticalErrorRate
+        expr: |
+          (
+            sum(rate(outbox_events_failed_total[5m])) /
+            (sum(rate(outbox_events_published_total[5m])) + 1)
+          ) > 0.2
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Critical event failure rate"
+          description: |
+            Event failure rate is {{ $value | humanizePercentage }}.
+            More than 20% of events are failing.
+            This is a critical issue requiring immediate attention.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Investigate error logs, pause production if needed"
+
+      - alert: RabbitMQEventsPublishErrorSpike
+        expr: |
+          rate(outbox_publish_errors_total[1m]) > 10
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Publish error spike detected"
+          description: |
+            {{ $value | humanize }} publish errors per second.
+            Error Type: {{ $labels.error_type | default("unknown") }}
+            Error Code: {{ $labels.error_code | default("N/A") }}
+          dashboard: "RabbitMQ Events Observability"
+
+      - alert: RabbitMQEventsDatabaseErrorSpike
+        expr: |
+          rate(outbox_database_errors_total[1m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Database error spike detected"
+          description: |
+            {{ $value | humanize }} database errors per second.
+            Operation: {{ $labels.operation | default("unknown") }}
+            Error Type: {{ $labels.error_type | default("unknown") }}
+          dashboard: "RabbitMQ Events Observability"
+
+  # ==============================================================================
+  # Circuit Breaker Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_circuit_breaker
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsCircuitBreakerOpen
+        expr: |
+          outbox_circuit_breaker_state == 1
+        for: 1m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+          runbook: "https://docs.cypher.ro/runbooks/rabbitmq/circuit-breaker-open"
+        annotations:
+          summary: "Circuit breaker is OPEN"
+          description: |
+            Circuit breaker is OPEN for component {{ $labels.component }}.
+            Event publishing has been stopped to prevent cascading failures.
+            Check RabbitMQ connectivity and health.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Investigate RabbitMQ health, manually reset when ready"
+
+      - alert: RabbitMQEventsCircuitBreakerFrequentTrips
+        expr: |
+          rate(outbox_circuit_breaker_trips_total[10m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Circuit breaker tripping frequently"
+          description: |
+            Circuit breaker has tripped {{ $value | humanize }} times per second.
+            This indicates unstable service behavior.
+            Component: {{ $labels.component }}
+          dashboard: "RabbitMQ Events Observability"
+
+  # ==============================================================================
+  # Connection Health Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_connection
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsConnectionDown
+        expr: |
+          outbox_rabbitmq_connection_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+          runbook: "https://docs.cypher.ro/runbooks/rabbitmq/connection-down"
+        annotations:
+          summary: "RabbitMQ connection lost"
+          description: |
+            Outbox relay has lost connection to RabbitMQ.
+            Events are accumulating in the outbox table.
+            Reconnection attempts are ongoing.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Check RabbitMQ service health and network connectivity"
+
+      - alert: RabbitMQEventsPostgresConnectionDown
+        expr: |
+          outbox_postgres_connection_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "PostgreSQL connection lost"
+          description: |
+            Outbox relay has lost connection to PostgreSQL.
+            Event publishing cannot continue without database access.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Check PostgreSQL service and connection string"
+
+      - alert: RabbitMQEventsNoConsumers
+        expr: |
+          sum(rabbitmq_queue_consumers) == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "No active consumers detected"
+          description: |
+            No consumers are actively processing RabbitMQ queues.
+            Queue: {{ $labels.queue | default("all queues") }}
+            Events will accumulate in the queue.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Check consumer service status and restart if needed"
+
+  # ==============================================================================
+  # Throughput Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_throughput
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsLowThroughput
+        expr: |
+          rate(outbox_events_published_total[5m]) < 1
+        for: 10m
+        labels:
+          severity: info
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Low event throughput"
+          description: |
+            Event throughput is less than 1 event/sec for 10 minutes.
+            Current rate: {{ $value | humanize }} events/sec
+            This may be normal during low-traffic periods.
+          dashboard: "RabbitMQ Events Observability"
+
+      - alert: RabbitMQEventsThroughputDrop
+        expr: |
+          (
+            rate(outbox_events_published_total[5m]) <
+            rate(outbox_events_published_total[5m] offset 10m) * 0.5
+          )
+          and
+          rate(outbox_events_published_total[5m] > 10)
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Significant throughput drop detected"
+          description: |
+            Event throughput has dropped by more than 50%.
+            Previous rate: >10 events/sec
+            Current rate: {{ $value | humanize }} events/sec
+          dashboard: "RabbitMQ Events Observability"
+
+  # ==============================================================================
+  # Processing Time Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_latency
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsProcessingTimeHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(outbox_event_processing_duration_seconds_bucket[5m])) by (le)
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "High event processing time (P95)"
+          description: |
+            P95 event processing time is {{ $value | humanizeDuration }}.
+            Threshold: >5 seconds
+            Event Type: {{ $labels.event_type | default("all") }}
+            Domain: {{ $labels.event_domain | default("all") }}
+          dashboard: "RabbitMQ Events Observability"
+
+      - alert: RabbitMQEventsProcessingTimeCritical
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(outbox_event_processing_duration_seconds_bucket[5m])) by (le)
+          ) > 30
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Critical event processing time (P95)"
+          description: |
+            P95 event processing time is {{ $value | humanizeDuration }}.
+            Threshold: >30 seconds
+            This indicates severe performance degradation.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Investigate consumer performance and system resources"
+
+      - alert: RabbitMQEventsPublishLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(outbox_publish_duration_seconds_bucket[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "High publish latency (P95)"
+          description: |
+            P95 publish latency is {{ $value | humanizeDuration }}.
+            Threshold: >1 second
+            Exchange: {{ $labels.exchange | default("default") }}
+            Routing Key: {{ $labels.routing_key | default("default") }}
+          dashboard: "RabbitMQ Events Observability"
+
+      - alert: RabbitMQEventsBatchProcessingSlow
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(outbox_batch_processing_duration_seconds_bucket[5m])) by (le)
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Slow batch processing detected"
+          description: |
+            P95 batch processing time is {{ $value | humanizeDuration }}.
+            Threshold: >10 seconds
+          dashboard: "RabbitMQ Events Observability"
+
+  # ==============================================================================
+  # Resource Usage Alerts
+  # ==============================================================================
+  - name: rabbitmq_events_resources
+    interval: 30s
+    rules:
+      - alert: RabbitMQEventsMemoryUsageHigh
+        expr: |
+          rabbitmq_process_resident_memory_bytes / rabbitmq_vm_memory_high_watermark_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: rabbitmq
+        annotations:
+          summary: "RabbitMQ memory usage high"
+          description: |
+            RabbitMQ memory usage is at {{ $value | humanizePercentage }}.
+            Threshold: >80% of high watermark
+          dashboard: "RabbitMQ Events Observability"
+          action: "Review RabbitMQ memory usage and message backlog"
+
+      - alert: RabbitMQEventsMemoryUsageCritical
+        expr: |
+          rabbitmq_process_resident_memory_bytes / rabbitmq_vm_memory_high_watermark_bytes > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: rabbitmq
+        annotations:
+          summary: "RabbitMQ memory usage critical"
+          description: |
+            RabbitMQ memory usage is at {{ $value | humanizePercentage }}.
+            Threshold: >95% of high watermark
+            RabbitMQ may start blocking publishers.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Immediate: Reduce queue depth or increase memory limit"
+
+  # ==============================================================================
+  # Composite Health Alert
+  # ==============================================================================
+  - name: rabbitmq_events_health
+    interval: 60s
+    rules:
+      - alert: RabbitMQEventsHealthDegraded
+        expr: |
+          (
+            # High queue depth
+            outbox_queue_depth{status="pending"} > 500
+            or
+            # High retry rate
+            (
+              sum(rate(outbox_events_retried_total[5m])) /
+              (sum(rate(outbox_events_published_total[5m])) + 1)
+            ) > 0.1
+            or
+            # High processing time
+            histogram_quantile(0.95,
+              sum(rate(outbox_event_processing_duration_seconds_bucket[5m])) by (le)
+            ) > 5
+            or
+            # DLQ messages
+            sum(outbox_events_discarded_total) > 10
+          )
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Event pipeline health degraded"
+          description: |
+            Multiple event pipeline health indicators are degraded.
+            This may indicate an emerging issue that needs attention.
+            Review individual alerts for details.
+          dashboard: "RabbitMQ Events Observability"
+
+      - alert: RabbitMQEventsHealthCritical
+        expr: |
+          (
+            # Critical queue depth
+            outbox_queue_depth{status="pending"} > 1000
+            or
+            # Circuit breaker open
+            outbox_circuit_breaker_state == 1
+            or
+            # Connection down
+            outbox_rabbitmq_connection_status == 0
+            or
+            # Critical error rate
+            (
+              sum(rate(outbox_events_failed_total[5m])) /
+              (sum(rate(outbox_events_published_total[5m])) + 1)
+            ) > 0.2
+          )
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq-events
+          component: outbox-relay
+        annotations:
+          summary: "Event pipeline health critical"
+          description: |
+            Critical event pipeline health issue detected.
+            Immediate investigation and action required.
+          dashboard: "RabbitMQ Events Observability"
+          action: "Check all health indicators and take corrective action"

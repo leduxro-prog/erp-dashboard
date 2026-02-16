@@ -1,0 +1,192 @@
+================================================================================
+CYPHER ERP - PostgreSQL 15 Database Schema Summary
+================================================================================
+
+FILE LOCATION: /sessions/hopeful-wizardly-babbage/mnt/erp/cypher/database/schema.sql
+FILE SIZE: 1314 lines
+STATUS: Complete and Ready for Docker Initialization
+
+================================================================================
+SCHEMA COMPONENTS
+================================================================================
+
+1. EXTENSIONS (2)
+   - uuid-ossp (UUID generation)
+   - pgcrypto (Encryption functions)
+
+2. ENUMS (15)
+   - user_role: admin, sales, warehouse, finance, supplier_manager, support, b2b_user, guest
+   - gender: M, F, O, N/A
+   - customer_type: B2B, B2C
+   - customer_status: ACTIVE, INACTIVE, SUSPENDED, BANNED
+   - order_status: quote_pending, quote_sent, quote_accepted, order_confirmed, supplier_order_placed, awaiting_delivery, in_preparation, ready_to_ship, shipped, delivered, invoiced, paid, cancelled, returned
+   - quote_status: draft, sent, viewed, accepted, declined, expired
+   - stock_movement_type: IN, OUT, ADJUSTMENT, RETURN, DAMAGE, LOSS, RETURN_SUPPLIER
+   - configurator_type: TRACK, LED_STRIP
+   - compatibility_rule_type: INCOMPATIBLE, REQUIRES, OPTIONAL
+   - smartbill_sync_type: INVOICE, PROFORMA, STOCK, DELIVERY, PAYMENT
+   - woocommerce_sync_type: PRODUCT, PRICE, STOCK, CATEGORY, IMAGES
+   - whatsapp_direction: SENT, RECEIVED
+   - whatsapp_message_type: CONFIRMATION, STATUS, ALERT, NOTIFICATION, QUOTE
+   - notification_type: EMAIL, WHATSAPP, SMS, IN_APP
+   - b2b_registration_status: PENDING, APPROVED, REJECTED, EXPIRED
+
+3. TABLES (49 total)
+
+   USER DOMAIN (4 tables):
+   - users: Core user management with email validation, 2FA, roles
+   - user_devices: Device tracking and management
+   - user_2fa: Two-factor authentication configuration
+   - password_reset_tokens: Password reset token management
+
+   CUSTOMER DOMAIN (3 tables):
+   - customer_tiers: Tier-based discount and payment term management
+   - customers: B2B and B2C customer profiles with addresses
+   - credit_limits: Per-customer credit limit tracking
+
+   CATEGORY DOMAIN (2 tables):
+   - categories: Product category hierarchy with translations
+   - category_translations: Multi-language category names and descriptions
+
+   PRODUCT DOMAIN (3 tables):
+   - products: Product catalog with pricing, stock, and configurator settings
+   - product_translations: Multi-language product names and descriptions
+   - product_images: Product image management with primary image flag
+
+   SUPPLIER DOMAIN (3 tables):
+   - suppliers: Supplier master data with API integration fields
+   - supplier_products: Supplier-to-product mapping with pricing
+   - supplier_sku_mappings: ERP to supplier SKU mapping
+
+   WAREHOUSE/STOCK DOMAIN (4 tables):
+   - warehouses: Multi-warehouse management with capacity
+   - stock_levels: Real-time inventory levels with reservation tracking
+   - stock_movements: Complete stock transaction history
+   - stock_sync_logs: Audit trail for external system syncs
+
+   PRICING DOMAIN (4 tables):
+   - price_rules: Rule-based pricing with date ranges and priorities
+   - volume_discounts: Quantity-based discount tiers
+   - promotional_prices: Time-limited promotional pricing
+   - customer_prices: Custom pricing per customer-product combination
+
+   QUOTE DOMAIN (3 tables):
+   - quote_templates: Configurable quote templates with branding
+   - quotes: Complete quote lifecycle management
+   - quote_items: Line items for quotes
+
+   ORDER DOMAIN (4 tables):
+   - orders: Complete order management with multi-status workflow
+   - order_items: Order line items with tax/discount tracking
+   - order_status_history: Order status change audit trail
+   - proforma_invoices: Pre-delivery invoice generation
+
+   CONFIGURATOR DOMAIN (6 tables):
+   - configurator_sessions: User configuration sessions
+   - track_configurations: LED track lighting configuration
+   - track_config_items: Components in track configurations
+   - led_strip_configurations: LED strip lighting configuration
+   - led_config_items: Components in LED configurations
+   - compatibility_rules: Product compatibility enforcement
+
+   INTEGRATION DOMAIN (3 tables):
+   - smartbill_sync: SmartBill accounting integration sync logs
+   - woocommerce_sync: WooCommerce e-commerce sync logs
+   - supplier_sync_logs: Supplier system integration logs
+
+   COMMUNICATION DOMAIN (2 tables):
+   - whatsapp_messages: WhatsApp messaging with delivery tracking
+   - notifications: Multi-channel notification system (Email, SMS, WhatsApp, In-App)
+
+   B2B DOMAIN (5 tables):
+   - b2b_registrations: B2B registration workflow with approval
+   - saved_carts: Customer cart templates
+   - saved_cart_items: Items in saved carts
+   - project_lists: Project-based product planning
+   - project_list_items: Items in project lists
+
+   SYSTEM DOMAIN (3 tables):
+   - audit_logs: Complete audit trail for all entity changes
+   - settings: System configuration key-value store
+   - migrations: Database migration tracking
+
+4. INDEXES (110 total)
+   - Performance indexes on all foreign keys
+   - Search indexes on commonly queried fields (email, SKU, status)
+   - Composite indexes for multi-field queries
+   - Date range indexes for time-series queries
+   - Partial indexes for active records
+
+5. TRIGGERS (38 total)
+   - Automatic updated_at timestamp maintenance on all mutable tables
+   - Single trigger function applied to 38 tables
+
+================================================================================
+KEY FEATURES
+================================================================================
+
+DATA INTEGRITY:
+- CHECK constraints on all monetary amounts (>= 0)
+- Email validation regex on all email fields
+- Foreign key cascades and restrictions for referential integrity
+- UNIQUE constraints on natural identifiers (SKU, email, codes)
+
+MULTI-TENANCY SUPPORT:
+- Customer tier system for B2B/B2C differentiation
+- Per-customer pricing and credit limits
+- Customer-specific device tracking
+
+MULTI-LANGUAGE SUPPORT:
+- Translation tables for categories and products
+- Language code columns throughout the schema
+
+AUDIT & COMPLIANCE:
+- Soft deletes (deleted_at column) on critical entities
+- Complete audit logging table
+- Password reset token expiration tracking
+- Order status history with timestamps and user tracking
+
+FINANCIAL TRACKING:
+- Complete pricing hierarchy (base, promotional, volume, custom)
+- Tax and discount tracking throughout quotes and orders
+- Credit limit and payment tracking
+- Invoice generation (proforma)
+
+INTEGRATION READY:
+- SmartBill sync tables for accounting integration
+- WooCommerce sync tables for e-commerce
+- Supplier sync logs for supply chain integration
+- API credential fields for supplier integration
+- External ID tracking for all sync operations
+
+CONFIGURATION MANAGEMENT:
+- Product configurator for track lighting and LED strips
+- Compatibility rules for component validation
+- Session-based configuration state
+
+SCALABILITY:
+- BIGSERIAL primary keys for unlimited growth
+- JSONB metadata columns for flexible attribute storage
+- DECIMAL(12,2) for precise financial calculations
+- Index optimization for large datasets
+
+================================================================================
+QUALITY ASSURANCE
+================================================================================
+
+All tables include:
+✓ BIGSERIAL primary key
+✓ created_at timestamp with timezone (auto-populated)
+✓ updated_at timestamp with timezone (auto-populated via trigger)
+✓ Auto-update triggers for modified timestamps
+✓ Proper data types and constraints
+✓ CHECK constraints on quantities and amounts
+✓ Foreign key relationships with appropriate cascade rules
+
+All indexes follow naming convention: idx_[table]_[field(s)]
+
+All enum types created before table definitions to prevent dependency issues
+
+The schema is ready for immediate use in Docker via init scripts.
+
+================================================================================

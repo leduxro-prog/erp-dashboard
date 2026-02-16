@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decizie Cerere B2B</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background: #f9fafb; }
+    .email-container { background: #ffffff; }
+    .header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 40px 20px; text-align: center; color: white; }
+    .logo { max-width: 150px; height: auto; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .content { padding: 40px 20px; }
+    .content h2 { color: #dc2626; font-size: 22px; margin-bottom: 15px; font-weight: 600; }
+    .content h3 { color: #1f2937; font-size: 16px; margin: 20px 0 15px 0; font-weight: 600; }
+    .content p { margin-bottom: 15px; color: #555; font-size: 14px; }
+    .notification-box { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 2px solid #dc2626; padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .notification-box h2 { color: #dc2626; font-size: 18px; margin: 0 0 10px 0; }
+    .reason-box { background: #f0f4f8; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .reason-box strong { display: block; color: #dc2626; margin-bottom: 10px; }
+    .reason-box p { margin: 8px 0; color: #555; font-size: 13px; line-height: 1.6; }
+    .next-steps { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .next-steps strong { color: #b45309; display: block; margin-bottom: 10px; }
+    .next-steps ol { margin-left: 20px; }
+    .next-steps li { margin: 8px 0; color: #92400e; font-size: 13px; }
+    .contact-box { background: #f0f4f8; border-left: 4px solid #1e40af; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .contact-box strong { color: #1e40af; display: block; margin-bottom: 8px; }
+    .contact-box p { margin: 5px 0; color: #555; font-size: 13px; }
+    .contact-box a { color: #1e40af; text-decoration: none; }
+    .button { display: inline-block; background: #1e40af; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 500; margin-top: 15px; font-size: 14px; }
+    .button:hover { background: #1e3a8a; }
+    .footer { background: #1f2937; color: #e5e7eb; padding: 30px 20px; text-align: center; font-size: 12px; }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { max-width: 100%; }
+      .header { padding: 30px 15px; }
+      .content { padding: 25px 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <img src="https://ledux.ro/logo.png" alt="Ledux.ro" class="logo">
+        <h1>Decizie Cerere Parteneriat</h1>
+        <p>Mulțumim pentru interesul manifestat</p>
+      </div>
+
+      <div class="content">
+        <div class="notification-box">
+          <h2>Cerere Analizată</h2>
+          <p>Cererea dvs. de cont B2B a fost analizată în detaliu de către echipa noastră.</p>
+        </div>
+
+        <h2>Bună, {{companyName}}!</h2>
+        <p>Mulțumim pentru interesul manifestat în parteneratul B2B cu Ledux.ro. După evaluarea atentă a cererii dvs., am ajuns la o decizie pe care dorim să vă o comunicăm transparent.</p>
+
+        <div class="reason-box">
+          <strong>Motiv al Deciziei</strong>
+          <p>{{rejectionReason}}</p>
+          {{#if additionalDetails}}
+          <p style="margin-top: 12px;">{{additionalDetails}}</p>
+          {{/if}}
+        </div>
+
+        <h3>Ce Puteți Face Acum</h3>
+        <div class="next-steps">
+          <strong>Opțiuni Disponibile</strong>
+          <ol>
+            <li><strong>Reapplication:</strong> Dacă au intervenit schimbări în situația companiei dvs., puteți reaplica după 90 de zile cu documentație actualizată</li>
+            <li><strong>Parteneriat Restrâns:</strong> Oferim acces la o categorie specială de parteneri cu condiții limitate - consultați-ne pentru detalii</li>
+            <li><strong>Comenzi Retailer:</strong> Puteți continua să plasați comenzi ca client standard pe site-ul nostru</li>
+            <li><strong>Feedback Detaliat:</strong> Solicităm o întâlnire cu echipa dvs. pentru a discuta opțiuni de îmbunătățire</li>
+          </ol>
+        </div>
+
+        <h3>Documentație Suplimentară Necesară</h3>
+        {{#if requiredDocuments}}
+        <p>Pentru o viitoare aplicație, vă recomandăm să pregătiți următoarea documentație:</p>
+        <ul style="margin-left: 20px; margin: 15px 0;">
+          {{#each requiredDocuments}}
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">{{this}}</li>
+          {{/each}}
+        </ul>
+        {{/if}}
+
+        <div class="contact-box">
+          <strong>Contact pentru Discuții Suplimentare</strong>
+          <p>Nu renunțați la ideea parteneriatului! Suntem deschși la discuții și posibili compromisuri. Contactați managerul de relații comerciale:</p>
+          <p style="margin-top: 12px;">
+            <strong>{{contactName}}</strong><br>
+            Email: <a href="mailto:{{contactEmail}}">{{contactEmail}}</a><br>
+            Telefon: <a href="tel:{{contactPhone}}">{{contactPhone}}</a>
+          </p>
+          <p style="margin-top: 12px; font-size: 12px; color: #666;">
+            Disponibil pentru consultări: luni-vineri, 9:00-18:00 (ora României)
+          </p>
+        </div>
+
+        <h3>Opțiuni Imediate</h3>
+        <p>Indiferent de decizie, vă invităm să:</p>
+        <ul style="margin-left: 20px; margin: 15px 0;">
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Vizitați <a href="https://ledux.ro" style="color: #1e40af;">site-ul nostru</a> pentru a vedea gamă completă de produse</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Plasați comenzi standard și beneficiați de servicii de înaltă calitate</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Rămâneți în contact și urmăriți noile oportunități de parteneriat</li>
+        </ul>
+
+        <a href="https://ledux.ro" class="button">Vizitează Magazin</a>
+
+        <p style="margin-top: 30px; font-size: 13px; color: #666; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          <strong>Mulțumim încă o dată pentru interesul manifestat în Ledux.ro.</strong> Suntem convinși că vă putem oferi produse de cea mai bună calitate și servicii excelente, indiferent de tipul colaborării. Sperăm să vă revedem în curând!
+        </p>
+      </div>
+
+      <div class="footer">
+        <div style="margin-bottom: 15px;">
+          <strong>Ledux.ro</strong><br>
+          Soluții Premium pentru Iluminat LED<br>
+          <a href="https://ledux.ro">www.ledux.ro</a>
+        </div>
+        <div>
+          <a href="{{unsubscribeLink}}">Dezabonare</a> |
+          <a href="{{preferencesLink}}">Preferințe Email</a>
+        </div>
+        <div style="margin-top: 15px; opacity: 0.8;">
+          Copyright &copy; {{currentYear}} Ledux.ro. Toate drepturile rezervate.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

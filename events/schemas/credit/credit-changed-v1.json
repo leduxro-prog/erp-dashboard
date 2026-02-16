@@ -1,0 +1,216 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.cypher.ro/events/credit/credit-changed-v1.json",
+  "title": "Credit Changed Event v1",
+  "description": "Emitted when a customer's credit status, credit limit, or balance changes. This is a critical P0 event for B2B customers and affects order processing and payment workflows.",
+  "type": "object",
+  "required": [
+    "customer_id",
+    "customer_type",
+    "change_type",
+    "changed_at",
+    "credit_limit",
+    "available_credit"
+  ],
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Customer identifier"
+    },
+    "customer_type": {
+      "type": "string",
+      "enum": ["b2b", "b2c"],
+      "description": "Type of customer"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Name of the customer"
+    },
+    "customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Customer email address"
+    },
+    "change_type": {
+      "type": "string",
+      "enum": [
+        "credit_limit_increased",
+        "credit_limit_decreased",
+        "credit_limit_set",
+        "balance_increased",
+        "balance_decreased",
+        "payment_received",
+        "invoice_issued",
+        "credit_status_changed",
+        "account_created",
+        "account_closed",
+        "credit_suspended",
+        "credit_reinstated"
+      ],
+      "description": "Type of credit change"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the credit change occurred"
+    },
+    "changed_by": {
+      "type": "string",
+      "description": "User ID who initiated the change"
+    },
+    "changed_by_type": {
+      "type": "string",
+      "enum": ["admin", "system", "automated", "customer"],
+      "default": "admin",
+      "description": "Type of entity that initiated the change"
+    },
+    "previous_credit_status": {
+      "type": "string",
+      "enum": ["active", "suspended", "blocked", "closed", "pending"],
+      "description": "Previous credit status before the change"
+    },
+    "new_credit_status": {
+      "type": "string",
+      "enum": ["active", "suspended", "blocked", "closed", "pending"],
+      "description": "New credit status after the change"
+    },
+    "previous_credit_limit": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Previous credit limit (null for new accounts)"
+    },
+    "new_credit_limit": {
+      "type": "number",
+      "minimum": 0,
+      "description": "New credit limit after change"
+    },
+    "credit_limit": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Current credit limit"
+    },
+    "previous_balance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Previous outstanding balance"
+    },
+    "new_balance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "New outstanding balance"
+    },
+    "balance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Current outstanding balance"
+    },
+    "balance_change_amount": {
+      "type": "number",
+      "description": "Amount of change (positive for increase, negative for decrease)"
+    },
+    "available_credit": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Available credit (credit_limit - balance)"
+    },
+    "credit_utilization": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Credit utilization percentage"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "Currency code (e.g., EUR, RON, USD)"
+    },
+    "related_document": {
+      "type": "object",
+      "description": "Related document that caused the credit change",
+      "properties": {
+        "document_type": {
+          "type": "string",
+          "enum": ["invoice", "payment", "order", "credit_note", "adjustment"],
+          "description": "Type of related document"
+        },
+        "document_id": {
+          "type": "string",
+          "description": "Document identifier"
+        },
+        "document_number": {
+          "type": "string",
+          "description": "Document number"
+        }
+      }
+    },
+    "payment_term": {
+      "type": "string",
+      "enum": ["immediate", "net_7", "net_14", "net_30", "net_60", "net_90"],
+      "description": "Payment term for the customer"
+    },
+    "previous_payment_term": {
+      "type": "string",
+      "enum": ["immediate", "net_7", "net_14", "net_30", "net_60", "net_90"],
+      "description": "Previous payment term before change"
+    },
+    "overdue_amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total overdue amount"
+    },
+    "days_overdue": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of days overdue"
+    },
+    "credit_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Internal credit score"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about the credit change"
+    },
+    "notify_customer": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether customer should be notified of the change"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata"
+    }
+  },
+  "examples": [
+    {
+      "customer_id": "CUST-00123",
+      "customer_type": "b2b",
+      "customer_name": "Acme Corporation",
+      "customer_email": "contact@acme.com",
+      "change_type": "credit_limit_increased",
+      "changed_at": "2026-02-13T10:00:00.000Z",
+      "changed_by": "user-456",
+      "changed_by_type": "admin",
+      "previous_credit_status": "active",
+      "new_credit_status": "active",
+      "previous_credit_limit": 10000.00,
+      "new_credit_limit": 15000.00,
+      "credit_limit": 15000.00,
+      "previous_balance": 3500.00,
+      "new_balance": 3500.00,
+      "balance": 3500.00,
+      "balance_change_amount": 0,
+      "available_credit": 11500.00,
+      "credit_utilization": 23.33,
+      "currency": "EUR",
+      "payment_term": "net_30",
+      "overdue_amount": 0,
+      "days_overdue": 0,
+      "credit_score": 85,
+      "notes": "Credit limit increased based on payment history",
+      "notify_customer": true
+    }
+  ]
+}

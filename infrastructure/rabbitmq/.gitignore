@@ -1,0 +1,55 @@
+# ==============================================================================
+# Cypher ERP - RabbitMQ Event Bus
+# Git Ignore Configuration
+# ==============================================================================
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.*
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Environment variables (sensitive)
+.env
+.env.local
+.env.*.local
+
+# Override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Docker volumes data (local development)
+rabbitmq-data/
+prometheus-data/
+grafana-data/
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+
+# Test coverage
+coverage/
+*.cover

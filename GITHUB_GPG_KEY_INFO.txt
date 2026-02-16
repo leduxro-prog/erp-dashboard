@@ -1,0 +1,16 @@
+GitHub GPG key created successfully.
+
+UID:
+leduxro-prog <leduxro-prog@users.noreply.github.com>
+
+Key type:
+ed25519 (sign)
+
+Key ID (long):
+463E94CD9B949D03
+
+Fingerprint:
+0B0C33AEE16F361D2BC84CDB463E94CD9B949D03
+
+Public key file:
+/opt/cypher-erp/GITHUB_GPG_PUBLIC_KEY.asc

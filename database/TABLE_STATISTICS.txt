@@ -1,0 +1,242 @@
+================================================================================
+CYPHER ERP - Table Structure Verification Report
+================================================================================
+
+TABLE DOMAINS AND COUNTS:
+├── USER DOMAIN (4 tables)
+│   ├── users
+│   ├── user_devices
+│   ├── user_2fa
+│   └── password_reset_tokens
+│
+├── CUSTOMER DOMAIN (3 tables)
+│   ├── customer_tiers
+│   ├── customers
+│   └── credit_limits
+│
+├── CATEGORY DOMAIN (2 tables)
+│   ├── categories
+│   └── category_translations
+│
+├── PRODUCT DOMAIN (3 tables)
+│   ├── products
+│   ├── product_translations
+│   └── product_images
+│
+├── SUPPLIER DOMAIN (3 tables)
+│   ├── suppliers
+│   ├── supplier_products
+│   └── supplier_sku_mappings
+│
+├── WAREHOUSE/STOCK DOMAIN (4 tables)
+│   ├── warehouses
+│   ├── stock_levels
+│   ├── stock_movements
+│   └── stock_sync_logs
+│
+├── PRICING DOMAIN (4 tables)
+│   ├── price_rules
+│   ├── volume_discounts
+│   ├── promotional_prices
+│   └── customer_prices
+│
+├── QUOTE DOMAIN (3 tables)
+│   ├── quote_templates
+│   ├── quotes
+│   └── quote_items
+│
+├── ORDER DOMAIN (4 tables)
+│   ├── orders
+│   ├── order_items
+│   ├── order_status_history
+│   └── proforma_invoices
+│
+├── CONFIGURATOR DOMAIN (6 tables)
+│   ├── configurator_sessions
+│   ├── track_configurations
+│   ├── track_config_items
+│   ├── led_strip_configurations
+│   ├── led_config_items
+│   └── compatibility_rules
+│
+├── INTEGRATION DOMAIN (3 tables)
+│   ├── smartbill_sync
+│   ├── woocommerce_sync
+│   └── supplier_sync_logs
+│
+├── COMMUNICATION DOMAIN (2 tables)
+│   ├── whatsapp_messages
+│   └── notifications
+│
+├── B2B DOMAIN (5 tables)
+│   ├── b2b_registrations
+│   ├── saved_carts
+│   ├── saved_cart_items
+│   ├── project_lists
+│   └── project_list_items
+│
+└── SYSTEM DOMAIN (3 tables)
+    ├── audit_logs
+    ├── settings
+    └── migrations
+
+================================================================================
+STANDARD TABLE COLUMNS
+================================================================================
+
+Every table includes standard audit columns:
+  id               - BIGSERIAL PRIMARY KEY (unlimited scalability)
+  created_at       - TIMESTAMP WITH TIME ZONE (auto-populated)
+  updated_at       - TIMESTAMP WITH TIME ZONE (auto-maintained via trigger)
+
+Soft-deletable tables also include:
+  deleted_at       - TIMESTAMP WITH TIME ZONE (NULL = not deleted)
+
+Tables with soft delete:
+  - users
+  - customers
+  - products
+  - suppliers
+  - orders
+
+================================================================================
+CONSTRAINT TYPES USED
+================================================================================
+
+1. NOT NULL - Applied to all required columns
+2. UNIQUE - Applied to natural keys (SKU, email, codes)
+3. PRIMARY KEY - BIGSERIAL on all tables for scalability
+4. FOREIGN KEY - Referential integrity with appropriate ON DELETE actions
+5. CHECK - Business logic enforcement:
+   - Email format validation: ~'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'
+   - Amount validation: >= 0 for all monetary fields
+   - Quantity validation: > 0 or != 0 depending on context
+   - Percentage validation: 0-100 for discount/tier percentages
+   - Date range validation: start before end
+   - Product comparison: product_a_id != product_b_id (compatibility rules)
+6. GENERATED - Calculated discount percentages
+
+================================================================================
+RELATIONSHIP OVERVIEW
+================================================================================
+
+CASCADE DELETE (deletes child records):
+  - users → user_devices, user_2fa, password_reset_tokens
+  - categories → category_translations
+  - products → product_translations, product_images
+  - suppliers → supplier_products, supplier_sku_mappings, supplier_sync_logs
+  - customers → credit_limits, saved_carts, project_lists, b2b_registrations
+  - warehouses → stock_levels, stock_movements, stock_sync_logs
+  - stock_levels → (product, warehouse)
+  - quotes → quote_items
+  - quote_items → (quote, product)
+  - orders → order_items, order_status_history, proforma_invoices
+  - order_items → (order, product)
+  - configurator_sessions → track_configurations, led_strip_configurations
+  - track_configurations → track_config_items
+  - led_strip_configurations → led_config_items
+  - saved_carts → saved_cart_items
+  - project_lists → project_list_items
+  - products → track_config_items, led_config_items
+
+SET NULL (clears foreign key):
+  - categories → parent_id (category hierarchy)
+  - customers → customer_tier_id
+  - products → supplier_id
+  - quotes → quote_id (in orders)
+  - quotes → template_id
+  - quotes → created_by, viewed_at handling
+  - orders → quote_id
+  - orders → created_by, assigned_to
+  - order_items → product_id handling
+  - stock_movements → created_by
+  - user_devices → last_used_at handling
+  - various fields in status history
+
+RESTRICT (prevents deletion of referenced record):
+  - categories (parent in categories)
+  - products (referenced in orders, quotes, etc.)
+  - customers (referenced in orders, quotes)
+
+================================================================================
+PERFORMANCE OPTIMIZATION
+================================================================================
+
+INDEX STRATEGY (110 indexes):
+
+Foreign Key Indexes:
+  - All foreign key columns are indexed for JOIN performance
+  - Composite indexes for multi-column foreign keys
+
+Search Indexes:
+  - email fields on users, customers, suppliers, b2b_registrations
+  - SKU on products
+  - code on suppliers, warehouses
+  - status on customers, orders, quotes, b2b_registrations
+  - roles on users
+
+Time-based Indexes:
+  - created_at on all major tables
+  - deleted_at on soft-delete tables
+  - date ranges on promotional_prices, price_rules
+  - expires_at on configurator_sessions, password_reset_tokens
+
+Composite Indexes:
+  - (entity_type, entity_id) on audit_logs
+  - (resource_type, resource_id) on sync tables
+  - (category_id, language_code) on category_translations
+  - (product_id, language_code) on product_translations
+  - (customer_id, product_id) on customer_prices
+  - (supplier_id, product_id) on supplier_products
+  - (product_id, warehouse_id) on stock_levels
+  - (start_date, end_date) on promotional_prices (partial, active only)
+
+Partial Indexes:
+  - WHERE is_active = true on price rules and discounts
+  - Optimizes queries for active records only
+
+================================================================================
+ENUM TYPES RATIONALE
+================================================================================
+
+Enums provide:
+✓ Type safety at database level
+✓ Referential integrity for predefined values
+✓ Smaller storage footprint than strings
+✓ Faster queries compared to VARCHAR lookups
+✓ Prevents invalid values at insertion
+
+Total Enums: 15
+Total Enum Values: 87
+
+Enums used in:
+  - User roles (access control)
+  - Customer classification (B2B/B2C)
+  - Order/Quote workflow states
+  - Stock movement types
+  - Product configurator types
+  - Integration sync types
+  - Communication channels
+  - Registration statuses
+
+================================================================================
+JSONB FIELDS FOR FLEXIBILITY
+================================================================================
+
+JSONB metadata columns provide extensibility without schema changes:
+  - users.metadata (custom user attributes)
+  - customers.metadata (custom customer attributes)
+  - products.metadata (custom product attributes)
+  - suppliers.metadata (custom supplier attributes)
+  - categories.metadata (custom category attributes)
+  - orders.metadata (custom order attributes)
+  - quotes.metadata (custom quote attributes)
+  - configurator_sessions.configuration_data (complex configs)
+  - audit_logs.metadata (extended audit info)
+  - b2b_registrations.metadata (custom registration attributes)
+
+Also used for integration responses:
+  - smartbill_sync.response_data
+  - woocommerce_sync.response_data
+
+================================================================================

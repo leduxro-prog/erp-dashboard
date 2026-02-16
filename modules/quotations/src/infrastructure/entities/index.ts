@@ -1,0 +1,1 @@
+export { QuoteEntity } from './QuoteEntity';

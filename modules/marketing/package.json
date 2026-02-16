@@ -1,0 +1,57 @@
+{
+  "name": "@cypher-erp/marketing-module",
+  "version": "1.0.0",
+  "description": "Marketing module for CYPHER ERP - campaigns, discount codes, and email sequences",
+  "main": "src/marketing-module.ts",
+  "types": "src/marketing-module.ts",
+  "scripts": {
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:coverage": "jest --config jest.config.js --coverage",
+    "build": "tsc",
+    "lint": "eslint src tests",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\""
+  },
+  "keywords": [
+    "marketing",
+    "campaigns",
+    "discount-codes",
+    "email-sequences",
+    "erp",
+    "cypher"
+  ],
+  "author": "CYPHER ERP Team",
+  "license": "Proprietary",
+  "dependencies": {
+    "typeorm": "^0.3.0",
+    "express": "^4.18.0",
+    "bull": "^4.10.0",
+    "redis": "^4.6.0",
+    "winston": "^3.8.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^18.16.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.0",
+    "@typescript-eslint/parser": "^5.59.0",
+    "eslint": "^8.40.0",
+    "jest": "^29.5.0",
+    "prettier": "^2.8.8",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:cypher-erp/cypher.git",
+    "directory": "modules/marketing"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

@@ -1,0 +1,268 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  # Deploy to staging on develop branch
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging-api.ledux.ro
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login token for ECR
+        id: login-ecr
+        run: |
+          echo "password=$(aws ecr get-login-password --region eu-central-1)" >> $GITHUB_OUTPUT
+
+      - name: Login to ECR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com
+          username: AWS
+          password: ${{ steps.login-ecr.outputs.password }}
+
+      - name: Build and push Docker image (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/cypher-erp:staging-${{ github.sha }}
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/cypher-erp:staging-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster cypher-staging \
+            --service cypher-erp-staging \
+            --force-new-deployment \
+            --region eu-central-1
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster cypher-staging \
+            --services cypher-erp-staging \
+            --region eu-central-1 || true
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests against staging..."
+          curl -f https://staging-api.ledux.ro/health || exit 1
+          echo "Staging smoke tests passed"
+
+  # Deploy to production on main branch (with manual approval)
+  deploy-production:
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://api.ledux.ro
+    needs: []
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              environment: 'production',
+              required_contexts: [],
+              auto_merge: false,
+              description: 'Production deployment initiated'
+            });
+            console.log('Deployment created:', deployment.data.id);
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login token for ECR
+        id: login-ecr
+        run: |
+          echo "password=$(aws ecr get-login-password --region eu-central-1)" >> $GITHUB_OUTPUT
+
+      - name: Login to ECR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com
+          username: AWS
+          password: ${{ steps.login-ecr.outputs.password }}
+
+      - name: Build and push Docker image (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/cypher-erp:prod-${{ github.sha }}
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/cypher-erp:prod-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create backup
+        run: |
+          echo "Creating database backup before production deployment..."
+          aws rds create-db-snapshot \
+            --db-instance-identifier cypher-erp-prod \
+            --db-snapshot-identifier cypher-erp-prod-backup-${{ github.sha }} \
+            --region eu-central-1 || true
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster cypher-production \
+            --service cypher-erp-production \
+            --force-new-deployment \
+            --region eu-central-1
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster cypher-production \
+            --services cypher-erp-production \
+            --region eu-central-1 || true
+
+  # Smoke tests after deployment
+  smoke-test:
+    runs-on: ubuntu-latest
+    name: Run Smoke Tests
+    needs: [deploy-staging, deploy-production]
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          # Health check
+          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            curl -f https://staging-api.ledux.ro/health || exit 1
+            echo "Staging health check passed"
+          fi
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            curl -f https://api.ledux.ro/health || exit 1
+            echo "Production health check passed"
+          fi
+
+      - name: Verify API endpoints
+        run: |
+          echo "Verifying critical API endpoints..."
+          ENDPOINT="https://api.ledux.ro"
+          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            ENDPOINT="https://staging-api.ledux.ro"
+          fi
+          
+          curl -f $ENDPOINT/api/v1/health || exit 1
+          echo "API endpoint verification passed"
+
+  # Rollback on deployment failure
+  rollback:
+    runs-on: ubuntu-latest
+    name: Rollback on Failure
+    needs: [smoke-test]
+    if: failure() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "cluster=cypher-staging" >> $GITHUB_OUTPUT
+            echo "service=cypher-erp-staging" >> $GITHUB_OUTPUT
+          else
+            echo "cluster=cypher-production" >> $GITHUB_OUTPUT
+            echo "service=cypher-erp-production" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rollback deployment
+        run: |
+          echo "Rolling back deployment to previous version..."
+          # Get previous task definition
+          PREV_TASK=$(aws ecs describe-services \
+            --cluster ${{ steps.env.outputs.cluster }} \
+            --services ${{ steps.env.outputs.service }} \
+            --region eu-central-1 \
+            --query 'services[0].taskDefinition' \
+            --output text)
+          
+          # Update service to use previous task definition
+          aws ecs update-service \
+            --cluster ${{ steps.env.outputs.cluster }} \
+            --service ${{ steps.env.outputs.service }} \
+            --task-definition $(echo $PREV_TASK | sed 's/:[0-9]*$//'):$(($(echo $PREV_TASK | sed 's/.*://') - 1)) \
+            --region eu-central-1 || true
+
+      - name: Notify team
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          text: 'Deployment rollback initiated for ${{ github.ref }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author
+        continue-on-error: true

@@ -1,0 +1,84 @@
+# ==============================================================================
+# Cypher ERP - RabbitMQ Alert Rules
+# ==============================================================================
+
+groups:
+  - name: rabbitmq
+    interval: 30s
+    rules:
+      # Alert when a queue has too many messages
+      - alert: RabbitMQHighQueueDepth
+        expr: rabbitmq_queue_messages > 10000
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "High queue depth: {{ $labels.queue }}"
+          description: "Queue {{ $labels.queue }} has {{ $value }} messages"
+
+      # Alert when DLQ has messages
+      - alert: RabbitMQDLQMessages
+        expr: rabbitmq_queue_messages{queue=~".*\\.dlq\\..*"} > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "Messages in DLQ: {{ $labels.queue }}"
+          description: "DLQ {{ $labels.queue }} has {{ $value }} messages"
+
+      # Alert when DLQ has too many messages
+      - alert: RabbitMQHighDLQCount
+        expr: rabbitmq_queue_messages{queue=~".*\\.dlq\\..*"} > 100
+        for: 5m
+        labels:
+          severity: critical
+          service: rabbitmq
+        annotations:
+          summary: "High DLQ message count: {{ $labels.queue }}"
+          description: "DLQ {{ $labels.queue }} has {{ $value }} messages"
+
+      # Alert when there are no consumers
+      - alert: RabbitMQNoConsumers
+        expr: rabbitmq_queue_consumers == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "No consumers for queue: {{ $labels.queue }}"
+          description: "Queue {{ $labels.queue }} has no active consumers for 10 minutes"
+
+      # Alert when queue message rate drops
+      - alert: RabbitMQLowMessageRate
+        expr: rate(rabbitmq_queue_messages_delivered_total[5m]) < 1
+        for: 15m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "Low message rate: {{ $labels.queue }}"
+          description: "Queue {{ $labels.queue }} delivery rate is {{ $value }} msg/s"
+
+      # Alert when RabbitMQ is down
+      - alert: RabbitMQDown
+        expr: up{job="rabbitmq"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: rabbitmq
+        annotations:
+          summary: "RabbitMQ is down"
+          description: "RabbitMQ has been down for more than 2 minutes"
+
+      # Alert when RabbitMQ has high memory usage
+      - alert: RabbitMQHighMemoryUsage
+        expr: rabbitmq_process_resident_memory_bytes / rabbitmq_vm_memory_high_watermark_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: rabbitmq
+        annotations:
+          summary: "High memory usage"
+          description: "RabbitMQ memory usage is {{ $value | humanizePercentage }}"

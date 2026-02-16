@@ -1,0 +1,69 @@
+PLAN IMPLEMENTARE ERP - DE TRIMIS LA OPUS/CLAUDE
+
+Obiective principale
+1) Aprobare conturi B2B configurabila (manual/automat) din ERP Settings.
+2) Clientii B2B si clientii SmartBill disponibili in zona de ofertare.
+3) Din ofertare, la butonul Proforma, creare proforma direct in SmartBill.
+4) Fisa client ERP extinsa: discount, credit, facturi, favorite/recomandate, istoric.
+
+Stare curenta (important)
+- autoApprove exista deja in settings, dar trebuie consolidat end-to-end.
+- B2B si SmartBill sunt surse separate, ne-unificate complet in picker-ul de clienti din ofertare.
+- Fluxul proforma din ofertare spre SmartBill nu este inchis complet.
+
+Workstream 1 - Aprobare conturi B2B manual/automat
+- Setare unica: b2b.autoApprove (sau approvalMode enum: manual/auto).
+- Manual: inregistrare PENDING, aprobare/reject in B2B Admin, audit obligatoriu.
+- Automat: creare client + credentiale + notificare + audit la submit.
+- Protectii: validari, rate limit, loguri, evenimente.
+- AC: schimbarea setarii modifica imediat comportamentul pentru inregistrari noi.
+
+Workstream 2 - Unificare clienti in ofertare
+- Endpoint unificat: GET /api/v1/customers/search?sources=b2b,erp,smartbill&q=...
+- Model comun raspuns: id, display_name, cui, email, phone, source, credit, discount.
+- Deduplicare: CUI > email > nume+telefon.
+- UI ofertare: filtru sursa (ERP/B2B/SmartBill/Toti).
+- AC: clientii B2B si SmartBill pot fi selectati in Create Quote.
+
+Workstream 3 - Sincronizare clienti SmartBill
+- Sync manual + job periodic (ex. nightly).
+- Tabel legaturi externe: customer_external_links (customer_id, provider, external_id, last_sync_at).
+- Detectare conflicte si rezolvare in admin (CUI duplicat, email diferit).
+- Fallback: import CSV daca API SmartBill nu acopera toate cazurile.
+- AC: clientii SmartBill apar in cautare dupa sync.
+
+Workstream 4 - Proforma SmartBill din ofertare
+- UI: buton "Genereaza Proforma in SmartBill" in pagina de oferta.
+- Backend: POST /api/v1/quotations/:id/smartbill/proforma
+- Idempotency: daca exista deja proforma pentru oferta, nu duplicam.
+- Mapping: client, linii produse, discount, TVA 21%, termene, serie, moneda.
+- Persistenta: smartbill_document_id, numar proforma, status, pdf_url.
+- AC: click pe buton => proforma in SmartBill + link/PDF in ERP.
+
+Workstream 5 - Fisa client ERP (360)
+- Tab Comercial: tier, discount, reguli comerciale.
+- Tab Credit: limita, folosit, disponibil, tranzactii.
+- Tab Facturi: platite/neplatite/restante, scadente, total restant.
+- Tab Preferinte: favorite + recomandate.
+- Tab Istoric: oferte, comenzi, conversie oferta-comanda.
+- AC: sales vede complet datele clientului intr-un singur ecran.
+
+Workstream 6 - Roluri, securitate, audit
+- Permisiuni clare: admin/manager pentru aprobari + credit; sales pentru ofertare + vizualizare.
+- Audit obligatoriu pentru: approve/reject, modificari credit, creare/retry proforma.
+- Loguri tehnice + business events pentru observabilitate.
+
+Plan pe etape (recomandat)
+Etapa 1 (5-7 zile): approval mode + integrare B2B in picker ofertare.
+Etapa 2 (5-7 zile): sync SmartBill clienti + deduplicare + fallback import.
+Etapa 3 (4-6 zile): buton proforma + endpoint + idempotency + PDF flow.
+Etapa 4 (7-10 zile): fisa client completa + facturi + favorite/recomandate.
+
+Testare si acceptanta
+- Backend tests: approval mode, customer search multi-source, proforma idempotency.
+- Frontend tests: picker clienti, creare proforma, fisa client.
+- QA E2E: register B2B -> approve -> quote -> proforma -> customer detail.
+- Gate final: build + tests + verificare cu date reale SmartBill.
+
+Brief scurt de executie pentru Opus/Claude
+"Implementati incremental planul in 4 etape, fara breaking changes. Prioritate: approval mode + unificare clienti in ofertare + proforma SmartBill. Livrare cu feature flags, audit trail si test coverage." 

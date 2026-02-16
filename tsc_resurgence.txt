@@ -1,0 +1,648 @@
+modules/analytics/src/application/ports/index.ts(4,1): error TS2308: Module './ICustomerDataPort' has already exported a member named 'DateRange'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/analytics/src/application/ports/index.ts(5,1): error TS2308: Module './ICustomerDataPort' has already exported a member named 'DateRange'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/analytics/src/application/ports/index.ts(6,1): error TS2308: Module './ICustomerDataPort' has already exported a member named 'DateRange'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/analytics/src/application/use-cases/GenerateReport.ts(128,9): error TS2322: Type 'OrderMetrics' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'OrderMetrics'.
+modules/analytics/src/application/use-cases/GenerateReport.ts(131,9): error TS2322: Type 'CustomerMetrics' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'CustomerMetrics'.
+modules/analytics/src/application/use-cases/GenerateReport.ts(134,9): error TS2322: Type 'InventoryMetrics' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'InventoryMetrics'.
+modules/analytics/src/application/use-cases/GetSalesDashboard.ts(111,7): error TS2345: Argument of type '"GRID"' is not assignable to parameter of type 'LayoutType | undefined'.
+modules/analytics/src/domain/entities/Dashboard.ts(85,5): error TS2322: Type '"GRID"' is not assignable to type 'LayoutType'.
+modules/analytics/src/domain/entities/Report.ts(36,10): error TS2300: Duplicate identifier 'schedule'.
+modules/analytics/src/domain/entities/Report.ts(131,10): error TS2300: Duplicate identifier 'schedule'.
+modules/analytics/src/domain/index.ts(2,1): error TS2308: Module './entities' has already exported a member named 'DateRange'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/analytics/src/domain/services/DataAggregationService.ts(41,29): error TS2365: Operator '+' cannot be applied to types 'number' and '{}'.
+modules/analytics/src/domain/services/DataAggregationService.ts(126,43): error TS2365: Operator '+' cannot be applied to types 'number' and '{}'.
+modules/analytics/src/domain/services/DataAggregationService.ts(131,54): error TS2365: Operator '+' cannot be applied to types 'number' and '{}'.
+modules/analytics/src/index.ts(2,1): error TS2308: Module './domain' has already exported a member named 'DateRange'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/analytics/src/infrastructure/composition-root.ts(40,9): error TS2739: Type 'TypeOrmDashboardRepository' is missing the following properties from type 'IDashboardRepository': findByOwner, findShared, findDefault, delete
+modules/analytics/src/infrastructure/composition-root.ts(41,9): error TS2739: Type 'TypeOrmReportRepository' is missing the following properties from type 'IReportRepository': findAll, findScheduled, updateLastGenerated, delete
+modules/analytics/src/infrastructure/composition-root.ts(42,9): error TS2739: Type 'TypeOrmMetricRepository' is missing the following properties from type 'IMetricRepository': findByType, getTimeSeries, aggregate, deleteOlderThan
+modules/analytics/src/infrastructure/composition-root.ts(43,9): error TS2739: Type 'TypeOrmForecastRepository' is missing the following properties from type 'IForecastRepository': findByMetric, deleteOlderThan
+modules/analytics/src/infrastructure/composition-root.ts(46,29): error TS2554: Expected 4 arguments, but got 3.
+modules/analytics/src/infrastructure/composition-root.ts(52,26): error TS2554: Expected 7 arguments, but got 3.
+modules/analytics/src/infrastructure/composition-root.ts(60,5): error TS2554: Expected 0 arguments, but got 6.
+modules/analytics/src/infrastructure/index.ts(2,15): error TS2307: Cannot find module './entities' or its corresponding type declarations.
+modules/analytics/src/infrastructure/index.ts(4,15): error TS2307: Cannot find module './repositories' or its corresponding type declarations.
+modules/analytics/src/infrastructure/repositories/TypeOrmDashboardRepository.ts(12,9): error TS2416: Property 'findById' in type 'TypeOrmDashboardRepository' is not assignable to the same property in base type 'IDashboardRepository'.
+  Type '(id: string) => Promise<Dashboard | undefined>' is not assignable to type '(id: string) => Promise<Dashboard | null>'.
+    Type 'Promise<Dashboard | undefined>' is not assignable to type 'Promise<Dashboard | null>'.
+      Type 'Dashboard | undefined' is not assignable to type 'Dashboard | null'.
+        Type 'undefined' is not assignable to type 'Dashboard | null'.
+modules/analytics/src/infrastructure/repositories/TypeOrmForecastRepository.ts(16,9): error TS2416: Property 'findLatest' in type 'TypeOrmForecastRepository' is not assignable to the same property in base type 'IForecastRepository'.
+  Type '(metric: string) => Promise<Forecast | undefined>' is not assignable to type '(metricType: string) => Promise<Forecast | null>'.
+    Type 'Promise<Forecast | undefined>' is not assignable to type 'Promise<Forecast | null>'.
+      Type 'Forecast | undefined' is not assignable to type 'Forecast | null'.
+        Type 'undefined' is not assignable to type 'Forecast | null'.
+modules/analytics/src/infrastructure/repositories/TypeOrmMetricRepository.ts(20,9): error TS2416: Property 'findLatest' in type 'TypeOrmMetricRepository' is not assignable to the same property in base type 'IMetricRepository'.
+  Type '(limit: number) => Promise<MetricSnapshot[]>' is not assignable to type '(type: MetricType, dimensions?: Record<string, string> | undefined) => Promise<MetricSnapshot | null>'.
+    Types of parameters 'limit' and 'type' are incompatible.
+      Type 'import("/Users/Dell/Desktop/erp/cypher/modules/analytics/src/domain/entities/MetricSnapshot").MetricType' is not assignable to type 'number'.
+modules/analytics/src/infrastructure/repositories/TypeOrmReportRepository.ts(12,9): error TS2416: Property 'findById' in type 'TypeOrmReportRepository' is not assignable to the same property in base type 'IReportRepository'.
+  Type '(id: string) => Promise<Report | undefined>' is not assignable to type '(id: string) => Promise<Report | null>'.
+    Type 'Promise<Report | undefined>' is not assignable to type 'Promise<Report | null>'.
+      Type 'Report | undefined' is not assignable to type 'Report | null'.
+        Type 'undefined' is not assignable to type 'Report | null'.
+modules/b2b-portal/src/application/index.ts(2,1): error TS2308: Module './use-cases' has already exported a member named 'IOrderPort'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/b2b-portal/src/application/ports/index.ts(120,3): error TS2484: Export declaration conflicts with exported declaration of 'IOrderPort'.
+modules/b2b-portal/src/application/ports/index.ts(121,3): error TS2484: Export declaration conflicts with exported declaration of 'IPricingPort'.
+modules/b2b-portal/src/application/ports/index.ts(122,3): error TS2484: Export declaration conflicts with exported declaration of 'IInventoryPort'.
+modules/b2b-portal/src/application/ports/index.ts(123,3): error TS2484: Export declaration conflicts with exported declaration of 'INotificationPort'.
+modules/b2b-portal/src/application/ports/index.ts(124,3): error TS2484: Export declaration conflicts with exported declaration of 'Order'.
+modules/b2b-portal/src/application/ports/index.ts(125,3): error TS2484: Export declaration conflicts with exported declaration of 'StockAvailability'.
+modules/b2b-portal/src/b2b-module.ts(299,7): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'Record<string, IHealthStatus>'.
+  'string' index signatures are incompatible.
+    Type 'unknown' is not assignable to type 'IHealthStatus'.
+modules/b2b-portal/src/domain/index.ts(4,1): error TS2308: Module './entities' has already exported a member named 'BulkValidationError'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/b2b-portal/src/index.ts(7,15): error TS2306: File '/Users/Dell/Desktop/erp/cypher/modules/b2b-portal/src/api/index.ts' is not a module.
+modules/b2b-portal/src/infrastructure/composition-root.ts(65,30): error TS2554: Expected 5 arguments, but got 3.
+modules/b2b-portal/src/infrastructure/composition-root.ts(73,30): error TS2554: Expected 6 arguments, but got 3.
+modules/b2b-portal/src/infrastructure/composition-root.ts(83,5): error TS2554: Expected 0 arguments, but got 8.
+modules/b2b-portal/src/infrastructure/entities/B2BCustomerEntity.ts(34,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/b2b-portal/src/infrastructure/entities/B2BRegistrationEntity.ts(38,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/b2b-portal/src/infrastructure/entities/BulkOrderEntity.ts(29,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/b2b-portal/src/infrastructure/entities/CreditTransactionEntity.ts(26,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/b2b-portal/src/infrastructure/index.ts(1,15): error TS2307: Cannot find module './entities' or its corresponding type declarations.
+modules/b2b-portal/src/infrastructure/index.ts(4,15): error TS2307: Cannot find module './repositories' or its corresponding type declarations.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmB2BCustomerRepository.ts(204,7): error TS2554: Expected 7-8 arguments, but got 10.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmBulkOrderRepository.ts(21,32): error TS2339: Property 'orderNumber' does not exist on type 'BulkOrder'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmBulkOrderRepository.ts(23,5): error TS2322: Type 'BulkOrderItem[]' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'BulkOrderItem[]'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmBulkOrderRepository.ts(25,30): error TS2339: Property 'itemCount' does not exist on type 'BulkOrder'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmBulkOrderRepository.ts(26,26): error TS2339: Property 'notes' does not exist on type 'BulkOrder'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmBulkOrderRepository.ts(27,32): error TS2339: Property 'confirmedAt' does not exist on type 'BulkOrder'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmBulkOrderRepository.ts(28,30): error TS2339: Property 'shippedAt' does not exist on type 'BulkOrder'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmBulkOrderRepository.ts(29,32): error TS2339: Property 'deliveredAt' does not exist on type 'BulkOrder'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmBulkOrderRepository.ts(146,7): error TS2554: Expected 4 arguments, but got 12.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmCreditTransactionRepository.ts(26,38): error TS2339: Property 'referenceId' does not exist on type 'CreditTransaction'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmCreditTransactionRepository.ts(27,40): error TS2339: Property 'referenceType' does not exist on type 'CreditTransaction'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmCreditTransactionRepository.ts(28,35): error TS2339: Property 'metadata' does not exist on type 'CreditTransaction'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmCreditTransactionRepository.ts(153,7): error TS2554: Expected 8-10 arguments, but got 11.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmSavedCartRepository.ts(22,31): error TS2339: Property 'description' does not exist on type 'SavedCart'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmSavedCartRepository.ts(23,5): error TS2322: Type 'CartItemData[]' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'CartItemData[]'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmSavedCartRepository.ts(24,31): error TS2339: Property 'totalAmount' does not exist on type 'SavedCart'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmSavedCartRepository.ts(25,29): error TS2339: Property 'expiresAt' does not exist on type 'SavedCart'.
+modules/b2b-portal/src/infrastructure/repositories/TypeOrmSavedCartRepository.ts(117,7): error TS2554: Expected 3-5 arguments, but got 8.
+modules/configurators/src/application/index.ts(3,15): error TS2306: File '/Users/Dell/Desktop/erp/cypher/modules/configurators/src/application/dtos/index.ts' is not a module.
+modules/configurators/src/index.ts(4,15): error TS2306: File '/Users/Dell/Desktop/erp/cypher/modules/configurators/src/api/index.ts' is not a module.
+modules/configurators/src/infrastructure/composition-root.ts(46,9): error TS2322: Type 'TypeOrmSessionRepository' is not assignable to type 'ISessionRepository'.
+  Types of property 'findByCustomer' are incompatible.
+    Type '(customerId: string, page: number, limit: number) => Promise<PaginatedResult<ConfiguratorSession>>' is not assignable to type '(customerId: number, page: number, limit: number) => Promise<{ items: ConfiguratorSession[]; total: number; page: number; limit: number; }>'.
+      Types of parameters 'customerId' and 'customerId' are incompatible.
+        Type 'number' is not assignable to type 'string'.
+modules/configurators/src/infrastructure/composition-root.ts(80,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(99,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(123,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(149,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(178,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(204,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(225,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(246,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(272,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(293,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(311,3): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/composition-root.ts(318,9): error TS2322: Type 'string | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+modules/configurators/src/infrastructure/composition-root.ts(329,10): error TS2304: Cannot find name 'router'.
+modules/configurators/src/infrastructure/repositories/TypeOrmSessionRepository.ts(3,30): error TS2305: Module '"../../domain/repositories/ISessionRepository"' has no exported member 'PaginatedResult'.
+modules/configurators/src/infrastructure/repositories/TypeOrmSessionRepository.ts(20,9): error TS2416: Property 'findByCustomer' in type 'TypeOrmSessionRepository' is not assignable to the same property in base type 'ISessionRepository'.
+  Type '(customerId: string, page: number, limit: number) => Promise<PaginatedResult<ConfiguratorSession>>' is not assignable to type '(customerId: number, page: number, limit: number) => Promise<{ items: ConfiguratorSession[]; total: number; page: number; limit: number; }>'.
+    Types of parameters 'customerId' and 'customerId' are incompatible.
+      Type 'number' is not assignable to type 'string'.
+modules/inventory/src/api/index.ts(7,10): error TS2305: Module '"./routes/inventory.routes"' has no exported member 'inventoryRoutes'.
+modules/inventory/src/api/index.ts(10,10): error TS2305: Module '"./validators/inventory.validators"' has no exported member 'inventoryValidators'.
+modules/inventory/src/application/use-cases/AdjustStock.ts(4,10): error TS2305: Module '"crypto"' has no exported member 'v4'.
+modules/inventory/src/application/use-cases/AdjustStock.ts(58,15): error TS2339: Property 'adjust' does not exist on type 'StockItem'.
+modules/inventory/src/application/use-cases/AdjustStock.ts(112,31): error TS2339: Property 'isCritical' does not exist on type 'StockItem'.
+modules/inventory/src/application/use-cases/CheckStock.ts(31,30): error TS2551: Property 'availableQuantity' does not exist on type 'StockItem'. Did you mean 'getAvailableQuantity'?
+modules/inventory/src/application/use-cases/CheckStock.ts(43,16): error TS2339: Property 'isCritical' does not exist on type 'StockItem'.
+modules/inventory/src/application/use-cases/CheckStock.ts(48,27): error TS2551: Property 'getWarehouseId' does not exist on type 'StockItem'. Did you mean 'warehouse_id'?
+modules/inventory/src/application/use-cases/CheckStock.ts(49,46): error TS2551: Property 'getWarehouseId' does not exist on type 'StockItem'. Did you mean 'warehouse_id'?
+modules/inventory/src/application/use-cases/CheckStock.ts(49,72): error TS2551: Property 'getWarehouseId' does not exist on type 'StockItem'. Did you mean 'warehouse_id'?
+modules/inventory/src/application/use-cases/GetMovementHistory.ts(59,42): error TS2551: Property 'getWarehouseId' does not exist on type 'StockItem'. Did you mean 'warehouse_id'?
+modules/inventory/src/application/use-cases/GetMovementHistory.ts(68,25): error TS2551: Property 'getWarehouseId' does not exist on type 'StockItem'. Did you mean 'warehouse_id'?
+modules/inventory/src/application/use-cases/ReserveStock.ts(4,3): error TS2305: Module '"../../domain/services"' has no exported member 'FulfillmentSource'.
+modules/inventory/src/application/use-cases/ReserveStock.ts(13,10): error TS2305: Module '"crypto"' has no exported member 'v4'.
+modules/inventory/src/application/use-cases/ReserveStock.ts(49,44): error TS2339: Property 'findFulfillmentSources' does not exist on type 'StockFulfillmentService'.
+modules/inventory/src/application/use-cases/ReserveStock.ts(78,20): error TS2551: Property 'getWarehouseId' does not exist on type 'StockItem'. Did you mean 'warehouse_id'?
+modules/inventory/src/application/use-cases/SyncStock.ts(3,10): error TS2305: Module '"crypto"' has no exported member 'v4'.
+modules/inventory/src/domain/index.ts(2,1): error TS2308: Module './entities' has already exported a member named 'Warehouse'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/inventory/src/infrastructure/cache/StockCache.ts(2,10): error TS2614: Module '"@shared/utils/logger"' has no exported member 'Logger'. Did you mean to use 'import Logger from "@shared/utils/logger"' instead?
+modules/inventory/src/infrastructure/composition-root.ts(28,31): error TS2554: Expected 2 arguments, but got 1.
+modules/inventory/src/infrastructure/composition-root.ts(31,37): error TS2345: Argument of type 'TypeOrmInventoryRepository' is not assignable to parameter of type 'IInventoryRepository'.
+  Type 'TypeOrmInventoryRepository' is missing the following properties from type 'IInventoryRepository': getStockByProduct, getStockByWarehouse, getStockItem, updateStock, and 8 more.
+modules/inventory/src/infrastructure/composition-root.ts(32,41): error TS2345: Argument of type 'TypeOrmInventoryRepository' is not assignable to parameter of type 'IInventoryRepository'.
+  Type 'TypeOrmInventoryRepository' is missing the following properties from type 'IInventoryRepository': getStockByProduct, getStockByWarehouse, getStockItem, updateStock, and 8 more.
+modules/inventory/src/infrastructure/composition-root.ts(33,41): error TS2345: Argument of type 'TypeOrmInventoryRepository' is not assignable to parameter of type 'IInventoryRepository'.
+  Type 'TypeOrmInventoryRepository' is missing the following properties from type 'IInventoryRepository': getStockByProduct, getStockByWarehouse, getStockItem, updateStock, and 8 more.
+modules/inventory/src/infrastructure/composition-root.ts(34,39): error TS2345: Argument of type 'TypeOrmInventoryRepository' is not assignable to parameter of type 'IInventoryRepository'.
+  Type 'TypeOrmInventoryRepository' is missing the following properties from type 'IInventoryRepository': getStockByProduct, getStockByWarehouse, getStockItem, updateStock, and 8 more.
+modules/inventory/src/infrastructure/composition-root.ts(35,51): error TS2345: Argument of type 'TypeOrmInventoryRepository' is not assignable to parameter of type 'IInventoryRepository'.
+  Type 'TypeOrmInventoryRepository' is missing the following properties from type 'IInventoryRepository': getStockByProduct, getStockByWarehouse, getStockItem, updateStock, and 8 more.
+modules/inventory/src/infrastructure/composition-root.ts(36,53): error TS2345: Argument of type 'TypeOrmInventoryRepository' is not assignable to parameter of type 'IInventoryRepository'.
+  Type 'TypeOrmInventoryRepository' is missing the following properties from type 'IInventoryRepository': getStockByProduct, getStockByWarehouse, getStockItem, updateStock, and 8 more.
+modules/inventory/src/infrastructure/composition-root.ts(37,43): error TS2345: Argument of type 'TypeOrmInventoryRepository' is not assignable to parameter of type 'IInventoryRepository'.
+  Type 'TypeOrmInventoryRepository' is missing the following properties from type 'IInventoryRepository': getStockByProduct, getStockByWarehouse, getStockItem, updateStock, and 8 more.
+modules/inventory/src/infrastructure/entities/LowStockAlertEntity.ts(42,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/inventory/src/infrastructure/entities/StockMovementEntity.ts(42,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/inventory/src/infrastructure/entities/StockMovementEntity.ts(60,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/inventory/src/infrastructure/entities/StockReservationEntity.ts(37,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(2,10): error TS2614: Module '"@shared/utils/logger"' has no exported member 'Logger'. Did you mean to use 'import Logger from "@shared/utils/logger"' instead?
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(124,9): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<StockMovementEntity>[]): StockMovementEntity[]', gave the following error.
+    Object literal may only specify known properties, and 'id' does not exist in type 'DeepPartial<StockMovementEntity>[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(143,19): error TS2339: Property 'id' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(144,27): error TS2339: Property 'product_id' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(145,29): error TS2339: Property 'warehouse_id' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(146,30): error TS2339: Property 'movement_type' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(147,25): error TS2339: Property 'quantity' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(148,34): error TS2339: Property 'previous_quantity' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(149,29): error TS2339: Property 'new_quantity' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(150,23): error TS2339: Property 'reason' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(151,31): error TS2339: Property 'reference_type' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(152,29): error TS2339: Property 'reference_id' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(153,27): error TS2339: Property 'created_at' does not exist on type 'StockMovementEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(350,35): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(entityLikeArray: DeepPartial<LowStockAlertEntity>[]): LowStockAlertEntity[]', gave the following error.
+    Object literal may only specify known properties, and 'id' does not exist in type 'DeepPartial<LowStockAlertEntity>[]'.
+  Overload 2 of 3, '(entityLike: DeepPartial<LowStockAlertEntity>): LowStockAlertEntity', gave the following error.
+    Argument of type '{ acknowledged: boolean; product_id: string; severity: string; warehouse_id: string; minimum_threshold: number; product_sku: string; product_name: string; current_quantity: number; acknowledged_by?: string | undefined; acknowledged_at?: Date | undefined; id: string; }' is not assignable to parameter of type 'DeepPartial<LowStockAlertEntity>'.
+      Type '{ acknowledged: boolean; product_id: string; severity: string; warehouse_id: string; minimum_threshold: number; product_sku: string; product_name: string; current_quantity: number; acknowledged_by?: string | undefined; acknowledged_at?: Date | undefined; id: string; }' is not assignable to type '{ id?: string | undefined; product_id?: string | undefined; product_sku?: string | undefined; product_name?: string | undefined; warehouse_id?: string | undefined; current_quantity?: number | undefined; ... 5 more ...; created_at?: DeepPartial<...> | undefined; }'.
+        Types of property 'severity' are incompatible.
+          Type 'string' is not assignable to type 'DeepPartial<AlertSeverity> | undefined'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(358,17): error TS2339: Property 'id' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(359,25): error TS2339: Property 'product_id' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(360,26): error TS2339: Property 'product_sku' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(361,27): error TS2339: Property 'product_name' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(362,27): error TS2339: Property 'warehouse_id' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(363,31): error TS2339: Property 'current_quantity' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(364,32): error TS2339: Property 'minimum_threshold' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(365,23): error TS2339: Property 'severity' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(366,27): error TS2339: Property 'acknowledged' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(367,30): error TS2339: Property 'acknowledged_by' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(368,30): error TS2339: Property 'acknowledged_at' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(369,25): error TS2339: Property 'created_at' does not exist on type 'LowStockAlertEntity[]'.
+modules/inventory/src/infrastructure/repositories/TypeOrmInventoryRepository.ts(446,55): error TS2345: Argument of type '{ movement_type: StockMovementType; quantity: number; reason: string; reference_type: ReferenceType; reference_id: null; }' is not assignable to parameter of type 'Omit<StockMovement, "id" | "created_at">'.
+  Type '{ movement_type: StockMovementType; quantity: number; reason: string; reference_type: ReferenceType; reference_id: null; }' is missing the following properties from type 'Omit<StockMovement, "id" | "created_at">': product_id, warehouse_id, previous_quantity, new_quantity
+modules/marketing/src/application/services/LoyaltyProgramService.ts(7,52): error TS2307: Cannot find module '../infrastructure/entities/CustomerLoyaltyEntity' or its corresponding type declarations.
+modules/marketing/src/application/services/LoyaltyProgramService.ts(8,64): error TS2307: Cannot find module '../infrastructure/entities/PointsTransactionEntity' or its corresponding type declarations.
+modules/marketing/src/application/use-cases/CreateDiscountCode.ts(10,30): error TS2459: Module '"../../domain/errors/marketing.errors"' declares 'ValidationError' locally, but it is not exported.
+modules/marketing/src/application/use-cases/GenerateDiscountCodes.ts(10,10): error TS2459: Module '"../../domain/errors/marketing.errors"' declares 'ValidationError' locally, but it is not exported.
+modules/marketing/src/domain/entities/EmailSequence.ts(152,54): error TS2339: Property 'getId' does not exist on type 'EmailSequenceStep'.
+modules/marketing/src/infrastructure/entities/CustomerLoyaltyEntity.ts(42,13): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/marketing/src/infrastructure/entities/PointsTransactionEntity.ts(34,13): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/notifications/src/api/controllers/NotificationController.ts(9,11): error TS2430: Interface 'AuthenticatedRequest' incorrectly extends interface 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+  Types of property 'user' are incompatible.
+    Type '{ [key: string]: any; id: string; } | undefined' is not assignable to type 'User | undefined'.
+      Type '{ [key: string]: any; id: string; }' is missing the following properties from type 'User': email, role
+modules/notifications/src/api/controllers/NotificationController.ts(74,44): error TS2341: Property 'getHistoryUseCase' is private and only accessible within class 'NotificationsCompositionRoot'.
+modules/notifications/src/api/controllers/NotificationController.ts(74,44): error TS2349: This expression is not callable.
+  Type 'GetNotificationHistory' has no call signatures.
+modules/notifications/src/api/routes/notification.routes.ts(47,39): error TS2345: Argument of type 'Request<{}, any, any, ParsedQs, Record<string, any>>' is not assignable to parameter of type 'AuthenticatedRequest'.
+  Types of property 'user' are incompatible.
+    Type 'User | undefined' is not assignable to type '{ [key: string]: any; id: string; } | undefined'.
+      Type 'User' is not assignable to type '{ [key: string]: any; id: string; }'.
+        Types of property 'id' are incompatible.
+          Type 'string | number' is not assignable to type 'string'.
+            Type 'number' is not assignable to type 'string'.
+modules/notifications/src/api/routes/notification.routes.ts(120,33): error TS2345: Argument of type 'Request<{}, any, any, ParsedQs, Record<string, any>>' is not assignable to parameter of type 'AuthenticatedRequest'.
+  Types of property 'user' are incompatible.
+    Type 'User | undefined' is not assignable to type '{ [key: string]: any; id: string; } | undefined'.
+      Type 'User' is not assignable to type '{ [key: string]: any; id: string; }'.
+        Types of property 'id' are incompatible.
+          Type 'string | number' is not assignable to type 'string'.
+            Type 'number' is not assignable to type 'string'.
+modules/notifications/src/domain/entities/index.ts(3,1): error TS2308: Module './Notification' has already exported a member named 'NotificationChannel'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/notifications/src/infrastructure/composition-root.ts(53,11): error TS2300: Duplicate identifier 'getHistoryUseCase'.
+modules/notifications/src/infrastructure/composition-root.ts(235,3): error TS2300: Duplicate identifier 'getHistoryUseCase'.
+modules/notifications/src/infrastructure/repositories/TypeOrmNotificationRepository.ts(92,9): error TS2322: Type 'number | undefined' is not assignable to type 'string | undefined'.
+  Type 'number' is not assignable to type 'string'.
+modules/notifications/src/infrastructure/repositories/TypeOrmNotificationRepository.ts(179,51): error TS2345: Argument of type '{ createdAt: Record<string, { $lt: Date; }>; }' is not assignable to parameter of type 'string | number | string[] | Date | number[] | ObjectId | Date[] | ObjectId[] | FindOptionsWhere<NotificationEntity> | FindOptionsWhere<...>[]'.
+  Types of property 'createdAt' are incompatible.
+    Type 'Record<string, { $lt: Date; }>' is not assignable to type 'Date | FindOperator<Date> | undefined'.
+      Type 'Record<string, { $lt: Date; }>' is missing the following properties from type 'Date': toDateString, toTimeString, toLocaleDateString, toLocaleTimeString, and 37 more.
+modules/notifications/src/infrastructure/repositories/TypeOrmNotificationRepository.ts(180,20): error TS2352: Conversion of type '{ $lt: Date; }' to type 'Record<string, { $lt: Date; }>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property '$lt' is incompatible with index signature.
+    Property '$lt' is missing in type 'Date' but required in type '{ $lt: Date; }'.
+modules/notifications/src/infrastructure/repositories/TypeOrmNotificationRepository.ts(201,9): error TS2322: Type '{ status: string; createdAt: Record<string, { $gte: Date; $lte: Date; }>; }' is not assignable to type 'FindOptionsWhere<NotificationEntity> | FindOptionsWhere<NotificationEntity>[] | undefined'.
+  Types of property 'createdAt' are incompatible.
+    Type 'Record<string, { $gte: Date; $lte: Date; }>' is not assignable to type 'Date | FindOperator<Date> | undefined'.
+      Type 'Record<string, { $gte: Date; $lte: Date; }>' is missing the following properties from type 'Date': toDateString, toTimeString, toLocaleDateString, toLocaleTimeString, and 37 more.
+modules/notifications/src/infrastructure/repositories/TypeOrmNotificationRepository.ts(203,22): error TS2352: Conversion of type '{ $gte: Date; $lte: Date; }' to type 'Record<string, { $gte: Date; $lte: Date; }>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property '$gte' is incompatible with index signature.
+    Type 'Date' is missing the following properties from type '{ $gte: Date; $lte: Date; }': $gte, $lte
+modules/orders/src/api/controllers/OrderController.ts(56,9): error TS2322: Type 'string | number | undefined' is not assignable to type 'string | null | undefined'.
+  Type 'number' is not assignable to type 'string'.
+modules/orders/src/api/controllers/OrderController.ts(160,9): error TS2322: Type 'string | number | undefined' is not assignable to type 'string | null | undefined'.
+  Type 'number' is not assignable to type 'string'.
+modules/orders/src/api/controllers/OrderController.ts(222,9): error TS2322: Type 'string | number | undefined' is not assignable to type 'string | null | undefined'.
+  Type 'number' is not assignable to type 'string'.
+modules/orders/src/api/index.ts(7,10): error TS2305: Module '"./routes/order.routes"' has no exported member 'orderRoutes'.
+modules/orders/src/api/index.ts(10,10): error TS2305: Module '"./validators/order.validators"' has no exported member 'orderValidators'.
+modules/orders/src/infrastructure/cache/OrderCache.ts(1,28): error TS2307: Cannot find module '@nestjs/common' or its corresponding type declarations.
+modules/orders/src/infrastructure/cache/OrderCache.ts(2,30): error TS2307: Cannot find module '@nestjs-modules/redis' or its corresponding type declarations.
+modules/orders/src/infrastructure/entities/CashDrawerMovementEntity.ts(35,13): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/orders/src/infrastructure/entities/CashDrawerSessionEntity.ts(39,13): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/orders/src/infrastructure/entities/OrderEntity.ts(53,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/orders/src/infrastructure/entities/OrderEntity.ts(84,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/orders/src/infrastructure/entities/OrderEntity.ts(121,12): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/orders/src/infrastructure/entities/OrderEntity.ts(127,12): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/orders/src/infrastructure/entities/OrderItemEntity.ts(46,13): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/orders/src/infrastructure/entities/OrderStatusHistoryEntity.ts(38,13): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/orders/src/infrastructure/mappers/OrderMapper.ts(1,28): error TS2307: Cannot find module '@nestjs/common' or its corresponding type declarations.
+modules/orders/src/infrastructure/mappers/OrderMapper.ts(119,7): error TS2322: Type 'string' is not assignable to type 'PaymentStatus | undefined'.
+modules/orders/src/infrastructure/repositories/TypeOrmOrderRepository.ts(9,28): error TS2307: Cannot find module '@nestjs/common' or its corresponding type declarations.
+modules/orders/src/infrastructure/repositories/TypeOrmOrderRepository.ts(10,34): error TS2307: Cannot find module '@nestjs/typeorm' or its corresponding type declarations.
+modules/pricing-engine/src/api/controllers/PricingController.ts(14,13): error TS2687: All declarations of 'calculateOrderPricing' must have identical modifiers.
+modules/pricing-engine/src/api/controllers/PricingController.ts(16,13): error TS2687: All declarations of 'getTierPricing' must have identical modifiers.
+modules/pricing-engine/src/api/controllers/PricingController.ts(23,57): error TS2345: Argument of type '{ productId: any; }' is not assignable to parameter of type 'number'.
+modules/pricing-engine/src/api/controllers/PricingController.ts(31,3): error TS2300: Duplicate identifier 'calculateOrderPricing'.
+modules/pricing-engine/src/api/controllers/PricingController.ts(31,3): error TS2687: All declarations of 'calculateOrderPricing' must have identical modifiers.
+modules/pricing-engine/src/api/controllers/PricingController.ts(31,3): error TS2717: Subsequent property declarations must have the same type.  Property 'calculateOrderPricing' must be of type 'CalculateOrderPricing', but here has type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>) => Promise<void>'.
+modules/pricing-engine/src/api/controllers/PricingController.ts(39,9): error TS2353: Object literal may only specify known properties, and 'items' does not exist in type 'OrderItem[]'.
+modules/pricing-engine/src/api/controllers/PricingController.ts(49,3): error TS2300: Duplicate identifier 'getTierPricing'.
+modules/pricing-engine/src/api/controllers/PricingController.ts(49,3): error TS2687: All declarations of 'getTierPricing' must have identical modifiers.
+modules/pricing-engine/src/api/controllers/PricingController.ts(49,3): error TS2717: Subsequent property declarations must have the same type.  Property 'getTierPricing' must be of type 'GetTierPricing', but here has type '(req: AuthenticatedRequest, res: Response<any, Record<string, any>>) => Promise<void>'.
+modules/pricing-engine/src/api/controllers/PricingController.ts(53,61): error TS2345: Argument of type '{ productId: any; }' is not assignable to parameter of type 'number'.
+modules/pricing-engine/src/api/controllers/PricingController.ts(84,54): error TS2339: Property 'listPromotions' does not exist on type 'ManagePromotions'.
+modules/pricing-engine/src/api/index.ts(10,10): error TS2305: Module '"./routes/pricing.routes"' has no exported member 'pricingRoutes'.
+modules/pricing-engine/src/api/index.ts(13,10): error TS2305: Module '"./validators/pricing.validators"' has no exported member 'pricingValidators'.
+modules/pricing-engine/src/api/routes/pricing.routes.ts(24,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is not assignable to type 'AuthenticatedRequest'.
+            Types of property 'user' are incompatible.
+              Type 'User | undefined' is not assignable to type '{ id: string; email: string; role: string; } | undefined'.
+                Type 'User' is not assignable to type '{ id: string; email: string; role: string; }'.
+                  Types of property 'id' are incompatible.
+                    Type 'string | number' is not assignable to type 'string'.
+                      Type 'number' is not assignable to type 'string'.
+modules/pricing-engine/src/api/routes/pricing.routes.ts(31,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'CalculateOrderPricing' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+modules/pricing-engine/src/api/routes/pricing.routes.ts(31,16): error TS2341: Property 'calculateOrderPricing' is private and only accessible within class 'PricingController'.
+modules/pricing-engine/src/api/routes/pricing.routes.ts(38,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'GetTierPricing' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+modules/pricing-engine/src/api/routes/pricing.routes.ts(38,16): error TS2341: Property 'getTierPricing' is private and only accessible within class 'PricingController'.
+modules/pricing-engine/src/api/routes/pricing.routes.ts(46,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is not assignable to type 'AuthenticatedRequest'.
+            Types of property 'user' are incompatible.
+              Type 'User | undefined' is not assignable to type '{ id: string; email: string; role: string; } | undefined'.
+                Type 'User' is not assignable to type '{ id: string; email: string; role: string; }'.
+                  Types of property 'id' are incompatible.
+                    Type 'string | number' is not assignable to type 'string'.
+                      Type 'number' is not assignable to type 'string'.
+modules/pricing-engine/src/api/routes/pricing.routes.ts(53,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is not assignable to type 'AuthenticatedRequest'.
+            Types of property 'user' are incompatible.
+              Type 'User | undefined' is not assignable to type '{ id: string; email: string; role: string; } | undefined'.
+                Type 'User' is not assignable to type '{ id: string; email: string; role: string; }'.
+                  Types of property 'id' are incompatible.
+                    Type 'string | number' is not assignable to type 'string'.
+                      Type 'number' is not assignable to type 'string'.
+modules/pricing-engine/src/api/routes/pricing.routes.ts(61,5): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response) => Promise<void>' is not assignable to parameter of type 'RequestHandlerParams<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+      Type '(req: AuthenticatedRequest, res: Response) => Promise<void>' is not assignable to type 'RequestHandler<ParamsDictionary, any, any, ParsedQs, Record<string, any>>'.
+        Types of parameters 'req' and 'req' are incompatible.
+          Type 'Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>' is not assignable to type 'AuthenticatedRequest'.
+            Types of property 'user' are incompatible.
+              Type 'User | undefined' is not assignable to type '{ id: string; email: string; role: string; } | undefined'.
+                Type 'User' is not assignable to type '{ id: string; email: string; role: string; }'.
+                  Types of property 'id' are incompatible.
+                    Type 'string | number' is not assignable to type 'string'.
+                      Type 'number' is not assignable to type 'string'.
+modules/pricing-engine/src/application/use-cases/ManageTiers.ts(42,30): error TS2345: Argument of type 'string' is not assignable to parameter of type 'TierLevel'.
+modules/pricing-engine/src/domain/index.ts(15,24): error TS2305: Module '"./entities/CustomerTier"' has no exported member 'TierLevel'.
+modules/pricing-engine/src/domain/index.ts(25,8): error TS2724: '"./services/PriceCalculator"' has no exported member named 'PriceCalculation'. Did you mean 'PriceCalculator'?
+modules/pricing-engine/src/domain/index.ts(26,8): error TS2305: Module '"./services/PriceCalculator"' has no exported member 'PriceLineItem'.
+modules/pricing-engine/src/domain/index.ts(27,8): error TS2305: Module '"./services/PriceCalculator"' has no exported member 'OrderPriceResult'.
+modules/pricing-engine/src/infrastructure/composition-root.ts(28,45): error TS2345: Argument of type 'TypeOrmPriceRepository' is not assignable to parameter of type 'IPriceRepository'.
+  Type 'TypeOrmPriceRepository' is missing the following properties from type 'IPriceRepository': getProductPrice, getProductPricesByIds, getActivePromotionsForProduct, getAllActivePromotions, and 6 more.
+modules/pricing-engine/src/infrastructure/composition-root.ts(30,5): error TS2345: Argument of type 'TypeOrmPriceRepository' is not assignable to parameter of type 'IPriceRepository'.
+  Type 'TypeOrmPriceRepository' is missing the following properties from type 'IPriceRepository': getProductPrice, getProductPricesByIds, getActivePromotionsForProduct, getAllActivePromotions, and 6 more.
+modules/pricing-engine/src/infrastructure/composition-root.ts(33,49): error TS2345: Argument of type 'TypeOrmPriceRepository' is not assignable to parameter of type 'IPriceRepository'.
+  Type 'TypeOrmPriceRepository' is missing the following properties from type 'IPriceRepository': getProductPrice, getProductPricesByIds, getActivePromotionsForProduct, getAllActivePromotions, and 6 more.
+modules/pricing-engine/src/infrastructure/composition-root.ts(34,45): error TS2345: Argument of type 'TypeOrmPriceRepository' is not assignable to parameter of type 'IPriceRepository'.
+  Type 'TypeOrmPriceRepository' is missing the following properties from type 'IPriceRepository': getProductPrice, getProductPricesByIds, getActivePromotionsForProduct, getAllActivePromotions, and 6 more.
+modules/pricing-engine/src/infrastructure/composition-root.ts(35,39): error TS2345: Argument of type 'TypeOrmTierRepository' is not assignable to parameter of type 'ITierRepository'.
+  Type 'TypeOrmTierRepository' is missing the following properties from type 'ITierRepository': getCustomerTier, setCustomerTier, getCustomersByTierLevel, bulkUpdateCustomerTiers, getCustomerTierHistory
+modules/pricing-engine/src/pricing-module.ts(116,40): error TS2345: Argument of type 'ICacheManager' is not assignable to parameter of type 'Redis'.
+  Type 'ICacheManager' is missing the following properties from type 'Redis': options, status, stream, isCluster, and 373 more.
+modules/pricing-engine/src/pricing-module.ts(117,29): error TS2339: Property 'initialize' does not exist on type 'PriceCache'.
+modules/pricing-engine/src/pricing-module.ts(182,29): error TS2339: Property 'warmUpPopularPrices' does not exist on type 'PriceCache'.
+modules/pricing-engine/src/pricing-module.ts(220,31): error TS2339: Property 'flush' does not exist on type 'PriceCache'.
+modules/pricing-engine/src/pricing-module.ts(337,38): error TS2339: Property 'getCacheHitRate' does not exist on type 'PriceCache'.
+modules/quotations/src/index.ts(44,19): error TS2554: Expected 5-6 arguments, but got 1.
+modules/quotations/src/infrastructure/composition-root.ts(46,54): error TS2345: Argument of type 'DataSource' is not assignable to parameter of type 'Repository<QuoteEntity>'.
+  Type 'DataSource' is missing the following properties from type 'Repository<QuoteEntity>': target, metadata, hasId, getId, and 38 more.
+modules/quotations/src/infrastructure/composition-root.ts(47,22): error TS2554: Expected 1 arguments, but got 0.
+modules/seo-automation/src/application/use-cases/AuditProductSeo.ts(41,43): error TS2307: Cannot find module '../../../domain/entities/SeoAuditResult' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/AuditProductSeo.ts(42,73): error TS2307: Cannot find module '../../../domain/entities/SeoIssue' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/AuditProductSeo.ts(43,40): error TS2307: Cannot find module '../../../domain/repositories/ISeoMetadataRepository' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/AuditProductSeo.ts(44,43): error TS2307: Cannot find module '../../../domain/repositories/IStructuredDataRepository' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/AuditProductSeo.ts(45,34): error TS2307: Cannot find module '../../../domain/repositories/IAuditRepository' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/AuditProductSeo.ts(46,36): error TS2307: Cannot find module '../../../domain/services/SeoScoreCalculator' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/AuditProductSeo.ts(48,39): error TS2307: Cannot find module '../../../domain/errors/seo.errors' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/AuditProductSeo.ts(267,59): error TS7006: Parameter 'sd' implicitly has an 'any' type.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(44,29): error TS2307: Cannot find module '../../../domain/entities/SeoMetadata' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(45,44): error TS2307: Cannot find module '../../../domain/entities/StructuredData' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(46,40): error TS2307: Cannot find module '../../../domain/repositories/ISeoMetadataRepository' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(47,43): error TS2307: Cannot find module '../../../domain/repositories/IStructuredDataRepository' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(48,34): error TS2307: Cannot find module '../../../domain/services/MetaTagGenerator' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(49,31): error TS2307: Cannot find module '../../../domain/services/SlugGenerator' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(50,41): error TS2307: Cannot find module '../../../domain/services/StructuredDataGenerator' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(51,36): error TS2307: Cannot find module '../../../domain/services/SeoScoreCalculator' or its corresponding type declarations.
+modules/seo-automation/src/application/use-cases/GenerateProductSeo.ts(54,38): error TS2307: Cannot find module '../../../domain/errors/seo.errors' or its corresponding type declarations.
+modules/seo-automation/src/index.ts(2,1): error TS2308: Module './domain' has already exported a member named 'PaginatedResult'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/seo-automation/src/index.ts(2,1): error TS2308: Module './domain' has already exported a member named 'PaginationParams'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/seo-automation/src/infrastructure/composition-root.ts(106,9): error TS2740: Type 'TypeOrmSeoMetadataRepository' is missing the following properties from type 'ISeoMetadataRepository': findByLocale, findMissingMeta, findLowScore, search, and 4 more.
+modules/seo-automation/src/infrastructure/composition-root.ts(107,9): error TS2740: Type 'TypeOrmSitemapRepository' is missing the following properties from type 'ISitemapRepository': findByType, findAll, getLastGenerated, delete, and 2 more.
+modules/seo-automation/src/infrastructure/composition-root.ts(108,9): error TS2740: Type 'TypeOrmStructuredDataRepository' is missing the following properties from type 'IStructuredDataRepository': findInvalid, findBySchemaType, bulkSave, deleteByEntity, and 3 more.
+modules/seo-automation/src/infrastructure/composition-root.ts(109,9): error TS2740: Type 'TypeOrmAuditRepository' is missing the following properties from type 'IAuditRepository': findLatest, findAll, getAverageScore, findByEntity, and 2 more.
+modules/seo-automation/src/infrastructure/entities/SeoAuditResultEntity.ts(26,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/seo-automation/src/infrastructure/entities/SeoIssueEntity.ts(29,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/seo-automation/src/infrastructure/entities/SeoMetadataEntity.ts(31,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/seo-automation/src/infrastructure/entities/SitemapEntity.ts(23,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/seo-automation/src/infrastructure/repositories/TypeOrmAuditRepository.ts(5,14): error TS2420: Class 'TypeOrmAuditRepository' incorrectly implements interface 'IAuditRepository'.
+  Type 'TypeOrmAuditRepository' is missing the following properties from type 'IAuditRepository': findLatest, findAll, getAverageScore, findByEntity, and 2 more.
+modules/seo-automation/src/infrastructure/repositories/TypeOrmSeoMetadataRepository.ts(5,14): error TS2420: Class 'TypeOrmSeoMetadataRepository' incorrectly implements interface 'ISeoMetadataRepository'.
+  Type 'TypeOrmSeoMetadataRepository' is missing the following properties from type 'ISeoMetadataRepository': findByLocale, findMissingMeta, findLowScore, search, and 4 more.
+modules/seo-automation/src/infrastructure/repositories/TypeOrmSitemapRepository.ts(5,14): error TS2420: Class 'TypeOrmSitemapRepository' incorrectly implements interface 'ISitemapRepository'.
+  Type 'TypeOrmSitemapRepository' is missing the following properties from type 'ISitemapRepository': findByType, findAll, getLastGenerated, delete, and 2 more.
+modules/seo-automation/src/infrastructure/repositories/TypeOrmStructuredDataRepository.ts(12,9): error TS2416: Property 'findByEntity' in type 'TypeOrmStructuredDataRepository' is not assignable to the same property in base type 'IStructuredDataRepository'.
+  Type '(entityType: string, entityId: string) => Promise<StructuredData | null>' is not assignable to type '(entityType: SeoEntityType, entityId: string) => Promise<StructuredData[]>'.
+    Type 'Promise<StructuredData | null>' is not assignable to type 'Promise<StructuredData[]>'.
+      Type 'StructuredData | null' is not assignable to type 'StructuredData[]'.
+        Type 'null' is not assignable to type 'StructuredData[]'.
+modules/smartbill/src/index.ts(93,5): error TS2345: Argument of type 'import("/Users/Dell/Desktop/erp/cypher/modules/smartbill/src/index").IOrderService' is not assignable to parameter of type 'import("/Users/Dell/Desktop/erp/cypher/modules/smartbill/src/application/use-cases/CreateInvoice").IOrderService'.
+  Property 'getOrderById' is missing in type 'import("/Users/Dell/Desktop/erp/cypher/modules/smartbill/src/index").IOrderService' but required in type 'import("/Users/Dell/Desktop/erp/cypher/modules/smartbill/src/application/use-cases/CreateInvoice").IOrderService'.
+modules/smartbill/src/index.ts(100,5): error TS2345: Argument of type 'IOrderService' is not assignable to parameter of type 'IOrderServiceProforma'.
+  Property 'getOrderById' is missing in type 'IOrderService' but required in type 'IOrderServiceProforma'.
+modules/smartbill/src/index.ts(161,19): error TS2304: Cannot find name 'createSmartBillRouter'.
+modules/smartbill/src/infrastructure/composition-root.ts(17,31): error TS2554: Expected 3 arguments, but got 1.
+modules/smartbill/src/infrastructure/composition-root.ts(20,32): error TS2554: Expected 4 arguments, but got 1.
+modules/smartbill/src/infrastructure/composition-root.ts(21,33): error TS2554: Expected 4 arguments, but got 1.
+modules/smartbill/src/infrastructure/composition-root.ts(22,28): error TS2554: Expected 3 arguments, but got 1.
+modules/smartbill/src/infrastructure/composition-root.ts(23,57): error TS2345: Argument of type 'TypeOrmSmartBillRepository' is not assignable to parameter of type 'ISmartBillApiClientWarehouses'.
+  Property 'getWarehouses' is missing in type 'TypeOrmSmartBillRepository' but required in type 'ISmartBillApiClientWarehouses'.
+modules/smartbill/src/infrastructure/entities/SmartBillInvoiceEntity.ts(52,11): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(type?: any) => Function'.
+modules/smartbill/src/infrastructure/entities/SmartBillProformaEntity.ts(52,11): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '(type?: any) => Function'.
+modules/smartbill/src/infrastructure/jobs/StockSyncJob.ts(55,9): error TS2353: Object literal may only specify known properties, and 'timeout' does not exist in type 'DefaultJobOptions'.
+modules/smartbill/src/infrastructure/jobs/StockSyncJob.ts(108,53): error TS18048: 'job.processedOn' is possibly 'undefined'.
+modules/smartbill/src/infrastructure/jobs/StockSyncJob.ts(153,11): error TS2349: This expression is not callable.
+  No constituent of type 'JobProgress' is callable.
+modules/smartbill/src/infrastructure/mappers/SmartBillMapper.ts(30,5): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+modules/smartbill/src/infrastructure/mappers/SmartBillMapper.ts(72,5): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+modules/smartbill/src/infrastructure/repositories/TypeOrmSmartBillRepository.ts(54,60): error TS2322: Type '{ status: string; }' is not assignable to type 'FindOptionsWhere<SmartBillInvoiceEntity> | FindOptionsWhere<SmartBillInvoiceEntity>[] | undefined'.
+  Types of property 'status' are incompatible.
+    Type 'string' is not assignable to type 'NonNullable<InvoiceStatus> | FindOperator<NonNullable<InvoiceStatus>> | undefined'.
+modules/smartbill/src/infrastructure/repositories/TypeOrmSmartBillRepository.ts(105,61): error TS2322: Type '{ status: string; }' is not assignable to type 'FindOptionsWhere<SmartBillProformaEntity> | FindOptionsWhere<SmartBillProformaEntity>[] | undefined'.
+  Types of property 'status' are incompatible.
+    Type 'string' is not assignable to type 'NonNullable<ProformaStatus> | FindOperator<NonNullable<ProformaStatus>> | undefined'.
+modules/suppliers/src/api/controllers/SupplierController.ts(116,9): error TS2345: Argument of type '(code: any) => BaseScraper' is not assignable to parameter of type 'IScraperFactory'.
+modules/suppliers/src/api/controllers/SupplierController.ts(116,10): error TS7006: Parameter 'code' implicitly has an 'any' type.
+modules/suppliers/src/api/index.ts(7,10): error TS2305: Module '"./routes/supplier.routes"' has no exported member 'supplierRoutes'.
+modules/suppliers/src/api/index.ts(10,10): error TS2305: Module '"./validators/supplier.validators"' has no exported member 'supplierValidators'.
+modules/suppliers/src/application/use-cases/PlaceSupplierOrder.ts(128,26): error TS2339: Property 'getTotalAmount' does not exist on type 'SupplierOrder'.
+modules/suppliers/src/domain/entities/Supplier.ts(42,3): error TS2564: Property 'isActive' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierOrder.ts(33,3): error TS2564: Property 'id' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierOrder.ts(34,3): error TS2564: Property 'supplierId' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierOrder.ts(35,3): error TS2564: Property 'orderId' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierOrder.ts(38,3): error TS2564: Property 'whatsappMessageTemplate' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierOrder.ts(42,3): error TS2564: Property 'createdAt' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierOrder.ts(43,3): error TS2564: Property 'updatedAt' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(21,3): error TS2564: Property 'id' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(22,3): error TS2564: Property 'supplierId' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(23,3): error TS2564: Property 'supplierSku' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(24,3): error TS2564: Property 'name' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(25,3): error TS2564: Property 'price' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(26,3): error TS2564: Property 'currency' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(27,3): error TS2564: Property 'stockQuantity' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(28,3): error TS2564: Property 'lastScraped' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(30,3): error TS2564: Property 'createdAt' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/domain/entities/SupplierProduct.ts(31,3): error TS2564: Property 'updatedAt' has no initializer and is not definitely assigned in the constructor.
+modules/suppliers/src/infrastructure/composition-root.ts(18,30): error TS2554: Expected 4 arguments, but got 1.
+modules/suppliers/src/infrastructure/composition-root.ts(21,47): error TS2345: Argument of type 'DataSource' is not assignable to parameter of type 'ISupplierRepository'.
+  Type 'DataSource' is missing the following properties from type 'ISupplierRepository': getSupplier, getSupplierByCode, listSuppliers, getSupplierProducts, and 14 more.
+modules/suppliers/src/infrastructure/composition-root.ts(24,31): error TS2554: Expected 2 arguments, but got 1.
+modules/suppliers/src/infrastructure/entities/SupplierOrderEntityDb.ts(43,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/suppliers/src/infrastructure/jobs/SupplierSyncJob.ts(71,9): error TS2353: Object literal may only specify known properties, and 'timeout' does not exist in type 'DefaultJobOptions'.
+modules/suppliers/src/infrastructure/jobs/SupplierSyncJob.ts(103,53): error TS18048: 'job.processedOn' is possibly 'undefined'.
+modules/suppliers/src/infrastructure/jobs/SupplierSyncJob.ts(180,9): error TS2345: Argument of type '(code: any) => BaseScraper' is not assignable to parameter of type 'IScraperFactory'.
+modules/suppliers/src/infrastructure/jobs/SupplierSyncJob.ts(180,10): error TS7006: Parameter 'code' implicitly has an 'any' type.
+modules/suppliers/src/infrastructure/jobs/SupplierSyncJob.ts(230,13): error TS2345: Argument of type '(code: any) => BaseScraper' is not assignable to parameter of type 'IScraperFactory'.
+modules/suppliers/src/infrastructure/jobs/SupplierSyncJob.ts(230,14): error TS7006: Parameter 'code' implicitly has an 'any' type.
+modules/suppliers/src/infrastructure/repositories/TypeOrmSupplierRepository.ts(101,25): error TS2339: Property 'productId' does not exist on type 'SupplierProduct'.
+modules/suppliers/src/infrastructure/repositories/TypeOrmSupplierRepository.ts(104,33): error TS2339: Property 'minOrderQuantity' does not exist on type 'SupplierProduct'.
+modules/suppliers/src/infrastructure/repositories/TypeOrmSupplierRepository.ts(105,29): error TS2339: Property 'leadTimeDays' does not exist on type 'SupplierProduct'.
+modules/suppliers/src/infrastructure/repositories/TypeOrmSupplierRepository.ts(106,24): error TS2339: Property 'isActive' does not exist on type 'SupplierProduct'.
+modules/suppliers/src/infrastructure/repositories/TypeOrmSupplierRepository.ts(106,51): error TS2339: Property 'isActive' does not exist on type 'SupplierProduct'.
+modules/whatsapp/src/api/routes/whatsapp.routes.ts(26,14): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '(req: AuthenticatedRequest, res: Response, next: NextFunction) => void' is not assignable to parameter of type 'PathParams'.
+modules/whatsapp/src/infrastructure/composition-root.ts(43,9): error TS2739: Type 'TypeOrmMessageRepository' is missing the following properties from type 'IMessageRepository': findByPhone, findPending, updateStatus, countUnread, delete
+modules/whatsapp/src/infrastructure/composition-root.ts(44,9): error TS2740: Type 'TypeOrmConversationRepository' is missing the following properties from type 'IConversationRepository': findOpen, findAssigned, findAll, search, and 2 more.
+modules/whatsapp/src/infrastructure/composition-root.ts(58,5): error TS2554: Expected 0 arguments, but got 6.
+modules/whatsapp/src/infrastructure/entities/WhatsAppConversationEntity.ts(33,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/whatsapp/src/infrastructure/entities/WhatsAppMessageEntity.ts(27,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/whatsapp/src/infrastructure/entities/WhatsAppMessageEntity.ts(33,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/whatsapp/src/infrastructure/entities/WhatsAppMessageEntity.ts(48,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/whatsapp/src/infrastructure/entities/WhatsAppTemplateEntity.ts(32,9): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/whatsapp/src/infrastructure/index.ts(1,15): error TS2307: Cannot find module './entities' or its corresponding type declarations.
+modules/whatsapp/src/infrastructure/index.ts(2,15): error TS2307: Cannot find module './external' or its corresponding type declarations.
+modules/whatsapp/src/infrastructure/index.ts(5,15): error TS2307: Cannot find module './repositories' or its corresponding type declarations.
+modules/whatsapp/src/infrastructure/index.ts(6,15): error TS2307: Cannot find module './services' or its corresponding type declarations.
+modules/whatsapp/src/infrastructure/index.ts(7,15): error TS2307: Cannot find module './use-cases' or its corresponding type declarations.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(16,5): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(16,38): error TS2341: Property 'customerId' is private and only accessible within class 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(17,39): error TS2339: Property 'phone' does not exist on type 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(18,39): error TS2339: Property 'displayName' does not exist on type 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(19,34): error TS2341: Property 'status' is private and only accessible within class 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(20,40): error TS2341: Property 'messageCount' is private and only accessible within class 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(21,33): error TS2339: Property 'notes' does not exist on type 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(22,41): error TS2341: Property 'lastMessageAt' is private and only accessible within class 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(23,36): error TS2339: Property 'closedAt' does not exist on type 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(24,36): error TS2339: Property 'metadata' does not exist on type 'WhatsAppConversation'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(32,9): error TS2416: Property 'findById' in type 'TypeOrmConversationRepository' is not assignable to the same property in base type 'IConversationRepository'.
+  Type '(id: string) => Promise<WhatsAppConversation | undefined>' is not assignable to type '(id: string) => Promise<WhatsAppConversation | null>'.
+    Type 'Promise<WhatsAppConversation | undefined>' is not assignable to type 'Promise<WhatsAppConversation | null>'.
+      Type 'WhatsAppConversation | undefined' is not assignable to type 'WhatsAppConversation | null'.
+        Type 'undefined' is not assignable to type 'WhatsAppConversation | null'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(37,9): error TS2416: Property 'findByPhone' in type 'TypeOrmConversationRepository' is not assignable to the same property in base type 'IConversationRepository'.
+  Type '(phone: string) => Promise<WhatsAppConversation | undefined>' is not assignable to type '(phone: string) => Promise<WhatsAppConversation | null>'.
+    Type 'Promise<WhatsAppConversation | undefined>' is not assignable to type 'Promise<WhatsAppConversation | null>'.
+      Type 'WhatsAppConversation | undefined' is not assignable to type 'WhatsAppConversation | null'.
+        Type 'undefined' is not assignable to type 'WhatsAppConversation | null'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmConversationRepository.ts(68,7): error TS2345: Argument of type 'number' is not assignable to parameter of type 'Date'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmMessageRepository.ts(18,34): error TS2339: Property 'type' does not exist on type 'WhatsAppMessage'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmMessageRepository.ts(22,29): error TS2341: Property 'status' is private and only accessible within class 'WhatsAppMessage'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmMessageRepository.ts(27,40): error TS2341: Property 'whatsappMessageId' is private and only accessible within class 'WhatsAppMessage'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmMessageRepository.ts(28,36): error TS2341: Property 'failureReason' is private and only accessible within class 'WhatsAppMessage'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmMessageRepository.ts(29,33): error TS2341: Property 'retryCount' is private and only accessible within class 'WhatsAppMessage'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmMessageRepository.ts(38,9): error TS2416: Property 'findById' in type 'TypeOrmMessageRepository' is not assignable to the same property in base type 'IMessageRepository'.
+  Type '(id: string) => Promise<WhatsAppMessage | undefined>' is not assignable to type '(id: string) => Promise<WhatsAppMessage | null>'.
+    Type 'Promise<WhatsAppMessage | undefined>' is not assignable to type 'Promise<WhatsAppMessage | null>'.
+      Type 'WhatsAppMessage | undefined' is not assignable to type 'WhatsAppMessage | null'.
+        Type 'undefined' is not assignable to type 'WhatsAppMessage | null'.
+modules/whatsapp/src/infrastructure/repositories/TypeOrmMessageRepository.ts(43,9): error TS2416: Property 'findByConversation' in type 'TypeOrmMessageRepository' is not assignable to the same property in base type 'IMessageRepository'.
+  Type '(conversationId: string) => Promise<WhatsAppMessage[]>' is not assignable to type '(conversationId: string, pagination: PaginationParams) => Promise<PaginatedResult<WhatsAppMessage>>'.
+    Type 'Promise<WhatsAppMessage[]>' is not assignable to type 'Promise<PaginatedResult<WhatsAppMessage>>'.
+      Type 'WhatsAppMessage[]' is missing the following properties from type 'PaginatedResult<WhatsAppMessage>': items, total, limit, offset
+modules/whatsapp/src/infrastructure/repositories/TypeOrmMessageRepository.ts(64,7): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'Record<string, string> | undefined'.
+  Type 'string' is not assignable to type 'Record<string, string>'.
+modules/whatsapp/src/whatsapp-module.ts(140,9): error TS2554: Expected 2 arguments, but got 3.
+modules/whatsapp/src/whatsapp-module.ts(295,7): error TS2322: Type 'Record<string, unknown>' is not assignable to type 'Record<string, IHealthStatus>'.
+  'string' index signatures are incompatible.
+    Type 'unknown' is not assignable to type 'IHealthStatus'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(19,13): error TS2300: Duplicate identifier 'syncAllProducts'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(20,13): error TS2300: Duplicate identifier 'syncStock'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(21,13): error TS2300: Duplicate identifier 'syncPrice'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(22,13): error TS2300: Duplicate identifier 'syncCategories'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(23,13): error TS2300: Duplicate identifier 'pullOrders'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(38,9): error TS2300: Duplicate identifier 'syncAllProducts'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(50,9): error TS2300: Duplicate identifier 'syncStock'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(62,9): error TS2300: Duplicate identifier 'syncPrice'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(74,9): error TS2300: Duplicate identifier 'syncCategories'.
+modules/woocommerce-sync/src/api/controllers/WooCommerceController.ts(84,9): error TS2300: Duplicate identifier 'pullOrders'.
+modules/woocommerce-sync/src/api/index.ts(7,10): error TS2305: Module '"./routes/woocommerce.routes"' has no exported member 'woocommerceRoutes'.
+modules/woocommerce-sync/src/api/index.ts(10,10): error TS2724: '"./validators/woocommerce.validators"' has no exported member named 'woocommerceValidators'. Did you mean 'WooCommerceValidators'?
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(25,49): error TS2341: Property 'syncAllProducts' is private and only accessible within class 'WooCommerceController'.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(25,49): error TS2349: This expression is not callable.
+  Type 'SyncAllProducts' has no call signatures.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(31,49): error TS2341: Property 'syncStock' is private and only accessible within class 'WooCommerceController'.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(31,49): error TS2349: This expression is not callable.
+  Type 'SyncStock' has no call signatures.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(37,49): error TS2341: Property 'syncPrice' is private and only accessible within class 'WooCommerceController'.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(37,49): error TS2349: This expression is not callable.
+  Type 'SyncPrice' has no call signatures.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(43,49): error TS2341: Property 'syncCategories' is private and only accessible within class 'WooCommerceController'.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(43,49): error TS2349: This expression is not callable.
+  Type 'SyncCategories' has no call signatures.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(50,49): error TS2341: Property 'pullOrders' is private and only accessible within class 'WooCommerceController'.
+modules/woocommerce-sync/src/api/routes/woocommerce.routes.ts(50,49): error TS2349: This expression is not callable.
+  Type 'PullOrders' has no call signatures.
+modules/woocommerce-sync/src/application/services/WebhookReliabilityService.ts(8,54): error TS2307: Cannot find module '../entities/WebhookEventLogEntity' or its corresponding type declarations.
+modules/woocommerce-sync/src/application/use-cases/index.ts(6,1): error TS2308: Module './SyncAllProducts' has already exported a member named 'InternalProduct'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/woocommerce-sync/src/application/use-cases/SyncCategories.ts(45,17): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+modules/woocommerce-sync/src/application/use-cases/SyncCategories.ts(56,13): error TS2353: Object literal may only specify known properties, and 'description' does not exist in type '{ name: string; slug?: string | undefined; parent?: number | undefined; }'.
+modules/woocommerce-sync/src/application/use-cases/SyncPrice.ts(43,9): error TS2554: Expected 1-4 arguments, but got 5.
+modules/woocommerce-sync/src/application/use-cases/SyncStock.ts(34,9): error TS2554: Expected 1 arguments, but got 2.
+modules/woocommerce-sync/src/index.ts(12,1): error TS2308: Module './domain' has already exported a member named 'SyncStats'. Consider explicitly re-exporting to resolve the ambiguity.
+modules/woocommerce-sync/src/infrastructure/cache/SyncCache.ts(7,25): error TS2694: Namespace '"/Users/Dell/Desktop/erp/cypher/node_modules/redis/dist/index"' has no exported member 'RedisClient'.
+modules/woocommerce-sync/src/infrastructure/cache/SyncCache.ts(14,30): error TS7006: Parameter 'err' implicitly has an 'any' type.
+modules/woocommerce-sync/src/infrastructure/composition-root.ts(22,23): error TS2554: Expected 4 arguments, but got 1.
+modules/woocommerce-sync/src/infrastructure/composition-root.ts(23,27): error TS2554: Expected 4 arguments, but got 1.
+modules/woocommerce-sync/src/infrastructure/composition-root.ts(24,21): error TS2554: Expected 4 arguments, but got 1.
+modules/woocommerce-sync/src/infrastructure/composition-root.ts(25,21): error TS2554: Expected 4 arguments, but got 1.
+modules/woocommerce-sync/src/infrastructure/composition-root.ts(26,26): error TS2554: Expected 3 arguments, but got 1.
+modules/woocommerce-sync/src/infrastructure/composition-root.ts(27,22): error TS2554: Expected 3 arguments, but got 1.
+modules/woocommerce-sync/src/infrastructure/entities/WebhookEventLogEntity.ts(40,13): error TS1255: A definite assignment assertion '!' is not permitted in this context.
+modules/woocommerce-sync/src/infrastructure/jobs/FullSyncJob.ts(47,9): error TS2353: Object literal may only specify known properties, and 'timeout' does not exist in type 'DefaultJobOptions'.
+modules/woocommerce-sync/src/infrastructure/jobs/FullSyncJob.ts(104,53): error TS18048: 'job.processedOn' is possibly 'undefined'.
+modules/woocommerce-sync/src/infrastructure/jobs/OrderPullJob.ts(50,9): error TS2353: Object literal may only specify known properties, and 'timeout' does not exist in type 'DefaultJobOptions'.
+modules/woocommerce-sync/src/infrastructure/jobs/OrderPullJob.ts(114,53): error TS18048: 'job.processedOn' is possibly 'undefined'.
+modules/woocommerce-sync/src/infrastructure/jobs/RealTimeSyncWorker.ts(45,7): error TS2353: Object literal may only specify known properties, and 'attempts' does not exist in type 'WorkerOptions'.
+modules/woocommerce-sync/src/infrastructure/jobs/RealTimeSyncWorker.ts(106,13): error TS18046: 'productData' is of type 'unknown'.
+modules/woocommerce-sync/src/infrastructure/jobs/RealTimeSyncWorker.ts(113,13): error TS18046: 'productData' is of type 'unknown'.
+modules/woocommerce-sync/src/infrastructure/jobs/RealTimeSyncWorker.ts(114,13): error TS18046: 'productData' is of type 'unknown'.
+modules/woocommerce-sync/src/infrastructure/jobs/RealTimeSyncWorker.ts(119,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'InternalProduct'.
+modules/woocommerce-sync/src/infrastructure/jobs/RealTimeSyncWorker.ts(138,11): error TS2349: This expression is not callable.
+  No constituent of type 'JobProgress' is callable.
+modules/woocommerce-sync/src/infrastructure/jobs/RetryFailedJob.ts(50,9): error TS2353: Object literal may only specify known properties, and 'timeout' does not exist in type 'DefaultJobOptions'.
+modules/woocommerce-sync/src/infrastructure/jobs/RetryFailedJob.ts(114,53): error TS18048: 'job.processedOn' is possibly 'undefined'.
+modules/woocommerce-sync/src/infrastructure/repositories/TypeOrmSyncRepository.ts(89,7): error TS2322: Type '{ syncType: string; }' is not assignable to type 'FindOptionsWhere<SyncItemEntity> | FindOptionsWhere<SyncItemEntity>[] | undefined'.
+  Types of property 'syncType' are incompatible.
+    Type 'string' is not assignable to type 'NonNullable<SyncType> | FindOperator<NonNullable<SyncType>> | undefined'.
+modules/woocommerce-sync/src/infrastructure/repositories/TypeOrmSyncRepository.ts(221,7): error TS2322: Type '{ syncStatus: string; }' is not assignable to type 'FindOptionsWhere<ProductSyncMappingEntity> | FindOptionsWhere<ProductSyncMappingEntity>[] | undefined'.
+  Types of property 'syncStatus' are incompatible.
+    Type 'string' is not assignable to type 'NonNullable<"error" | "in_sync" | "out_of_sync"> | FindOperator<NonNullable<"error" | "in_sync" | "out_of_sync">> | undefined'.
+shared/alerting/index.ts(50,3): error TS18004: No value exists in scope for the shorthand property 'getAlertManager'. Either declare one or provide an initializer.
+shared/alerting/index.ts(51,3): error TS18004: No value exists in scope for the shorthand property 'sendAlert'. Either declare one or provide an initializer.
+shared/api/api-client.ts(335,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+shared/cache/redis-pool.ts(370,21): error TS2345: Argument of type 'Timer' is not assignable to parameter of type 'string | number | Timeout | undefined'.
+  Type 'Timer' is missing the following properties from type 'Timeout': close, _onTimeout, [Symbol.dispose]
+shared/constants/order-statuses.ts(122,36): error TS2345: Argument of type 'OrderStatus' is not assignable to parameter of type 'never'.
+shared/constants/order-statuses.ts(135,3): error TS2322: Type 'readonly [OrderStatus.QUOTE_SENT, OrderStatus.CANCELLED] | readonly [OrderStatus.QUOTE_ACCEPTED, OrderStatus.CANCELLED] | readonly [OrderStatus.ORDER_CONFIRMED, OrderStatus.CANCELLED] | ... 9 more ... | readonly []' is not assignable to type 'OrderStatus[]'.
+  The type 'readonly [OrderStatus.QUOTE_SENT, OrderStatus.CANCELLED]' is 'readonly' and cannot be assigned to the mutable type 'OrderStatus[]'.
+shared/database/query-optimizer.ts(108,38): error TS2344: Type 'T' does not satisfy the constraint 'ObjectLiteral'.
+shared/database/query-optimizer.ts(328,33): error TS2344: Type 'T' does not satisfy the constraint 'ObjectLiteral'.
+shared/database/query-optimizer.ts(395,61): error TS2344: Type 'T' does not satisfy the constraint 'ObjectLiteral'.
+shared/database/query-optimizer.ts(426,38): error TS2344: Type 'T' does not satisfy the constraint 'ObjectLiteral'.
+shared/database/query-optimizer.ts(461,60): error TS2344: Type 'T' does not satisfy the constraint 'ObjectLiteral'.
+shared/events/index.ts(98,5): error TS2304: Cannot find name 'OrderEventPayload'.
+shared/events/index.ts(99,5): error TS2304: Cannot find name 'InventoryEventPayload'.
+shared/events/index.ts(100,5): error TS2304: Cannot find name 'QuoteEventPayload'.
+shared/events/index.ts(101,5): error TS2304: Cannot find name 'PricingEventPayload'.
+shared/events/index.ts(102,5): error TS2304: Cannot find name 'SupplierEventPayload'.
+shared/events/index.ts(103,5): error TS2304: Cannot find name 'CustomerEventPayload'.
+shared/events/index.ts(109,5): error TS2304: Cannot find name 'OrderEventType'.
+shared/events/index.ts(110,5): error TS2304: Cannot find name 'InventoryEventType'.
+shared/events/index.ts(111,5): error TS2304: Cannot find name 'QuoteEventType'.
+shared/events/index.ts(112,5): error TS2304: Cannot find name 'PricingEventType'.
+shared/events/index.ts(113,5): error TS2304: Cannot find name 'SupplierEventType'.
+shared/events/index.ts(114,5): error TS2304: Cannot find name 'CustomerEventType'.
+shared/index.ts(14,1): error TS2308: Module './types' has already exported a member named 'OrderStatus'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(14,1): error TS2308: Module './types' has already exported a member named 'VAT_RATE'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(17,1): error TS2308: Module './types' has already exported a member named 'NotificationPayload'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(17,1): error TS2308: Module './types' has already exported a member named 'ProformaInvoice'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(17,1): error TS2308: Module './types' has already exported a member named 'QuoteFilters'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(17,1): error TS2308: Module './types' has already exported a member named 'SupplierProduct'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(17,1): error TS2308: Module './types' has already exported a member named 'SupplierSkuMapping'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(20,1): error TS2308: Module './interfaces' has already exported a member named 'PartialDeliveryItem'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(20,1): error TS2308: Module './interfaces' has already exported a member named 'SupplierOrderItem'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(20,1): error TS2308: Module './types' has already exported a member named 'OrderItem'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(20,1): error TS2308: Module './types' has already exported a member named 'QuoteItem'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/index.ts(26,1): error TS2308: Module './types' has already exported a member named 'ApiResponse'. Consider explicitly re-exporting to resolve the ambiguity.
+shared/middleware/audit-trail.middleware.ts(45,7): error TS2322: Type 'string | number | undefined' is not assignable to type 'number | undefined'.
+  Type 'string' is not assignable to type 'number'.
+shared/middleware/audit-trail.middleware.ts(101,37): error TS2345: Argument of type 'any[]' is not assignable to parameter of type '[chunk: any, encoding: BufferEncoding, cb?: (() => void) | undefined]'.
+  Target requires 2 element(s) but source may have fewer.
+shared/middleware/health.middleware.ts(214,47): error TS2353: Object literal may only specify known properties, and 'timeout' does not exist in type 'RequestInit'.
+shared/middleware/health.middleware.ts(223,35): error TS2339: Property 'ok' does not exist on type 'e.Response<any, Record<string, any>> | Response'.
+  Property 'ok' does not exist on type 'Response<any, Record<string, any>>'.
+shared/middleware/health.middleware.ts(267,13): error TS2353: Object literal may only specify known properties, and 'timeout' does not exist in type 'RequestInit'.
+shared/middleware/health.middleware.ts(277,30): error TS2339: Property 'ok' does not exist on type 'e.Response<any, Record<string, any>> | Response'.
+  Property 'ok' does not exist on type 'Response<any, Record<string, any>>'.
+shared/utils/logger.ts(13,21): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(o: {}): string[]', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '{}'.
+  Overload 2 of 2, '(o: object): string[]', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'object'.
+shared/utils/logger.ts(27,21): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(o: {}): string[]', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type '{}'.
+  Overload 2 of 2, '(o: object): string[]', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'object'.
+shared/utils/stream-processor.ts(104,38): error TS2344: Type 'T' does not satisfy the constraint 'ObjectLiteral'.
+shared/utils/stream-processor.ts(158,22): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | null | undefined'.
+shared/utils/stream-processor.ts(208,38): error TS2344: Type 'T' does not satisfy the constraint 'ObjectLiteral'.
+shared/utils/stream-processor.ts(247,22): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | null | undefined'.
+shared/utils/stream-processor.ts(318,34): error TS7006: Parameter 'encoding' implicitly has an 'any' type.
+shared/utils/stream-processor.ts(318,44): error TS7006: Parameter 'callback' implicitly has an 'any' type.
+shared/utils/stream-processor.ts(365,15): error TS7006: Parameter 'callback' implicitly has an 'any' type.
+shared/utils/stream-processor.ts(401,38): error TS2344: Type 'T' does not satisfy the constraint 'ObjectLiteral'.
+shared/utils/stream-processor.ts(434,24): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Error | undefined'.
+shared/utils/validator.ts(3,23): error TS2307: Cannot find module 'isomorphic-dompurify' or its corresponding type declarations.
+src/server.ts(115,20): error TS2341: Property 'connect' is private and only accessible within class 'EventBus'.

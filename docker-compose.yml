@@ -1,0 +1,605 @@
+# ==============================================================================
+# Cypher ERP - Main Docker Compose Configuration
+# ==============================================================================
+#
+# This is the main Docker Compose configuration for the Cypher ERP system.
+# For production deployment, use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# For development, use this file directly: docker compose up -d
+#
+# Environment Variables:
+#   See .env.example for a complete list of required and optional variables
+#
+# ==============================================================================
+
+services:
+  # ==============================================================================
+  # Frontend (Nginx + React/Vite)
+  # ==============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cypher-erp-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - cypher-network
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:80/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      labels:
+        - "com.cypher.service=frontend"
+        - "com.cypher.environment=${NODE_ENV:-development}"
+        - "com.cypher.version=${VERSION:-0.1.0}"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service,environment"
+
+  # ==============================================================================
+  # CYPHER ERP Application (Backend API)
+  # ==============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=${NODE_ENV:-production}
+    container_name: cypher-erp-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+      API_PREFIX: ${API_PREFIX:-/api/v1}
+      APP_NAME: ${APP_NAME:-CYPHER ERP}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      VERSION: ${VERSION:-0.1.0}
+
+      # Database Configuration
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-cypher_erp}
+      DB_USER: ${DB_USER:-cypher_user}
+      DB_USERNAME: ${DB_USER:-cypher_user}
+      DB_PASSWORD: ${DB_PASSWORD:-cypher_secret}
+      DB_SSL: ${DB_SSL:-false}
+      DB_LOGGING: ${DB_LOGGING:-false}
+      DB_POOL_MIN: ${DB_POOL_MIN:-5}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+
+      # RabbitMQ Configuration
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+
+      # JWT Authentication
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_in_production}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      JWT_SECRET_B2B: ${JWT_SECRET_B2B:-b2b_jwt_secret_change_me_in_production}
+
+      # SmartBill API
+      SMARTBILL_API_URL: ${SMARTBILL_API_URL:-https://ws.smartbill.ro/SMBWS/api}
+      SMARTBILL_USERNAME: ${SMARTBILL_USERNAME:-}
+      SMARTBILL_TOKEN: ${SMARTBILL_TOKEN:-}
+      SMARTBILL_COMPANY_VAT: ${SMARTBILL_COMPANY_VAT:-}
+      SMARTBILL_INVOICE_SERIES: ${SMARTBILL_INVOICE_SERIES:-FL}
+      SMARTBILL_SYNC_INTERVAL_MS: ${SMARTBILL_SYNC_INTERVAL_MS:-900000}
+
+      # WooCommerce API
+      WOOCOMMERCE_URL: ${WOOCOMMERCE_URL:-https://ledux.ro}
+      WOOCOMMERCE_CONSUMER_KEY: ${WOOCOMMERCE_CONSUMER_KEY:-}
+      WOOCOMMERCE_CONSUMER_SECRET: ${WOOCOMMERCE_CONSUMER_SECRET:-}
+      WOOCOMMERCE_VERSION: ${WOOCOMMERCE_VERSION:-wc/v3}
+      WOOCOMMERCE_API_KEY: ${WOOCOMMERCE_API_KEY:-}
+      WOOCOMMERCE_API_SECRET: ${WOOCOMMERCE_API_SECRET:-}
+
+      # WhatsApp Business (Agent B)
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL:-}
+      WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+
+      # Email Configuration
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@ledux.ro}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Ledux.ro}
+
+      # Supplier Configuration
+      SUPPLIER_SYNC_INTERVAL_MS: ${SUPPLIER_SYNC_INTERVAL_MS:-14400000}
+      SUPPLIER_SCRAPE_TIMEOUT_MS: ${SUPPLIER_SCRAPE_TIMEOUT_MS:-30000}
+      SUPPLIER_SCRAPE_MAX_RETRIES: ${SUPPLIER_SCRAPE_MAX_RETRIES:-3}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Feature Flags
+      FEATURE_ADVANCED_REPORTING: ${FEATURE_ADVANCED_REPORTING:-true}
+      FEATURE_AI_RECOMMENDATIONS: ${FEATURE_AI_RECOMMENDATIONS:-true}
+      FEATURE_MULTI_CURRENCY: ${FEATURE_MULTI_CURRENCY:-true}
+      FEATURE_FLAG_ENABLE_B2B_PORTAL: ${FEATURE_FLAG_ENABLE_B2B_PORTAL:-true}
+
+      # Rate Limiting
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-3600000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-1000}
+
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80,http://65.108.255.104}
+      CORS_CREDENTIALS: ${CORS_CREDENTIALS:-true}
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - cypher-network
+
+    volumes:
+      - ./logs:/app/logs
+      - ./config:/app/config
+
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "com.cypher.service=app"
+        - "com.cypher.environment=${NODE_ENV:-production}"
+        - "com.cypher.version=${VERSION:-0.1.0}"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service,environment,version"
+
+  # ==============================================================================
+  # PostgreSQL Database
+  # ==============================================================================
+  db:
+    image: postgres:15-alpine
+    container_name: cypher-erp-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME:-cypher_erp}
+      POSTGRES_USER: ${DB_USER:-cypher_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cypher_secret}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
+
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./database/init-scripts:/docker-entrypoint-initdb.d:ro
+
+    networks:
+      - cypher-network
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-cypher_user} -d ${DB_NAME:-cypher_erp}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "com.cypher.service=db"
+        - "com.cypher.environment=${NODE_ENV:-production}"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service,environment"
+
+  # ==============================================================================
+  # Redis Cache
+  # ==============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: cypher-erp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: >
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+        redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD" --maxmemory 256mb --maxmemory-policy allkeys-lru;
+      else
+        redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru;
+      fi'
+
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+    volumes:
+      - redis-data:/data
+
+    networks:
+      - cypher-network
+
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+        window: 60s
+      labels:
+        - "com.cypher.service=redis"
+        - "com.cypher.environment=${NODE_ENV:-production}"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service,environment"
+
+  # ==============================================================================
+  # MeiliSearch - High Performance Search Engine
+  # ==============================================================================
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: cypher-erp-search
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
+      MEILI_ENV: ${NODE_ENV:-development}
+
+    volumes:
+      - meili-data:/meili_data
+
+    networks:
+      - cypher-network
+
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "com.cypher.service=meilisearch"
+        - "com.cypher.environment=${NODE_ENV:-production}"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service,environment"
+
+  # ==============================================================================
+  # PgAdmin - Database Management UI (Optional)
+  # ==============================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cypher-erp-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@ledux.ro}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
+    networks:
+      - cypher-network
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/misc/ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+      labels:
+        - "com.cypher.service=pgadmin"
+        - "com.cypher.environment=${NODE_ENV:-production}"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service,environment"
+
+  # ==============================================================================
+  # AI Agents Service (Python)
+  # ==============================================================================
+  ai-service:
+    build:
+      context: ./modules/ai-agents
+      dockerfile: Dockerfile
+    container_name: cypher-erp-ai
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DATABASE_URL: postgresql://${DB_USER:-cypher_user}:${DB_PASSWORD:-cypher_secret}@db:5432/${DB_NAME:-cypher_erp}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/${REDIS_DB:-0}
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - cypher-network
+
+    volumes:
+      - ./modules/ai-agents:/app
+
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8000/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "com.cypher.service=ai-service"
+        - "com.cypher.environment=${NODE_ENV:-production}"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service,environment"
+
+  # ==============================================================================
+  # RabbitMQ - Event Bus
+  # ==============================================================================
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: cypher-rabbitmq
+    hostname: rabbitmq
+
+    ports:
+      # AMQP protocol port
+      - "5672:5672"
+      # Management UI port
+      - "15672:15672"
+      # Prometheus metrics port (optional)
+      - "15692:15692"
+
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+
+      # Memory and disk thresholds
+      RABBITMQ_DISK_FREE_LIMIT: 1GB
+
+      # Enable plugins
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit log_levels [{connection,error},{default,warning}]"
+
+    volumes:
+      # Persist data across container restarts
+      - rabbitmq-data:/var/lib/rabbitmq
+      # Persist configuration
+      - rabbitmq-config:/etc/rabbitmq
+
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+    networks:
+      - cypher-network
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 180s
+      labels:
+        - "com.cypher.service=rabbitmq"
+        - "com.cypher.environment=${NODE_ENV:-production}"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service,environment"
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  cypher-network:
+    name: ${COMPOSE_PROJECT_NAME:-cypher-erp}_cypher-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+    labels:
+      - "com.cypher.network=default"
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  db-data:
+    name: cypher-db-data
+    driver: local
+
+  redis-data:
+    name: cypher-redis-data
+    driver: local
+
+  meili-data:
+    name: cypher-meili-data
+    driver: local
+
+  pgadmin-data:
+    name: cypher-pgadmin-data
+    driver: local
+
+  rabbitmq-data:
+    name: cypher-rabbitmq-data
+    driver: local
+
+  rabbitmq-config:
+    name: cypher-rabbitmq-config
+    driver: local

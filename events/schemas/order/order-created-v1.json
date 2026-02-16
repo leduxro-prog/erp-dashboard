@@ -1,0 +1,449 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.cypher.ro/events/order/order-created-v1.json",
+  "title": "Order Created Event v1",
+  "description": "Emitted when a new order is created in the system. This is a critical P0 event that triggers inventory updates, payment processing, and order fulfillment workflows.",
+  "type": "object",
+  "required": [
+    "order_id",
+    "order_number",
+    "customer_id",
+    "customer_type",
+    "created_at",
+    "items",
+    "totals",
+    "status"
+  ],
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the order"
+    },
+    "order_number": {
+      "type": "string",
+      "pattern": "^ORD-\\d{8}$",
+      "description": "Human-readable order number (e.g., ORD-00012345)"
+    },
+    "quote_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Quote ID if order was created from a quote"
+    },
+    "quote_number": {
+      "type": "string",
+      "description": "Quote number if order was created from a quote"
+    },
+    "cart_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Cart ID if order was created from a cart"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Customer identifier"
+    },
+    "customer_type": {
+      "type": "string",
+      "enum": ["b2b", "b2c", "guest"],
+      "description": "Type of customer"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Name of the customer"
+    },
+    "customer_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Customer email address"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer phone number"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID who created the order (null for customer-created orders)"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the order was created"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "confirmed", "processing", "ready_to_ship", "shipped", "delivered", "cancelled", "refunded", "failed"],
+      "default": "pending",
+      "description": "Current status of the order"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": ["pending", "authorized", "paid", "partial", "refunded", "failed"],
+      "default": "pending",
+      "description": "Payment status of the order"
+    },
+    "fulfillment_status": {
+      "type": "string",
+      "enum": ["unfulfilled", "partial", "fulfilled"],
+      "default": "unfulfilled",
+      "description": "Fulfillment status of the order"
+    },
+    "items": {
+      "type": "array",
+      "description": "Order line items",
+      "items": {
+        "$ref": "#/definitions/OrderItem"
+      }
+    },
+    "totals": {
+      "$ref": "#/definitions/OrderTotals",
+      "description": "Order totals"
+    },
+    "shipping_address": {
+      "$ref": "#/definitions/Address",
+      "description": "Shipping address"
+    },
+    "billing_address": {
+      "$ref": "#/definitions/Address",
+      "description": "Billing address"
+    },
+    "shipping_method": {
+      "$ref": "#/definitions/ShippingMethod",
+      "description": "Selected shipping method"
+    },
+    "payment_method": {
+      "$ref": "#/definitions/PaymentMethod",
+      "description": "Selected payment method"
+    },
+    "channel": {
+      "type": "string",
+      "enum": ["web", "mobile", "pos", "api", "admin", "phone", "email"],
+      "default": "web",
+      "description": "Sales channel where the order was created"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Customer notes on the order"
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Internal notes not visible to customer"
+    },
+    "promo_code": {
+      "type": "string",
+      "description": "Promotional code applied to the order"
+    },
+    "tax_exempt": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the order is tax-exempt"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional order metadata"
+    }
+  },
+  "definitions": {
+    "OrderItem": {
+      "type": "object",
+      "required": [
+        "item_id",
+        "product_id",
+        "quantity",
+        "unit_price"
+      ],
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for the order item"
+        },
+        "product_id": {
+          "type": "string",
+          "description": "Product identifier"
+        },
+        "variant_id": {
+          "type": "string",
+          "description": "Product variant identifier (if applicable)"
+        },
+        "sku": {
+          "type": "string",
+          "description": "SKU of the product"
+        },
+        "product_name": {
+          "type": "string",
+          "description": "Name of the product"
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Quantity ordered"
+        },
+        "unit_price": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per unit before discounts"
+        },
+        "unit_cost": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Cost per unit for profit calculation"
+        },
+        "tax_rate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Tax rate as percentage"
+        },
+        "tax_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Tax amount for this line"
+        },
+        "discount_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Discount amount for this line"
+        },
+        "line_total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total price for this line item"
+        },
+        "reserved_stock": {
+          "type": "boolean",
+          "description": "Whether stock has been reserved for this item"
+        }
+      }
+    },
+    "OrderTotals": {
+      "type": "object",
+      "required": [
+        "subtotal",
+        "tax_amount",
+        "total"
+      ],
+      "properties": {
+        "subtotal": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Subtotal of all items"
+        },
+        "discount_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total discount amount"
+        },
+        "tax_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total tax amount"
+        },
+        "shipping_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Shipping cost"
+        },
+        "shipping_discount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Shipping discount amount"
+        },
+        "total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Final order total"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Currency code (e.g., EUR, RON, USD)"
+        }
+      }
+    },
+    "Address": {
+      "type": "object",
+      "required": [
+        "country",
+        "city"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Recipient name"
+        },
+        "company": {
+          "type": "string",
+          "description": "Company name"
+        },
+        "address_line1": {
+          "type": "string",
+          "description": "First address line"
+        },
+        "address_line2": {
+          "type": "string",
+          "description": "Second address line"
+        },
+        "city": {
+          "type": "string",
+          "description": "City"
+        },
+        "state_province": {
+          "type": "string",
+          "description": "State or province"
+        },
+        "postal_code": {
+          "type": "string",
+          "description": "Postal/ZIP code"
+        },
+        "country": {
+          "type": "string",
+          "description": "Country code or name"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number"
+        }
+      }
+    },
+    "ShippingMethod": {
+      "type": "object",
+      "required": [
+        "method_code",
+        "method_name",
+        "cost"
+      ],
+      "properties": {
+        "method_code": {
+          "type": "string",
+          "description": "Shipping method code"
+        },
+        "method_name": {
+          "type": "string",
+          "description": "Shipping method name"
+        },
+        "cost": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Shipping cost"
+        },
+        "estimated_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Estimated delivery days"
+        },
+        "carrier": {
+          "type": "string",
+          "description": "Shipping carrier name"
+        }
+      }
+    },
+    "PaymentMethod": {
+      "type": "object",
+      "required": [
+        "method_code",
+        "method_name"
+      ],
+      "properties": {
+        "method_code": {
+          "type": "string",
+          "enum": ["card", "bank_transfer", "cash_on_delivery", "credit", "paypal", "stripe", "payu"],
+          "description": "Payment method code"
+        },
+        "method_name": {
+          "type": "string",
+          "description": "Payment method display name"
+        },
+        "installments": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of installments (if applicable)"
+        },
+        "payment_term": {
+          "type": "string",
+          "enum": ["immediate", "net_7", "net_14", "net_30", "net_60", "net_90"],
+          "description": "Payment term (for B2B)"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "order_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "order_number": "ORD-00012345",
+      "quote_id": "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+      "quote_number": "QT-000123",
+      "customer_id": "CUST-00123",
+      "customer_type": "b2b",
+      "customer_name": "Acme Corporation",
+      "customer_email": "contact@acme.com",
+      "customer_phone": "+40700123456",
+      "created_by": "user-456",
+      "created_at": "2026-02-13T10:00:00.000Z",
+      "status": "pending",
+      "payment_status": "pending",
+      "fulfillment_status": "unfulfilled",
+      "items": [
+        {
+          "item_id": "f1e2d3c4-b5a6-9876-fedc-987654321098",
+          "product_id": "PRD-001",
+          "variant_id": "VAR-001-A",
+          "sku": "PRD-001-A",
+          "product_name": "Product Name",
+          "quantity": 10,
+          "unit_price": 150.00,
+          "unit_cost": 100.00,
+          "tax_rate": 19,
+          "tax_amount": 285.00,
+          "discount_amount": 0,
+          "line_total": 1785.00,
+          "reserved_stock": true
+        }
+      ],
+      "totals": {
+        "subtotal": 1500.00,
+        "discount_amount": 150.00,
+        "tax_amount": 256.50,
+        "shipping_amount": 25.00,
+        "shipping_discount": 0,
+        "total": 1631.50,
+        "currency": "EUR"
+      },
+      "shipping_address": {
+        "name": "John Doe",
+        "company": "Acme Corporation",
+        "address_line1": "123 Business Street",
+        "city": "Bucharest",
+        "state_province": "Bucharest",
+        "postal_code": "010123",
+        "country": "Romania",
+        "phone": "+40700123456"
+      },
+      "billing_address": {
+        "name": "John Doe",
+        "company": "Acme Corporation",
+        "address_line1": "123 Business Street",
+        "city": "Bucharest",
+        "state_province": "Bucharest",
+        "postal_code": "010123",
+        "country": "Romania",
+        "phone": "+40700123456"
+      },
+      "shipping_method": {
+        "method_code": "standard",
+        "method_name": "Standard Delivery",
+        "cost": 25.00,
+        "estimated_days": 3,
+        "carrier": "Courier"
+      },
+      "payment_method": {
+        "method_code": "bank_transfer",
+        "method_name": "Bank Transfer",
+        "payment_term": "net_30"
+      },
+      "channel": "admin",
+      "notes": "Please include product documentation",
+      "tax_exempt": false,
+      "promo_code": "B2B10"
+    }
+  ]
+}

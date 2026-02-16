@@ -1,0 +1,1 @@
+export { TypeOrmQuoteRepository } from './TypeOrmQuoteRepository';

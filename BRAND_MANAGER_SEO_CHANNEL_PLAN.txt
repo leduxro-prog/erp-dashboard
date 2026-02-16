@@ -1,0 +1,168 @@
+PLAN CONCRET BRAND MANAGER + SEO + ORCHESTRARE CANALE (PENTRU OPUS)
+
+Obiectiv business
+- Un singur "Brand Manager Hub" in ERP care planifica, executa si masoara campanii cross-channel.
+- Canale incluse: SEO, Email, WhatsApp, SMS, TikTok/Ads, notificari in-app, oferte comerciale.
+- KPI final: crestere trafic organic, crestere conversie, crestere LTV, reducere CAC, recuperare clienti inactivi.
+
+Situatia curenta (pe cod, pe scurt)
+- Frontend pagini Marketing/SEO/WhatsApp sunt in mare parte mock UI cu date statice.
+- Backend marketing are componente reale pentru campanii/coduri discount, dar secventele email sunt 501.
+- Backend SEO are multe raspunsuri placeholder (metadata/audit/sitemap fara persistenta reala).
+- Backend WhatsApp are doar sendMessage relativ functional; conversatii/webhook/assignment sunt in mare parte TODO.
+- Concluzie: avem shell UI + API partial, trebuie inchise fluxurile end-to-end cu persistenta + joburi + analytics.
+
+Arhitectura tinta (fara breaking changes)
+1) Campaign Orchestrator (core)
+- Entitati: campaign, campaign_step, audience_segment, channel_delivery, conversion_event.
+- Capabilitati: trigger manual/scheduled/event-driven, multichannel journey, retry policy, frequency cap.
+
+2) Customer Identity & Consent
+- Customer profile unificat ERP+B2B+SmartBill (cand exista legatura).
+- Consimtamant per canal: email_opt_in, sms_opt_in, whatsapp_opt_in, profiling_opt_in.
+- Respectare preferinte + unsubscribe global/per canal.
+
+3) SEO Engine real
+- Persistenta metadata SEO la produs/categorie.
+- Audit real (meta length, duplicate title, missing alt, H1, canonical, robots, schema).
+- Sitemap generator incremental + ping search engines + last_run metrics.
+
+4) Channel Connectors
+- Email provider (Resend/Mailgun) + template variables.
+- WhatsApp provider webhook + delivery status + conversation thread.
+- TikTok/Ads event pipeline (view_content, add_to_cart, purchase).
+
+5) Attribution & Analytics
+- UTM governance + click_id mapping.
+- Last-touch + assisted conversion (simplu initial).
+- Dashboard: funnel per canal, revenue attributed, cost, ROI, ROAS.
+
+Etape de implementare (8 saptamani)
+
+Etapa 1 (S1-S2): Foundation + Data model (CRITIC)
+- Creeaza module/table: marketing_campaigns_ext, campaign_steps, audience_segments,
+  channel_deliveries, customer_consents, attribution_events.
+- API noi:
+  - POST /api/v1/marketing/campaigns/:id/steps
+  - POST /api/v1/marketing/audiences/preview
+  - POST /api/v1/marketing/campaigns/:id/schedule
+  - GET  /api/v1/marketing/campaigns/:id/deliveries
+- Job runner (Bull/queue existent) pentru schedule + retry + DLQ.
+- Audit trail obligatoriu pentru create/update/publish/pause campaign.
+
+AC Etapa 1
+- O campanie poate avea >=1 pas multichannel si poate fi programata.
+- Delivery-urile sunt persistate cu status (queued/sent/failed/retried).
+- Consimtamantul blocheaza automat trimiterea pe canal nepermis.
+
+Etapa 2 (S2-S4): SEO Automation production-ready (CRITIC)
+- Inlocuieste placeholder logic din SeoController cu servicii reale + repository.
+- Endpointuri reale:
+  - POST /api/v1/seo/products/:id/generate (persista metadata)
+  - POST /api/v1/seo/products/:id/audit (rule engine + scor)
+  - GET  /api/v1/seo/audits + GET /api/v1/seo/audits/:id (din DB)
+  - POST /api/v1/seo/sitemap/regenerate (job async)
+- Rule engine minim:
+  - title 50-60 chars, meta 140-160 chars,
+  - slug valid, canonical prezent, alt text complet,
+  - schema Product valid.
+- Frontend SeoPage legat la API real (fara array static).
+
+AC Etapa 2
+- Auditul returneaza scor real si issue-uri actionabile.
+- Bulk audit/generate proceseaza loturi cu progres.
+- Sitemap regenerat vizibil cu timestamp si nr URL-uri.
+
+Etapa 3 (S4-S6): WhatsApp + Messaging Hub (HIGH)
+- Completeaza TODO-uri din WhatsAppController: conversations, assign, resolve, webhook status.
+- Persista inbound/outbound mesaje + status transitions (sent/delivered/read/failed).
+- Template registry + variabile validate.
+- Frontend WhatsAppPage conectat la API real (lista conversatii, thread, send, assign).
+- SLA panel: first response time, resolution time, backlog.
+
+AC Etapa 3
+- Mesajele trimise apar in thread cu status update asincron.
+- Webhook proceseaza delivery receipts si updateaza mesajele.
+- Conversatiile pot fi asignate/rezolvate cu audit.
+
+Etapa 4 (S6-S8): Orchestrare canale + attribution dashboard (HIGH)
+- Journey builder simplu (pas 1 email, pas 2 whatsapp, pas 3 discount).
+- Triggere:
+  - abandoned cart,
+  - invoice overdue,
+  - inactive 30/60/90 zile,
+  - quote created/no order.
+- Attribution API:
+  - GET /api/v1/marketing/analytics/attribution
+  - GET /api/v1/marketing/analytics/funnel
+- Dashboard unic "Brand Manager" in frontend:
+  - Revenue by channel
+  - Conversions by segment
+  - CAC/ROAS trend
+  - Top campaigns + anomaly alerts
+
+AC Etapa 4
+- Campaniile cross-channel ruleaza automat pe trigger.
+- Fiecare conversie are sursa/campanie/utm asociata (cand datele exista).
+- Managementul vede ROI/ROAS per canal intr-un singur ecran.
+
+Backlog tehnic concret pe fisiere (initial)
+Backend
+- modules/marketing/src/api/controllers/MarketingController.ts
+  - finalizeaza updateCampaign + email sequence endpoints (elimina 501)
+- modules/marketing/src/api/routes/marketing.routes.ts
+  - adauga rute pentru steps/schedule/deliveries/attribution
+- modules/seo-automation/src/api/controllers/SeoController.ts
+  - inlocuire payload static cu use-case-uri + DB
+- modules/whatsapp/src/api/controllers/WhatsAppController.ts
+  - implementeaza list/get conversation, webhook process, assign/resolve
+- shared/
+  - evenimente business: CampaignSent, MessageDelivered, ConversionTracked
+
+Frontend
+- frontend/src/pages/MarketingPage.tsx
+  - migrare de la mock arrays la react-query + servicii reale
+- frontend/src/pages/SeoPage.tsx
+  - consum audit/generate/list endpoints reale
+- frontend/src/pages/WhatsAppPage.tsx
+  - conversatii + thread realtime polling/WebSocket fallback
+- frontend/src/services/marketing.service.ts
+- frontend/src/services/seo.service.ts
+- frontend/src/services/whatsapp.service.ts
+  - extinde contractele pentru noile endpoint-uri
+
+Matrice KPI (de urmarit in productie)
+- SEO: indexed pages, avg seo score, non-compliant pages, organic sessions, conversion rate organic.
+- Messaging: delivery rate, read rate, response SLA, opt-out rate.
+- Campaigns: sent, opened, clicked, converted, revenue attributed, ROI/ROAS.
+- Commercial: quote->order conversion, repeat purchase rate, top reactivation revenue.
+
+Testare obligatorie
+- Integration tests
+  - SEO audit scoring + bulk jobs
+  - Campaign schedule + retry/dlq
+  - WhatsApp webhook status transitions
+  - Attribution aggregation pe interval
+- E2E tests
+  - Creeaza campanie -> schedule -> delivery -> conversie
+  - Ruleaza audit SEO -> aplica fix -> scor imbunatatit
+  - Inbound WhatsApp -> assign -> resolve
+
+Ordine recomandata de executie (strict)
+1) Etapa 1 Foundation
+2) Etapa 2 SEO real
+3) Etapa 3 WhatsApp operational
+4) Etapa 4 Orchestrare + Attribution
+
+Riscuri si mitigari
+- Risc: date clienti duplicate intre ERP/B2B/SmartBill
+  - Mitigare: customer_external_links + resolver manual + scoring auto
+- Risc: cost mare de trimitere pe canale
+  - Mitigare: frequency cap + throttling + ROI guardrails
+- Risc: calitate slaba a datelor UTM
+  - Mitigare: naming convention obligatoriu + validator in UI
+
+Livrabil de acceptanta finala
+- Un dashboard Brand Manager functional care porneste campanii cross-channel,
+  masoara performanta pe fiecare canal si conecteaza SEO + comunicare + vanzari
+  in acelasi flow operational.

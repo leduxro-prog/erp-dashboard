@@ -1,0 +1,166 @@
+SPLIT IMPLEMENTARE - OPUS vs GLM5 (Brand Manager + SEO + Canale)
+
+Scop
+- Impartire clara pe ownership, fara overlap mare pe aceleasi fisiere.
+- Executie paralela cu puncte fixe de integrare.
+
+Regula de baza
+- OPUS = backend core + data model + jobs + webhook + analytics API.
+- GLM5 = frontend pages + service adapters + UX flows + E2E UI + QA contract.
+
+==================================================
+1) OPUS - OWNERSHIP PRINCIPAL (Backend)
+==================================================
+
+WS-A: Foundation Campaign Orchestrator (S1-S2)
+- Creeaza/actualizeaza tabele:
+  - marketing_campaigns_ext
+  - campaign_steps
+  - audience_segments
+  - channel_deliveries
+  - customer_consents
+  - attribution_events
+- Implementeaza endpoint-uri:
+  - POST /api/v1/marketing/campaigns/:id/steps
+  - POST /api/v1/marketing/audiences/preview
+  - POST /api/v1/marketing/campaigns/:id/schedule
+  - GET  /api/v1/marketing/campaigns/:id/deliveries
+- Job runner: schedule, retry, backoff, DLQ, observability.
+- Audit trail pentru create/update/publish/pause campaign.
+
+WS-B: SEO production backend (S2-S4)
+- Inlocuieste placeholder logic din SeoController cu use-case-uri reale + repository.
+- Persista metadata/audit jobs/sitemap runs.
+- Rule engine minim: title/meta/alt/H1/canonical/schema.
+- Endpoint-uri reale pentru generate/audit/list/details/sitemap.
+
+WS-C: WhatsApp backend operational (S4-S6)
+- Completeaza TODO-uri din WhatsAppController:
+  - listMessages/listConversations/getConversation
+  - assignConversation/resolveConversation
+  - handleWebhook + status transitions
+- Persistenta inbound/outbound + status lifecycle.
+- Template validation + provider adapter hardening.
+
+WS-D: Attribution backend (S6-S8)
+- Endpoint-uri:
+  - GET /api/v1/marketing/analytics/attribution
+  - GET /api/v1/marketing/analytics/funnel
+- Agregari revenue/cost/conversion per canal/campanie/segment.
+
+Teste OPUS (must)
+- Integration tests backend pentru WS-A/B/C/D.
+- Contract tests pentru payload-uri folosite de frontend.
+
+Fisiere tinta OPUS (prioritar)
+- modules/marketing/src/api/controllers/MarketingController.ts
+- modules/marketing/src/api/routes/marketing.routes.ts
+- modules/seo-automation/src/api/controllers/SeoController.ts
+- modules/whatsapp/src/api/controllers/WhatsAppController.ts
+- module repositories/use-cases/composition roots aferente
+
+==================================================
+2) GLM5 - OWNERSHIP PRINCIPAL (Frontend + UX)
+==================================================
+
+WS-1: Marketing UI real data
+- Migreaza MarketingPage din mock arrays la react-query + API.
+- Add screens pentru:
+  - campaign steps editor
+  - audience preview
+  - schedule + status deliveries
+- Add guardrails in UI: validation, UTM naming, frequency cap hints.
+
+WS-2: SEO UI real data
+- Migreaza SeoPage la endpoint-urile reale:
+  - audit list/details
+  - generate metadata
+  - sitemap regenerate/status
+- UI issue actions: "fix recommendation" + re-audit trigger.
+
+WS-3: WhatsApp UI operational
+- Migreaza WhatsAppPage la API real:
+  - conversations list
+  - thread view
+  - send message
+  - assign/resolve
+- Polling/WebSocket fallback pentru status updates.
+
+WS-4: Brand Manager dashboard
+- Pagina unica dashboard:
+  - revenue by channel
+  - conversions by segment
+  - ROI/ROAS trend
+  - top campaigns + alerts
+- Filtre globale: perioada, canal, segment.
+
+Teste GLM5 (must)
+- E2E pentru fluxuri UI critice:
+  - create campaign -> schedule -> deliveries view
+  - run seo audit -> view issues -> trigger re-audit
+  - open whatsapp conversation -> send -> assign -> resolve
+- Frontend type-check + build clean.
+
+Fisiere tinta GLM5 (prioritar)
+- frontend/src/pages/MarketingPage.tsx
+- frontend/src/pages/SeoPage.tsx
+- frontend/src/pages/WhatsAppPage.tsx
+- frontend/src/services/marketing.service.ts
+- frontend/src/services/seo.service.ts
+- frontend/src/services/whatsapp.service.ts
+- frontend/src/pages/BrandManagerPage.tsx (nou)
+
+==================================================
+3) Integrare OPUS <-> GLM5 (contract points)
+==================================================
+
+Checkpoint 1 (final S2)
+- OPUS livreaza OpenAPI/contract payload pentru WS-A + auth/roles.
+- GLM5 incepe integrarea UI pe endpoints WS-A.
+
+Checkpoint 2 (final S4)
+- OPUS livreaza SEO endpoints reale + sample data.
+- GLM5 inchide SeoPage complet pe API.
+
+Checkpoint 3 (final S6)
+- OPUS livreaza WhatsApp conversation/webhook/status.
+- GLM5 inchide WhatsApp UI operational.
+
+Checkpoint 4 (final S8)
+- OPUS livreaza attribution analytics endpoints.
+- GLM5 inchide dashboard Brand Manager.
+
+==================================================
+4) Reguli de lucru ca sa evitam conflicte
+==================================================
+
+- OPUS nu modifica fisierele de pagina frontend (exceptand tipuri shared daca e necesar).
+- GLM5 nu modifica logica de domain/use-case backend (doar contract fixes minore in controller).
+- Daca apare conflict de contract, se rezolva prin DTO versioning rapid.
+- PR-urile se fac pe workstream separat, apoi merge pe ordine: backend contract -> frontend integration.
+
+==================================================
+5) Ordinea recomandata (paralelizare maxima)
+==================================================
+
+S1-S2:
+- OPUS: WS-A
+- GLM5: incepe skeleton BrandManagerPage + refactor service clients
+
+S2-S4:
+- OPUS: WS-B
+- GLM5: WS-1 + WS-2
+
+S4-S6:
+- OPUS: WS-C
+- GLM5: WS-3
+
+S6-S8:
+- OPUS: WS-D
+- GLM5: WS-4 + E2E final
+
+Definition of Done final
+- Dashboard Brand Manager functional cap-coada.
+- SEO/Marketing/WhatsApp fara mock-uri statice in paginile principale.
+- KPI-uri disponibile per canal si campanie.
+- Build + tests verzi (backend + frontend + e2e critic).

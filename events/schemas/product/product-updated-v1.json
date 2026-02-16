@@ -1,0 +1,444 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.cypher.ro/events/product/product-updated-v1.json",
+  "title": "Product Updated Event v1",
+  "description": "Emitted when a product's details are modified. This includes name, description, pricing, categorization, and other product attributes. Price changes are emitted separately as price.changed events.",
+  "type": "object",
+  "required": [
+    "product_id",
+    "sku",
+    "updated_at",
+    "change_type"
+  ],
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "description": "Product identifier"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Product SKU"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the product was updated"
+    },
+    "updated_by": {
+      "type": "string",
+      "description": "User ID who made the update"
+    },
+    "change_type": {
+      "type": "string",
+      "enum": [
+        "name_changed",
+        "description_changed",
+        "category_changed",
+        "attributes_changed",
+        "images_changed",
+        "status_changed",
+        "visibility_changed",
+        "active_variant_changed",
+        "metadata_changed",
+        "bulk_update"
+      ],
+      "description": "Type of product change"
+    },
+    "previous_values": {
+      "type": "object",
+      "description": "Previous values of changed fields",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Previous product name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Previous product description"
+        },
+        "short_description": {
+          "type": "string",
+          "description": "Previous short description"
+        },
+        "category_id": {
+          "type": "string",
+          "description": "Previous category ID"
+        },
+        "category_path": {
+          "type": "string",
+          "description": "Previous category path"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "draft", "archived", "discontinued"],
+          "description": "Previous product status"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["visible", "hidden", "catalog_only", "search_only"],
+          "description": "Previous visibility setting"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Previous weight value"
+        },
+        "weight_unit": {
+          "type": "string",
+          "enum": ["kg", "g", "lb", "oz"],
+          "description": "Previous weight unit"
+        }
+      }
+    },
+    "new_values": {
+      "type": "object",
+      "description": "New values of changed fields",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "New product name"
+        },
+        "description": {
+          "type": "string",
+          "description": "New product description"
+        },
+        "short_description": {
+          "type": "string",
+          "description": "New short description"
+        },
+        "category_id": {
+          "type": "string",
+          "description": "New category ID"
+        },
+        "category_path": {
+          "type": "string",
+          "description": "New category path"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "draft", "archived", "discontinued"],
+          "description": "New product status"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["visible", "hidden", "catalog_only", "search_only"],
+          "description": "New visibility setting"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "description": "New weight value"
+        },
+        "weight_unit": {
+          "type": "string",
+          "enum": ["kg", "g", "lb", "oz"],
+          "description": "New weight unit"
+        }
+      }
+    },
+    "product": {
+      "type": "object",
+      "description": "Full current product state",
+      "required": [
+        "name",
+        "status"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Product name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Product description"
+        },
+        "short_description": {
+          "type": "string",
+          "description": "Short description"
+        },
+        "category_id": {
+          "type": "string",
+          "description": "Category ID"
+        },
+        "category_path": {
+          "type": "string",
+          "description": "Full category path"
+        },
+        "brand_id": {
+          "type": "string",
+          "description": "Brand ID"
+        },
+        "brand_name": {
+          "type": "string",
+          "description": "Brand name"
+        },
+        "manufacturer": {
+          "type": "string",
+          "description": "Manufacturer name"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "draft", "archived", "discontinued"],
+          "description": "Product status"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["visible", "hidden", "catalog_only", "search_only"],
+          "description": "Product visibility"
+        },
+        "product_type": {
+          "type": "string",
+          "enum": ["simple", "configurable", "bundle", "grouped", "virtual", "downloadable"],
+          "description": "Product type"
+        },
+        "requires_shipping": {
+          "type": "boolean",
+          "description": "Whether the product requires shipping"
+        },
+        "is_taxable": {
+          "type": "boolean",
+          "description": "Whether the product is taxable"
+        },
+        "tax_class": {
+          "type": "string",
+          "description": "Tax class for the product"
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Product weight"
+        },
+        "weight_unit": {
+          "type": "string",
+          "enum": ["kg", "g", "lb", "oz"],
+          "description": "Weight unit"
+        },
+        "dimensions": {
+          "$ref": "#/definitions/Dimensions",
+          "description": "Product dimensions"
+        },
+        "attributes": {
+          "type": "array",
+          "description": "Product attributes",
+          "items": {
+            "$ref": "#/definitions/ProductAttribute"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "description": "Product tags",
+          "items": {
+            "type": "string"
+          }
+        },
+        "images": {
+          "type": "array",
+          "description": "Product images",
+          "items": {
+            "$ref": "#/definitions/ProductImage"
+          }
+        },
+        "seo": {
+          "$ref": "#/definitions/SEO",
+          "description": "SEO information"
+        },
+        "has_variants": {
+          "type": "boolean",
+          "description": "Whether product has variants"
+        },
+        "variant_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of variants"
+        },
+        "active_variant_ids": {
+          "type": "array",
+          "description": "Active variant IDs",
+          "items": {
+            "type": "string"
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Product creation timestamp"
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Product publication timestamp"
+        }
+      }
+    },
+    "variants_affected": {
+      "type": "array",
+      "description": "List of variant IDs affected by the change",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about the update"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata"
+    }
+  },
+  "definitions": {
+    "Dimensions": {
+      "type": "object",
+      "properties": {
+        "length": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Length dimension"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Width dimension"
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Height dimension"
+        },
+        "unit": {
+          "type": "string",
+          "enum": ["cm", "mm", "in"],
+          "description": "Dimension unit"
+        }
+      }
+    },
+    "ProductAttribute": {
+      "type": "object",
+      "required": [
+        "code",
+        "value"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Attribute code"
+        },
+        "name": {
+          "type": "string",
+          "description": "Attribute name"
+        },
+        "value": {
+          "type": ["string", "number", "boolean"],
+          "description": "Attribute value"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "number", "boolean", "select", "multiselect", "date"],
+          "description": "Attribute data type"
+        },
+        "visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether attribute is visible"
+        }
+      }
+    },
+    "ProductImage": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "image_id": {
+          "type": "string",
+          "description": "Image identifier"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Image URL"
+        },
+        "alt_text": {
+          "type": "string",
+          "description": "Alt text for accessibility"
+        },
+        "position": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Display position"
+        },
+        "is_primary": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this is the primary image"
+        }
+      }
+    },
+    "SEO": {
+      "type": "object",
+      "properties": {
+        "meta_title": {
+          "type": "string",
+          "description": "Meta title for SEO"
+        },
+        "meta_description": {
+          "type": "string",
+          "description": "Meta description for SEO"
+        },
+        "meta_keywords": {
+          "type": "array",
+          "description": "Meta keywords",
+          "items": {
+            "type": "string"
+          }
+        },
+        "slug": {
+          "type": "string",
+          "description": "URL-friendly slug"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "product_id": "PRD-00123",
+      "sku": "PRD-00123",
+      "updated_at": "2026-02-13T10:00:00.000Z",
+      "updated_by": "user-456",
+      "change_type": "name_changed",
+      "previous_values": {
+        "name": "Old Product Name"
+      },
+      "new_values": {
+        "name": "New Product Name"
+      },
+      "product": {
+        "name": "New Product Name",
+        "description": "Product description",
+        "short_description": "Short description",
+        "category_id": "CAT-001",
+        "category_path": "Electronics > Computers",
+        "brand_id": "BRAND-001",
+        "brand_name": "TechBrand",
+        "status": "active",
+        "visibility": "visible",
+        "product_type": "simple",
+        "requires_shipping": true,
+        "is_taxable": true,
+        "tax_class": "standard",
+        "weight": 1.5,
+        "weight_unit": "kg",
+        "dimensions": {
+          "length": 30,
+          "width": 20,
+          "height": 10,
+          "unit": "cm"
+        },
+        "tags": ["electronics", "computers"],
+        "created_at": "2026-01-01T00:00:00.000Z",
+        "published_at": "2026-01-01T00:00:00.000Z"
+      },
+      "notes": "Product name updated for branding consistency"
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bun Venit la Ledux.ro</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background: #f9fafb; }
+    .email-container { background: #ffffff; }
+    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); padding: 40px 20px; text-align: center; color: white; }
+    .logo { max-width: 150px; height: auto; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; letter-spacing: -0.5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .content { padding: 40px 20px; }
+    .content h2 { color: #1e40af; font-size: 22px; margin-bottom: 15px; font-weight: 600; }
+    .content h3 { color: #1f2937; font-size: 16px; margin: 20px 0 15px 0; font-weight: 600; }
+    .content p { margin-bottom: 15px; color: #555; font-size: 14px; }
+    .welcome-box { background: linear-gradient(135deg, #f0f4f8 0%, #e0e7ff 100%); border: 2px solid #1e40af; padding: 25px; margin: 20px 0; border-radius: 8px; text-align: center; }
+    .welcome-box h2 { color: #1e40af; margin-bottom: 5px; }
+    .welcome-box p { color: #555; margin-bottom: 0; }
+    .feature-grid { display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; }
+    .feature-card { flex: 1; min-width: 160px; background: #f9fafb; border: 1px solid #e5e7eb; padding: 15px; border-radius: 6px; text-align: center; }
+    .feature-card .icon { font-size: 32px; margin-bottom: 8px; }
+    .feature-card h4 { font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 5px; }
+    .feature-card p { font-size: 12px; color: #666; margin: 0; }
+    .getting-started { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 20px; margin: 20px 0; border-radius: 4px; }
+    .getting-started h3 { color: #16a34a; font-size: 16px; margin-bottom: 15px; }
+    .getting-started ol { margin-left: 20px; }
+    .getting-started li { margin: 10px 0; color: #555; font-size: 13px; }
+    .button { display: inline-block; background: #1e40af; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: 500; margin: 15px 10px 15px 0; font-size: 14px; }
+    .button:hover { background: #1e3a8a; }
+    .button-secondary { background: #64748b; }
+    .button-secondary:hover { background: #475569; }
+    .benefit-list { list-style: none; margin: 15px 0; }
+    .benefit-list li { padding: 10px 0; padding-left: 30px; position: relative; color: #555; font-size: 13px; }
+    .benefit-list li:before { content: "✓"; position: absolute; left: 0; color: #1e40af; font-weight: bold; font-size: 18px; }
+    .contact-box { background: #f0f4f8; border: 1px solid #1e40af; padding: 15px; margin: 20px 0; border-radius: 6px; }
+    .contact-box strong { color: #1e40af; display: block; margin-bottom: 8px; }
+    .contact-box p { margin: 5px 0; color: #555; font-size: 13px; }
+    .contact-box a { color: #1e40af; text-decoration: none; }
+    .footer { background: #1f2937; color: #e5e7eb; padding: 30px 20px; text-align: center; font-size: 12px; }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { max-width: 100%; }
+      .header { padding: 30px 15px; }
+      .content { padding: 25px 15px; }
+      .feature-grid { flex-direction: column; }
+      .feature-card { min-width: 100%; }
+      .button { display: block; margin: 10px 0; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <img src="https://ledux.ro/logo.png" alt="Ledux.ro" class="logo">
+        <h1>Bun Venit!</h1>
+        <p>Mulțumim că v-ați alăturat comunității Ledux.ro</p>
+      </div>
+
+      <div class="content">
+        <div class="welcome-box">
+          <h2>Bună, {{customerName}}!</h2>
+          <p>Contul dvs. a fost creat cu succes. Suntem entuziaști să vă ajutăm să descoperiți soluții premium de iluminare LED.</p>
+        </div>
+
+        <h2>Bine ați venit la Ledux.ro</h2>
+        <p>Suntem o companie dedicată furnizării de soluții inovatoare și de înaltă calitate pentru iluminare LED. Cu o experiență de peste 15 ani pe piață, ne mândrim cu portofoliul nostru divers și cu servicii excelenți.</p>
+
+        <h3>De Ce Ledux.ro?</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="icon">⭐</div>
+            <h4>Calitate Premium</h4>
+            <p>Produse certificate și durabile</p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">🚚</div>
+            <h4>Livrare Rapidă</h4>
+            <p>Expediție în 24-48 ore</p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">💰</div>
+            <h4>Prețuri Competitive</h4>
+            <p>Cea mai bună valoare pentru bani</p>
+          </div>
+          <div class="feature-card">
+            <div class="icon">🤝</div>
+            <h4>Suport Dedicat</h4>
+            <p>Echipă gata să vă ajute</p>
+          </div>
+        </div>
+
+        <div class="getting-started">
+          <h3>Cum să Comenzi</h3>
+          <ol>
+            <li><strong>Explorează Catalogul:</strong> Navighează prin peste 5000 de produse LED</li>
+            <li><strong>Personalizează Setările:</strong> Configurează preferințele și metoda de plată</li>
+            <li><strong>Adaugă în Coș:</strong> Selectează articolele dorite și personalizează cantitățile</li>
+            <li><strong>Finalizează Comanda:</strong> Completează informațiile de livrare și plătești sigur</li>
+            <li><strong>Urmărește Livrarea:</strong> Monitorizează starea comenzii în timp real</li>
+          </ol>
+        </div>
+
+        <h3>Beneficiile Contului Dvs.</h3>
+        <ul class="benefit-list">
+          <li>Acces la catalogul complet de produse cu stocuri în timp real</li>
+          <li>Istoric complet al comenzilor și facturilor</li>
+          <li>Salvare automată a adreselor și metodelor de plată preferate</li>
+          <li>Program de loialitate cu puncte și recompense</li>
+          <li>Notificări cu privire la oferte și produse noi</li>
+          <li>Recomandări personalizate bazate pe istoricul dvs.</li>
+          <li>Acces la suport prioritar pentru clienți VIP</li>
+        </ul>
+
+        <h3>Portofoliu de Produse</h3>
+        <p>Oferim o gamă largă de soluții LED:</p>
+        <ul style="margin-left: 20px; margin: 15px 0;">
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Surse de lumină (becuri LED, tuburi, panouri)</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Corpuri de iluminare (spoturi, aplice, candelabre)</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Sisteme de control (dimere, senzori, echipamente inteligente)</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Soluții profesionale (pentru birouri, fabrici, spații publice)</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Iluminare decorativă (pentru case, apartamente, grădini)</li>
+        </ul>
+
+        <div style="text-align: center; margin-top: 25px;">
+          <a href="{{shopUrl}}" class="button">Explorează Produsele</a>
+          <a href="{{accountUrl}}" class="button button-secondary">Setările Contului</a>
+        </div>
+
+        <div class="contact-box">
+          <strong>Avez nevoie de ajutor?</strong>
+          <p>Echipa noastră de suport este disponibilă pentru a răspunde la orice întrebări:</p>
+          <p>
+            Email: <a href="mailto:{{supportEmail}}">{{supportEmail}}</a><br>
+            Telefon: <a href="tel:{{supportPhone}}">{{supportPhone}}</a><br>
+            Chat Live: Disponibil pe site-ul nostru<br>
+            Orele de lucru: Luni-Vineri, 9:00-18:00 (ora României)
+          </p>
+        </div>
+
+        <p style="margin-top: 30px; font-size: 13px; color: #666; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          <strong>Cod de Binevenit:</strong> Folosiți codul <span style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-family: monospace;">{{welcomeCode}}</span> pentru 10% reducere la prima comandă!
+        </p>
+      </div>
+
+      <div class="footer">
+        <div style="margin-bottom: 15px;">
+          <strong>Ledux.ro</strong><br>
+          Soluții Premium pentru Iluminat LED<br>
+          <a href="https://ledux.ro">www.ledux.ro</a>
+        </div>
+        <div style="margin-bottom: 15px;">
+          Urmărește-ne:
+          <a href="https://facebook.com/ledux.ro">Facebook</a> |
+          <a href="https://instagram.com/ledux.ro">Instagram</a> |
+          <a href="https://linkedin.com/company/ledux">LinkedIn</a>
+        </div>
+        <div>
+          <a href="{{unsubscribeLink}}">Dezabonare</a> |
+          <a href="{{preferencesLink}}">Preferințe Email</a>
+        </div>
+        <div style="margin-top: 15px; opacity: 0.8;">
+          Copyright &copy; {{currentYear}} Ledux.ro. Toate drepturile rezervate.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

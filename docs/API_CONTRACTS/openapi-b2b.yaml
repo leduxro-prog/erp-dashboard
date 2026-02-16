@@ -1,0 +1,860 @@
+openapi: 3.0.3
+info:
+  title: CYPHER B2B Platform API
+  description: |
+    Enterprise B2B Cart & Checkout API Contract v1
+    
+    ## Authentication
+    All protected endpoints require `Authorization: Bearer <JWT>` header.
+    JWT must contain `realm: b2b` claim.
+    
+    ## Idempotency
+    POST /checkout/confirm requires `Idempotency-Key` header.
+    Valid keys: UUID v4 format. Response cached for 24h.
+    
+    ## Rate Limiting
+    - Auth endpoints: 5 requests/minute
+    - Cart operations: 30 requests/minute
+    - Checkout: 10 requests/minute
+    
+    ## Error Response Format
+    All errors follow RFC 7807 Problem Details for HTTP APIs.
+  version: 1.0.0
+  contact:
+    name: CYPHER Engineering
+    email: engineering@cypher.ro
+
+servers:
+  - url: https://api.cypher.ro/api/v1
+    description: Production B2B API
+  - url: http://localhost:3000/api/v1
+    description: Development B2B API
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Cart
+    description: B2B shopping cart operations
+  - name: Checkout
+    description: B2B checkout and validation
+
+paths:
+  /b2b/cart:
+    get:
+      summary: Get active cart
+      description: |
+        Returns the current customer's active cart with calculated prices.
+        Applies tier-based discounts and volume discounts automatically.
+      operationId: getCart
+      tags:
+        - Cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      responses:
+        '200':
+          description: Cart retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+              example:
+                id: "cart_1234567890"
+                customer_id: 1001
+                company_name: "Electrica Import Export SRL"
+                tier: "GOLD"
+                items:
+                  - id: "item_001"
+                    product_id: 5501
+                    sku: "LED-PANEL-60W-120x30"
+                    name: "Panel LED 60W 120x30cm 6500K"
+                    quantity: 50
+                    unit_price: 45.50
+                    discount_percentage: 10.0
+                    final_unit_price: 40.95
+                    total: 2047.50
+                subtotal: 4095.00
+                tier_discount: 409.50
+                volume_discount: 204.75
+                tax_amount: 778.05
+                total: 3685.05
+                currency: "RON"
+                created_at: "2026-02-13T10:30:00Z"
+                updated_at: "2026-02-13T14:22:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /b2b/cart/items:
+    post:
+      summary: Add item to cart
+      description: |
+        Adds a product to the current customer's cart.
+        Validates stock availability and applies pricing rules.
+      operationId: addCartItem
+      tags:
+        - Cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+            example:
+              product_id: 5501
+              quantity: 50
+              notes: "Need for project Alpha"
+      responses:
+        '201':
+          description: Item added to cart
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItemResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /b2b/cart/items/{itemId}:
+    patch:
+      summary: Update cart item quantity
+      description: |
+        Updates quantity for an existing cart item.
+        Recalculates volume discounts automatically.
+      operationId: updateCartItem
+      tags:
+        - Cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "item_001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+            example:
+              quantity: 100
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartItemResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Remove cart item
+      description: |
+        Removes an item from the current customer's cart.
+      operationId: removeCartItem
+      tags:
+        - Cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "item_001"
+      responses:
+        '204':
+          description: Item removed successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /b2b/checkout/validate-stock:
+    post:
+      summary: Validate stock availability
+      description: |
+        Validates stock for all items in cart before checkout.
+        Checks both warehouse stock and supplier availability.
+      operationId: validateStock
+      tags:
+        - Checkout
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateStockRequest'
+            example:
+              items:
+                - product_id: 5501
+                  quantity: 50
+      responses:
+        '200':
+          description: Stock validation complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateStockResponse'
+              example:
+                valid: true
+                items:
+                  - product_id: 5501
+                    sku: "LED-PANEL-60W-120x30"
+                    available_quantity: 200
+                    requested_quantity: 50
+                    status: "available"
+                checked_at: "2026-02-13T14:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Stock validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://api.cypher.ro/problems/insufficient-stock"
+                title: "Insufficient Stock"
+                status: 422
+                detail: "Insufficient stock for product LED-PANEL-60W-120x30"
+                instance: "/api/v1/b2b/checkout/validate-stock"
+                errors:
+                  - product_id: 5501
+                    available: 30
+                    requested: 50
+                    supplier_available: 0
+                    lead_time_days: null
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /b2b/checkout/validate-credit:
+    post:
+      summary: Validate credit limit
+      description: |
+        Validates if customer has sufficient credit for the order.
+        Checks available credit against order total including tax.
+      operationId: validateCredit
+      tags:
+        - Checkout
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateCreditRequest'
+            example:
+              order_total: 4500.00
+              currency: "RON"
+      responses:
+        '200':
+          description: Credit validation complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateCreditResponse'
+              example:
+                valid: true
+                customer_id: 1001
+                credit_limit: 50000.00
+                used_credit: 12500.00
+                available_credit: 37500.00
+                order_total: 4500.00
+                remaining_after_order: 33000.00
+                currency: "RON"
+                validated_at: "2026-02-13T14:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Credit validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://api.cypher.ro/problems/insufficient-credit"
+                title: "Insufficient Credit"
+                status: 422
+                detail: "Order total exceeds available credit"
+                instance: "/api/v1/b2b/checkout/validate-credit"
+                errors:
+                  - code: "INSUFFICIENT_CREDIT"
+                    credit_limit: 50000.00
+                    used_credit: 12500.00
+                    available_credit: 37500.00
+                    order_total: 45000.00
+                    shortfall: 7500.00
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /b2b/checkout/confirm:
+    post:
+      summary: Confirm checkout (idempotent)
+      description: |
+        Creates the order from cart contents.
+        
+        ## Idempotency
+        This endpoint is idempotent. Include unique `Idempotency-Key` header
+        (UUID v4) to prevent duplicate orders. Valid for 24 hours.
+        
+        ## Process Flow
+        1. Validate stock availability
+        2. Validate credit limit
+        3. Apply final pricing
+        4. Reserve stock
+        5. Create order
+        6. Publish events (via Outbox pattern)
+      operationId: confirmCheckout
+      tags:
+        - Checkout
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tenantId'
+        - $ref: '#/components/parameters/idempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutConfirmRequest'
+            example:
+              shipping_address_id: "addr_001"
+              billing_address_id: "addr_001"
+              payment_terms: "net_30"
+              notes: "Please deliver before 17:00"
+      responses:
+        '201':
+          description: Order created successfully
+          headers:
+            Idempotency-Key:
+              schema:
+                type: string
+              description: Echoed idempotency key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutConfirmResponse'
+              example:
+                order_id: "ord_20260213_0001"
+                order_number: "ORD-20260213-0001"
+                status: "ORDER_CONFIRMED"
+                customer_id: 1001
+                items:
+                  - product_id: 5501
+                    sku: "LED-PANEL-60W-120x30"
+                    name: "Panel LED 60W"
+                    quantity: 50
+                    unit_price: 45.50
+                    discount: 10.0
+                    final_price: 40.95
+                    total: 2047.50
+                subtotal: 4095.00
+                discount_total: 614.25
+                tax_amount: 778.05
+                total: 3685.05
+                currency: "RON"
+                payment_terms: "net_30"
+                credit_used: 3685.05
+                estimated_delivery: "2026-02-18"
+                created_at: "2026-02-13T14:35:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: "https://api.cypher.ro/problems/idempotency-conflict"
+                title: "Idempotency Conflict"
+                status: 409
+                detail: "Order already created with this idempotency key"
+                instance: "/api/v1/b2b/checkout/confirm"
+                existing_order_id: "ord_20260213_0001"
+                created_at: "2026-02-13T14:35:00Z"
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token with `realm: b2b` claim required.
+        Include in header: `Authorization: Bearer <token>`
+
+  parameters:
+    tenantId:
+      name: X-Tenant-ID
+      in: header
+      required: false
+      description: Multi-tenant identifier (internal use)
+      schema:
+        type: string
+        format: uuid
+      example: "tenant_001"
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Unique key for idempotent requests. UUID v4 format.
+        Required for POST /checkout/confirm
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    # Common schemas
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details
+      required:
+        - type
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI reference to problem type
+        title:
+          type: string
+          description: Short human-readable summary
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Human-readable explanation
+        instance:
+          type: string
+          format: uri
+          description: URI that caused the problem
+        errors:
+          type: array
+          items:
+            type: object
+
+    # Cart schemas
+    CartResponse:
+      type: object
+      required:
+        - id
+        - customer_id
+        - items
+        - subtotal
+        - total
+        - currency
+      properties:
+        id:
+          type: string
+          description: Unique cart identifier
+        customer_id:
+          type: integer
+          description: B2B customer ID
+        company_name:
+          type: string
+        tier:
+          type: string
+          enum: [STANDARD, SILVER, GOLD, PLATINUM]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        subtotal:
+          type: number
+          format: decimal
+          description: Sum before discounts
+        tier_discount:
+          type: number
+          format: decimal
+        volume_discount:
+          type: number
+          format: decimal
+        tax_amount:
+          type: number
+          format: decimal
+        total:
+          type: number
+          format: decimal
+        currency:
+          type: string
+          enum: [RON, EUR]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CartItem:
+      type: object
+      required:
+        - id
+        - product_id
+        - sku
+        - name
+        - quantity
+        - unit_price
+        - total
+      properties:
+        id:
+          type: string
+        product_id:
+          type: integer
+        sku:
+          type: string
+        name:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unit_price:
+          type: number
+          format: decimal
+        discount_percentage:
+          type: number
+          format: decimal
+        final_unit_price:
+          type: number
+          format: decimal
+        total:
+          type: number
+          format: decimal
+
+    AddCartItemRequest:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: integer
+          description: Product ID from catalog
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        notes:
+          type: string
+          maxLength: 500
+
+    CartItemResponse:
+      type: object
+      properties:
+        cart_id:
+          type: string
+        item:
+          $ref: '#/components/schemas/CartItem'
+        message:
+          type: string
+
+    UpdateCartItemRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10000
+
+    # Checkout schemas
+    ValidateStockRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - product_id
+              - quantity
+            properties:
+              product_id:
+                type: integer
+              quantity:
+                type: integer
+
+    ValidateStockResponse:
+      type: object
+      required:
+        - valid
+        - items
+      properties:
+        valid:
+          type: boolean
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: integer
+              sku:
+                type: string
+              available_quantity:
+                type: integer
+              requested_quantity:
+                type: integer
+              status:
+                type: string
+                enum: [available, insufficient, on_order]
+              supplier_available:
+                type: integer
+              lead_time_days:
+                type: integer
+                nullable: true
+        checked_at:
+          type: string
+          format: date-time
+
+    ValidateCreditRequest:
+      type: object
+      required:
+        - order_total
+      properties:
+        order_total:
+          type: number
+          format: decimal
+          minimum: 0.01
+        currency:
+          type: string
+          enum: [RON, EUR]
+          default: RON
+
+    ValidateCreditResponse:
+      type: object
+      required:
+        - valid
+        - customer_id
+        - credit_limit
+        - used_credit
+        - available_credit
+        - order_total
+        - remaining_after_order
+      properties:
+        valid:
+          type: boolean
+        customer_id:
+          type: integer
+        credit_limit:
+          type: number
+          format: decimal
+        used_credit:
+          type: number
+          format: decimal
+        available_credit:
+          type: number
+          format: decimal
+        order_total:
+          type: number
+          format: decimal
+        remaining_after_order:
+          type: number
+          format: decimal
+        currency:
+          type: string
+        validated_at:
+          type: string
+          format: date-time
+
+    CheckoutConfirmRequest:
+      type: object
+      required:
+        - shipping_address_id
+      properties:
+        shipping_address_id:
+          type: string
+          description: Saved address ID
+        billing_address_id:
+          type: string
+        payment_terms:
+          type: string
+          enum: [prepay, net_15, net_30, net_45, net_60, cash]
+          default: net_30
+        notes:
+          type: string
+          maxLength: 1000
+
+    CheckoutConfirmResponse:
+      type: object
+      required:
+        - order_id
+        - order_number
+        - status
+        - customer_id
+        - items
+        - total
+        - currency
+      properties:
+        order_id:
+          type: string
+        order_number:
+          type: string
+        status:
+          type: string
+        customer_id:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        subtotal:
+          type: number
+          format: decimal
+        discount_total:
+          type: number
+          format: decimal
+        tax_amount:
+          type: number
+          format: decimal
+        total:
+          type: number
+          format: decimal
+        currency:
+          type: string
+        payment_terms:
+          type: string
+        credit_used:
+          type: number
+          format: decimal
+        estimated_delivery:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+
+    # Error responses
+    BadRequest:
+      description: Bad Request - Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    Unauthorized:
+      description: Unauthorized - Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://api.cypher.ro/problems/unauthorized"
+            title: "Unauthorized"
+            status: 401
+            detail: "Missing or invalid authorization header"
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://api.cypher.ro/problems/forbidden"
+            title: "Forbidden"
+            status: 403
+            detail: "Access denied to this resource"
+
+    NotFound:
+      description: Not Found - Resource doesn't exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    UnprocessableEntity:
+      description: Unprocessable Entity - Business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://api.cypher.ro/problems/internal-error"
+            title: "Internal Server Error"
+            status: 500
+            detail: "An unexpected error occurred"
+            instance: "/api/v1/b2b/cart"
+
+externalDocs:
+  description: B2B API Documentation
+  url: https://docs.cypher.ro/b2b

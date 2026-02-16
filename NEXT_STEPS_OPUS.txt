@@ -1,0 +1,28 @@
+NEXT STEPS RECOMANDATE (DE IMPLEMENTAT DE OPUS)
+
+1) Cost snapshot pe linie de comanda (CRITIC)
+- La momentul vanzarii se salveaza cost_price_snapshot pe fiecare item din b2b_order_items/order_items.
+- Profitul istoric devine stabil si nu mai este afectat de update-uri ulterioare de cost pe produs.
+
+2) Sincronizare SmartBill automata + monitorizare (CRITIC)
+- Job-uri programate pentru sync-customers si sync-prices.
+- Retry/backoff, alerting la esec, dashboard cu last_success, duration, errors.
+
+3) Auto-match inteligent la conflicte clienti (HIGH)
+- Scoring pe CUI/email/nume+telefon.
+- Propuneri automate Top 5 in ecranul de conflict resolution.
+
+4) Conversie Proforma -> Factura + sync status bidirectional (HIGH)
+- Daca proforma este acceptata/platita in SmartBill, ERP sa actualizeze automat statusul.
+- Webhook/polling robust pentru consistenta ERP <-> SmartBill.
+
+5) Fisa client 360 unificata ERP+B2B+SmartBill (HIGH)
+- Profil unic client cu timeline complet: oferte, comenzi, proforme, facturi, plati, credit, risc.
+
+6) Testare automata pentru fluxurile noi (MUST HAVE)
+- Integration tests pentru top-customers, customer-links resolve, sync-prices cu metadata.cost,
+  proforma-from-quote idempotent.
+- E2E pentru 1-2 fluxuri critice in UI.
+
+Ordine recomandata:
+1 -> 2 -> 3 -> 4 -> 5 -> 6

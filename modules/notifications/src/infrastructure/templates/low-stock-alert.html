@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alertă Stoc Scăzut</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .email-wrapper { max-width: 600px; margin: 0 auto; background: #f9fafb; }
+    .email-container { background: #ffffff; }
+    .header { background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); padding: 40px 20px; text-align: center; color: white; }
+    .logo { max-width: 150px; height: auto; margin-bottom: 15px; }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .header p { font-size: 14px; opacity: 0.9; }
+    .content { padding: 40px 20px; }
+    .content h2 { color: #ea580c; font-size: 22px; margin-bottom: 15px; font-weight: 600; }
+    .content h3 { color: #1f2937; font-size: 16px; margin: 20px 0 15px 0; font-weight: 600; }
+    .content p { margin-bottom: 15px; color: #555; font-size: 14px; }
+    .alert-box { background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%); border: 2px solid #ea580c; padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .alert-box h2 { color: #ea580c; font-size: 20px; margin-bottom: 10px; }
+    .alert-icon { display: inline-block; width: 48px; height: 48px; background: #ea580c; color: white; border-radius: 50%; text-align: center; line-height: 48px; font-size: 24px; margin-right: 15px; vertical-align: middle; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+    table th { background: #f3f4f6; padding: 12px; text-align: left; font-weight: 600; color: #1f2937; border-bottom: 2px solid #e5e7eb; }
+    table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+    table tr:last-child td { border-bottom: none; }
+    .stock-critical { background: #fef2f2; color: #dc2626; }
+    .stock-low { background: #fff7ed; color: #ea580c; }
+    .stock-warning { background: #fefce8; color: #ca8a04; }
+    .text-center { text-align: center; }
+    .action-buttons { text-align: center; margin: 25px 0; }
+    .button { display: inline-block; background: #1e40af; color: white; padding: 12px 25px; border-radius: 6px; text-decoration: none; font-weight: 500; margin: 0 10px; font-size: 14px; }
+    .button:hover { background: #1e3a8a; }
+    .button-secondary { background: #64748b; }
+    .button-secondary:hover { background: #475569; }
+    .info-box { background: #f0f4f8; border-left: 4px solid #1e40af; padding: 15px; margin: 20px 0; border-radius: 4px; font-size: 13px; }
+    .info-box strong { color: #1e40af; display: block; margin-bottom: 8px; }
+    .footer { background: #1f2937; color: #e5e7eb; padding: 30px 20px; text-align: center; font-size: 12px; }
+    .footer a { color: #93c5fd; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { max-width: 100%; }
+      .header { padding: 30px 15px; }
+      .content { padding: 25px 15px; }
+      .button { display: block; margin: 8px 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <img src="https://ledux.ro/logo.png" alt="Ledux.ro" class="logo">
+        <h1>Alertă Stoc Scăzut</h1>
+        <p>Acțiune necesară</p>
+      </div>
+
+      <div class="content">
+        <div class="alert-box">
+          <div>
+            <span class="alert-icon">⚠</span>
+            <span style="vertical-align: middle;">
+              <strong>Atenție!</strong> {{alertCount}} produs(e) au nivelul de stoc sub pragul minim setat.
+            </span>
+          </div>
+        </div>
+
+        <h2>Produse cu Stoc Scăzut</h2>
+        <p>Următoarele produse din inventar necesită atenție imediată:</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Produs</th>
+              <th class="text-center">SKU</th>
+              <th class="text-center">Stoc Curent</th>
+              <th class="text-center">Prag Minim</th>
+              <th class="text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each products}}
+            <tr>
+              <td>
+                <strong>{{this.name}}</strong><br>
+                <small style="color: #999;">{{this.category}}</small>
+              </td>
+              <td class="text-center">{{this.sku}}</td>
+              <td class="text-center"><strong>{{this.currentStock}}</strong></td>
+              <td class="text-center">{{this.minimumStock}}</td>
+              <td class="text-center">
+                {{#if this.isCritical}}
+                <span class="stock-critical" style="padding: 4px 8px; border-radius: 4px; font-weight: 600;">CRITIC</span>
+                {{else if this.isLow}}
+                <span class="stock-low" style="padding: 4px 8px; border-radius: 4px; font-weight: 600;">SCĂZUT</span>
+                {{else}}
+                <span class="stock-warning" style="padding: 4px 8px; border-radius: 4px; font-weight: 600;">ATENȚIE</span>
+                {{/if}}
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <strong>Recomandări</strong>
+          <ul style="margin-left: 20px; margin-top: 8px;">
+            <li style="margin: 5px 0; font-size: 13px; color: #555;">Contactați furnizorii pentru a comanda articolele cu stoc critic în pierdere</li>
+            <li style="margin: 5px 0; font-size: 13px; color: #555;">Verificați comenzile pending care ar putea afecta disponibilitatea</li>
+            <li style="margin: 5px 0; font-size: 13px; color: #555;">Analizați tendințele de vânzare și ajustați pragurile de stoc dacă este necesar</li>
+            <li style="margin: 5px 0; font-size: 13px; color: #555;">Notificați echipa de vânzări despre limitări în disponibilitate</li>
+          </ul>
+        </div>
+
+        <h3>Acțiuni Disponibile</h3>
+
+        <div class="action-buttons">
+          <a href="{{inventoryDashboardUrl}}" class="button">Deschide Inventar</a>
+          <a href="{{replenishmentUrl}}" class="button button-secondary">Comenzi de Reaprovizionare</a>
+        </div>
+
+        <div class="info-box" style="margin-top: 25px;">
+          <strong>Informatii Alerta</strong>
+          <p><strong>Data Alertei:</strong> {{alertDate}}</p>
+          <p><strong>Total Produse Afectate:</strong> {{alertCount}}</p>
+          <p><strong>Produse Critice (≤0):</strong> {{criticalCount}}</p>
+          <p><strong>Produse cu Stoc Scăzut:</strong> {{lowStockCount}}</p>
+        </div>
+
+        <h3 style="margin-top: 25px;">Gestionare Alerte de Stoc</h3>
+        <p>Puteți personaliza pragurile de stoc și preferințele de alertare în setările de inventar. Vizitați panoul de control pentru:</p>
+        <ul style="margin-left: 20px; margin: 15px 0;">
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Ajustarea pragurilor minime de stoc per produs</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Configurarea frecvenței alertelor (zilnic, săptămânal, etc.)</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Selectarea categoriilor de produse pentru alertare</li>
+          <li style="margin: 8px 0; color: #555; font-size: 13px;">Adăugarea altor membri ai echipei pentru notificări</li>
+        </ul>
+
+        <p style="margin-top: 25px; font-size: 13px; color: #999;">
+          Aceasta este o alertă automată de la sistemul Ledux.ro ERP. Vă rugăm să nu răspundeți la acest email. Pentru asistență, contactați-ne la <a href="mailto:{{supportEmail}}" style="color: #1e40af;">{{supportEmail}}</a>
+        </p>
+      </div>
+
+      <div class="footer">
+        <div style="margin-bottom: 15px;">
+          <strong>Ledux.ro ERP System</strong><br>
+          Sistem Integrat de Management Comercial<br>
+          <a href="https://erp.ledux.ro">erp.ledux.ro</a>
+        </div>
+        <div>
+          <a href="{{unsubscribeLink}}">Dezabonare Alerte</a> |
+          <a href="{{preferencesLink}}">Preferințe</a>
+        </div>
+        <div style="margin-top: 15px; opacity: 0.8;">
+          Copyright &copy; {{currentYear}} Ledux.ro. Toate drepturile rezervate.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
