@@ -1,6 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { WhatsAppController } from '../controllers/WhatsAppController';
-import { authenticate, requireRole, AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import {
+  authenticate,
+  requireRole,
+  AuthenticatedRequest,
+} from '@shared/middleware/auth.middleware';
 import { asyncHandler } from '@shared/middleware/async-handler';
 import {
   validationMiddleware,
@@ -243,7 +247,7 @@ export function createWhatsAppRoutes(controller: WhatsAppController): Router {
   router.get(
     '/api/v1/whatsapp/connection/status',
     asyncHandler((req: Request, res: Response, next: NextFunction) =>
-      controller.getConnectionStatus(req, res, next),
+      controller.getConnectionStatus(req as AuthenticatedRequest, res, next),
     ),
   );
 

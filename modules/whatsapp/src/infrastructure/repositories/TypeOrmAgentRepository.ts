@@ -1,4 +1,4 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, Like } from 'typeorm';
 import { WhatsAppAgent, AgentStatus } from '../../domain/entities/WhatsAppAgent';
 import { IAgentRepository } from '../../domain/repositories/IAgentRepository';
 import { WhatsAppAgentEntity } from '../entities/WhatsAppAgentEntity';
@@ -47,11 +47,7 @@ export class TypeOrmAgentRepository implements IAgentRepository {
     return this.toDomain(entity);
   }
 
-  async updateCounts(
-    agentId: string,
-    deltaActive: number,
-    deltaAssigned: number,
-  ): Promise<void> {
+  async updateCounts(agentId: string, deltaActive: number, deltaAssigned: number): Promise<void> {
     const entity = await this.repository.findOne({ where: { id: agentId } });
     if (!entity) {
       throw new Error(`Agent with ID ${agentId} not found`);

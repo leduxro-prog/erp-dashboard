@@ -61,7 +61,10 @@ export class GetStatistics {
     const dateTo = request.dateTo ? new Date(request.dateTo) : undefined;
 
     // Get conversation counts by status
-    const allConversations = await this.conversationRepository.findAll({}, { limit: 100000, offset: 0 });
+    const allConversations = await this.conversationRepository.findAll(
+      {},
+      { limit: 100000, offset: 0 },
+    );
     let filteredConversations = allConversations.items;
 
     if (dateFrom || dateTo) {
@@ -74,34 +77,45 @@ export class GetStatistics {
     }
 
     const activeConversations = filteredConversations.filter((c) => c.isActive()).length;
-    const resolvedConversations = filteredConversations.filter((c) => c.getStatus() === 'RESOLVED').length;
+    const resolvedConversations = filteredConversations.filter(
+      (c) => c.getStatus() === 'RESOLVED',
+    ).length;
 
-    // Get message counts
-    const allMessages = await this.messageRepository.findAll({}, { limit: 100000, offset: 0 });
-    let filteredMessages = allMessages.items;
+    // Aggregate message counts from individual conversations
+    // Note: For large deployments, this should be replaced with a dedicated aggregate query
+    let totalMessages = 0;
+    let sentMessages = 0;
+    let receivedMessages = 0;
+    let failedMessages = 0;
 
-    if (dateFrom || dateTo) {
-      filteredMessages = allMessages.items.filter((msg) => {
-        const msgDate = msg.createdAt;
-        if (dateFrom && msgDate < dateFrom) return false;
-        if (dateTo && msgDate > dateTo) return false;
-        return true;
+    for (const conv of filteredConversations) {
+      const messagesResult = await this.messageRepository.findByConversation(conv.id, {
+        limit: 10000,
+        offset: 0,
       });
+
+      totalMessages += messagesResult.total;
+
+      for (const msg of messagesResult.items) {
+        if (msg.direction === 'OUTBOUND') {
+          sentMessages++;
+        } else {
+          receivedMessages++;
+        }
+        if (msg.getStatus() === 'FAILED') {
+          failedMessages++;
+        }
+      }
     }
 
-    const sentMessages = filteredMessages.filter((m) => m.direction === 'outbound').length;
-    const receivedMessages = filteredMessages.filter((m) => m.direction === 'inbound').length;
-    const failedMessages = filteredMessages.filter((m) => m.getStatus() === 'failed').length;
-
-    // Calculate average response time (simplified)
-    const totalMessagesCount = filteredMessages.length;
-    const averageResponseTime = totalMessagesCount > 0 ? 150 : 0; // Placeholder - would need timestamp analysis
+    // Calculate average response time (simplified placeholder)
+    const averageResponseTime = totalMessages > 0 ? 150 : 0;
 
     return {
       totalConversations: filteredConversations.length,
       activeConversations,
       resolvedConversations,
-      totalMessages: totalMessagesCount,
+      totalMessages,
       sentMessages,
       receivedMessages,
       failedMessages,

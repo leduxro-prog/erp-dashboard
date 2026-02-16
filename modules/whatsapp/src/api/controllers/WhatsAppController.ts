@@ -661,8 +661,10 @@ export class WhatsAppController {
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const { template_name, category, body, footer_text } =
-        req.validatedBody as Record<string, any>;
+      const { template_name, category, body, footer_text } = req.validatedBody as Record<
+        string,
+        any
+      >;
 
       const result = await this.updateTemplateUseCase.execute({
         id,
@@ -675,8 +677,8 @@ export class WhatsAppController {
         success: true,
         data: {
           template_id: result.template.id,
-          template_name: result.template.getName(),
-          category: result.template.getCategory(),
+          template_name: result.template.name,
+          category: result.template.category,
           language: result.template.language,
           status: result.template.getStatus(),
           body_text: result.template.bodyText,
@@ -730,11 +732,7 @@ export class WhatsAppController {
    *
    * @returns JSON with agents list
    */
-  async getAgents(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
+  async getAgents(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await this.getAgentsUseCase.execute({
         status: req.query.status as any,
@@ -914,11 +912,7 @@ export class WhatsAppController {
    *
    * @returns JSON with tags list
    */
-  async getTags(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
+  async getTags(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await this.getTagsUseCase.execute();
 
@@ -978,11 +972,7 @@ export class WhatsAppController {
    *
    * @returns JSON with statistics
    */
-  async getStatistics(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> {
+  async getStatistics(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await this.getStatisticsUseCase.execute({
         dateFrom: req.query.date_from as string,

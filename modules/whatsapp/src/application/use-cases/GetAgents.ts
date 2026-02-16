@@ -68,7 +68,7 @@ export class GetAgents {
     const stats = await this.agentRepository.getAvailabilityStats();
 
     return {
-      agents: agents.map((agent) => agent.toJSON()),
+      agents: agents.map((agent) => agent.toJSON()) as GetAgentsResponse['agents'],
       stats,
     };
   }

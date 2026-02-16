@@ -1,13 +1,4 @@
-import {
-  Entity,
-  PrimaryColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToMany,
-  JoinTable,
-} from 'typeorm';
-import { ConversationEntity } from './ConversationEntity';
+import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 /**
  * TypeORM entity for WhatsApp Agent.

@@ -54,6 +54,7 @@ import { TypeOrmTagRepository } from './repositories/TypeOrmTagRepository';
 
 // Domain ports
 import { IWhatsAppBusinessApi } from '../domain/ports/IWhatsAppBusinessApi';
+import { IConnectionPort } from '../domain/ports/IConnectionPort';
 
 // Controller
 import { WhatsAppController } from '../api/controllers/WhatsAppController';
@@ -111,6 +112,13 @@ export function createWhatsAppRouter(
 
   const createTemplate = new CreateTemplate(templateRepository);
 
+  // Create IConnectionPort adapter wrapping the IWhatsAppBusinessApi methods
+  const connectionPort: IConnectionPort = {
+    getStatus: () => whatsappApi.getConnectionStatus(),
+    generateQRCode: (force?: boolean) => whatsappApi.generateQRCode(force),
+    disconnect: () => whatsappApi.disconnect(),
+  };
+
   // NEW USE CASES
   const reopenConversation = new ReopenConversation(conversationRepository);
   const markConversationAsRead = new MarkConversationAsRead(conversationRepository);
@@ -118,10 +126,10 @@ export function createWhatsAppRouter(
   const deleteTemplate = new DeleteTemplate(templateRepository);
   const getAgents = new GetAgents(agentRepository);
   const setAgentStatus = new SetAgentStatus(agentRepository);
-  const getConnectionStatus = new GetConnectionStatus(whatsappApi);
-  const connectWhatsApp = new ConnectWhatsApp(whatsappApi);
-  const disconnectWhatsApp = new DisconnectWhatsApp(whatsappApi);
-  const reconnectWhatsApp = new ReconnectWhatsApp(whatsappApi);
+  const getConnectionStatus = new GetConnectionStatus(connectionPort);
+  const connectWhatsApp = new ConnectWhatsApp(connectionPort);
+  const disconnectWhatsApp = new DisconnectWhatsApp(connectionPort);
+  const reconnectWhatsApp = new ReconnectWhatsApp(connectionPort);
   const getTags = new GetTags(tagRepository);
   const updateConversationTags = new UpdateConversationTags(conversationRepository);
   const getStatistics = new GetStatistics(conversationRepository, messageRepository);

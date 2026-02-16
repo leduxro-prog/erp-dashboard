@@ -65,6 +65,14 @@ export class WhatsAppTag {
   }
 
   /**
+   * Get last update timestamp.
+   * @internal
+   */
+  getUpdatedAt(): Date {
+    return this.updatedAt;
+  }
+
+  /**
    * Convert to plain object for API responses.
    *
    * @returns Plain object representation

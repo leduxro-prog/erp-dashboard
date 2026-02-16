@@ -1,11 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
-import { 
-  IWhatsAppBusinessApi, 
-  SendTextMessageRequest, 
-  SendTemplateMessageRequest, 
-  SendMediaMessageRequest, 
-  MessageSendResponse, 
-  TemplateStatusUpdate 
+import {
+  IWhatsAppBusinessApi,
+  SendTextMessageRequest,
+  SendTemplateMessageRequest,
+  SendMediaMessageRequest,
+  MessageSendResponse,
+  TemplateStatusUpdate,
 } from '../../domain/ports/IWhatsAppBusinessApi';
 import { createModuleLogger } from '@shared/utils/logger';
 
@@ -20,11 +20,11 @@ export class MetaWhatsAppClient implements IWhatsAppBusinessApi {
   constructor() {
     this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
     this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN || '';
-    
+
     this.axiosInstance = axios.create({
       baseURL: `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}`,
       headers: {
-        'Authorization': `Bearer ${this.accessToken}`,
+        Authorization: `Bearer ${this.accessToken}`,
         'Content-Type': 'application/json',
       },
       timeout: 10000,
@@ -38,7 +38,7 @@ export class MetaWhatsAppClient implements IWhatsAppBusinessApi {
   async sendTextMessage(request: SendTextMessageRequest): Promise<MessageSendResponse> {
     try {
       logger.debug('Sending text message', { phone: request.phone });
-      
+
       const response = await this.axiosInstance.post('/messages', {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
@@ -59,13 +59,16 @@ export class MetaWhatsAppClient implements IWhatsAppBusinessApi {
 
   async sendTemplateMessage(request: SendTemplateMessageRequest): Promise<MessageSendResponse> {
     try {
-      logger.debug('Sending template message', { phone: request.phone, template: request.templateName });
+      logger.debug('Sending template message', {
+        phone: request.phone,
+        template: request.templateName,
+      });
 
       const components: any[] = [];
       if (request.parameters && request.parameters.length > 0) {
         components.push({
           type: 'body',
-          parameters: request.parameters.map(p => ({ type: 'text', text: p })),
+          parameters: request.parameters.map((p) => ({ type: 'text', text: p })),
         });
       }
 
@@ -120,7 +123,10 @@ export class MetaWhatsAppClient implements IWhatsAppBusinessApi {
     }
   }
 
-  async getTemplateStatus(templateName: string, languageCode: string): Promise<TemplateStatusUpdate> {
+  async getTemplateStatus(
+    templateName: string,
+    languageCode: string,
+  ): Promise<TemplateStatusUpdate> {
     try {
       // Note: Template management is usually done at the WABA level, not Phone Number ID level
       const wabaId = process.env.WHATSAPP_WABA_ID;
@@ -130,12 +136,12 @@ export class MetaWhatsAppClient implements IWhatsAppBusinessApi {
         `https://graph.facebook.com/${this.apiVersion}/${wabaId}/message_templates`,
         {
           params: { name: templateName },
-          headers: { 'Authorization': `Bearer ${this.accessToken}` },
-        }
+          headers: { Authorization: `Bearer ${this.accessToken}` },
+        },
       );
 
       const template = response.data.data.find(
-        (t: any) => t.name === templateName && t.language === languageCode
+        (t: any) => t.name === templateName && t.language === languageCode,
       );
 
       if (!template) throw new Error('Template not found');
@@ -181,15 +187,55 @@ export class MetaWhatsAppClient implements IWhatsAppBusinessApi {
     }
   }
 
+  async getConnectionStatus(): Promise<{
+    connected: boolean;
+    phoneNumber?: string;
+    status: 'connected' | 'disconnected' | 'connecting' | 'needs_authentication';
+    lastConnectedAt?: Date;
+  }> {
+    try {
+      const health = await this.healthCheck();
+      return {
+        connected: health.healthy,
+        phoneNumber: this.phoneNumberId || undefined,
+        status: health.healthy ? 'connected' : 'disconnected',
+        lastConnectedAt: health.healthy ? new Date() : undefined,
+      };
+    } catch (_error) {
+      return {
+        connected: false,
+        status: 'disconnected',
+      };
+    }
+  }
+
+  async generateQRCode(_force?: boolean): Promise<{
+    qrCode?: string;
+    expiresIn?: number;
+  }> {
+    // QR code generation is handled by WhatsApp Business API onboarding flow
+    // This is a placeholder for the connection management feature
+    logger.warn('QR code generation not supported via Cloud API — use Embedded Signup flow');
+    return {
+      qrCode: undefined,
+      expiresIn: undefined,
+    };
+  }
+
+  async disconnect(): Promise<void> {
+    // Cloud API doesn't have a disconnect concept — session is token-based
+    logger.info('Disconnect requested — invalidating local session state');
+  }
+
   private handleError(operation: string, error: any): never {
     const message = error.response?.data?.error?.message || error.message;
     const code = error.response?.data?.error?.code;
-    
-    logger.error(`WhatsApp API Error (${operation})`, { 
+
+    logger.error(`WhatsApp API Error (${operation})`, {
       status: error.response?.status,
       message,
       code,
-      details: error.response?.data
+      details: error.response?.data,
     });
 
     const err: any = new Error(`WhatsApp API Error: ${message}`);

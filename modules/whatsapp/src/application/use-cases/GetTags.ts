@@ -40,7 +40,7 @@ export class GetTags {
     const tags = await this.tagRepository.findAll();
 
     return {
-      tags: tags.map((tag) => tag.toJSON()),
+      tags: tags.map((tag) => tag.toJSON()) as GetTagsResponse['tags'],
     };
   }
 }
