@@ -106,7 +106,9 @@ export function BrandManagerPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-text-primary">Brand Manager</h1>
-          <p className="text-text-secondary mt-1">Campaigns, analytics, and attribution dashboard</p>
+          <p className="text-text-secondary mt-1">
+            Campaigns, analytics, and attribution dashboard
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -172,6 +174,7 @@ export function BrandManagerPage() {
       {/* Dashboard View */}
       {viewMode === 'dashboard' && (
         <DashboardView
+          loading={loading}
           stats={stats}
           timePeriod={timePeriod}
           onRefresh={loadDashboardData}
@@ -179,29 +182,25 @@ export function BrandManagerPage() {
       )}
 
       {/* Campaigns View */}
-      {viewMode === 'campaigns' && (
-        <CampaignsView />
-      )}
+      {viewMode === 'campaigns' && <CampaignsView />}
 
       {/* Analytics View */}
-      {viewMode === 'analytics' && (
-        <AnalyticsView />
-      )}
+      {viewMode === 'analytics' && <AnalyticsView />}
 
       {/* Attribution View */}
-      {viewMode === 'attribution' && (
-        <AttributionView />
-      )}
+      {viewMode === 'attribution' && <AttributionView />}
     </div>
   );
 }
 
 // Dashboard View Component
 function DashboardView({
+  loading,
   stats,
   timePeriod,
   onRefresh,
 }: {
+  loading: boolean;
   stats: DashboardStats | null;
   timePeriod: TimePeriod;
   onRefresh: () => void;
@@ -371,7 +370,7 @@ function DashboardView({
             <h3 className="text-lg font-semibold text-text-primary mb-4">Revenue by Channel</h3>
             <div className="space-y-4">
               {channelMetrics.map((metric) => {
-                const maxValue = Math.max(...channelMetrics.map(m => m.revenue));
+                const maxValue = Math.max(...channelMetrics.map((m) => m.revenue));
                 const percentage = (metric.revenue / maxValue) * 100;
 
                 return (
@@ -386,7 +385,8 @@ function DashboardView({
                             {getChannelName(metric.channel)}
                           </p>
                           <p className="text-xs text-text-tertiary">
-                            {metric.conversions} conversions • {metric.conversionRate.toFixed(1)}% CR
+                            {metric.conversions} conversions • {metric.conversionRate.toFixed(1)}%
+                            CR
                           </p>
                         </div>
                       </div>
@@ -394,7 +394,9 @@ function DashboardView({
                         <p className="font-bold text-text-primary">
                           {metric.revenue.toLocaleString('ro-RO')} RON
                         </p>
-                        <p className={`text-sm ${metric.roas >= 5 ? 'text-green-600' : metric.roas >= 2 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        <p
+                          className={`text-sm ${metric.roas >= 5 ? 'text-green-600' : metric.roas >= 2 ? 'text-yellow-600' : 'text-red-600'}`}
+                        >
                           ROAS {metric.roas.toFixed(1)}x
                         </p>
                       </div>
@@ -419,7 +421,9 @@ function DashboardView({
                 {channelMetrics.slice(0, 3).map((metric) => (
                   <div key={metric.channel} className="flex items-center justify-between">
                     <span className="text-text-secondary">{getChannelName(metric.channel)}</span>
-                    <span className={`font-bold ${metric.roas >= 5 ? 'text-green-600' : metric.roas >= 2 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    <span
+                      className={`font-bold ${metric.roas >= 5 ? 'text-green-600' : metric.roas >= 2 ? 'text-yellow-600' : 'text-red-600'}`}
+                    >
                       {metric.roas.toFixed(1)}x
                     </span>
                   </div>
@@ -433,7 +437,9 @@ function DashboardView({
                 {channelMetrics.slice(0, 3).map((metric) => (
                   <div key={metric.channel} className="flex items-center justify-between">
                     <span className="text-text-secondary">{getChannelName(metric.channel)}</span>
-                    <span className={`font-bold ${metric.roi >= 10 ? 'text-green-600' : metric.roi >= 5 ? 'text-yellow-600' : 'text-red-600'}`}>
+                    <span
+                      className={`font-bold ${metric.roi >= 10 ? 'text-green-600' : metric.roi >= 5 ? 'text-yellow-600' : 'text-red-600'}`}
+                    >
                       {metric.roi.toFixed(1)}%
                     </span>
                   </div>
@@ -504,7 +510,7 @@ function CampaignsView() {
     }
   };
 
-  const filteredCampaigns = campaigns.filter(c => {
+  const filteredCampaigns = campaigns.filter((c) => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
     const matchesType = typeFilter === 'all' || c.type === typeFilter;
@@ -535,9 +541,7 @@ function CampaignsView() {
       render: (value, row) => (
         <div>
           <p className="font-medium text-text-primary">{value}</p>
-          {row.description && (
-            <p className="text-xs text-text-tertiary">{row.description}</p>
-          )}
+          {row.description && <p className="text-xs text-text-tertiary">{row.description}</p>}
         </div>
       ),
     },
@@ -576,11 +580,10 @@ function CampaignsView() {
       label: 'Performance',
       render: (value) => (
         <div className="flex gap-2 text-xs">
-          <span className="bg-surface-secondary px-2 py-1 rounded">
-            {value.conversions} conv
-          </span>
+          <span className="bg-surface-secondary px-2 py-1 rounded">{value.conversions} conv</span>
           <span className="bg-green-500/10 text-green-700 px-2 py-1 rounded">
-            {value.conversions > 0 ? ((value.clicked / value.conversions) * 100).toFixed(1) : 0}% CTR
+            {value.conversions > 0 ? ((value.clicked / value.conversions) * 100).toFixed(1) : 0}%
+            CTR
           </span>
         </div>
       ),
@@ -593,7 +596,10 @@ function CampaignsView() {
       <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
-            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+            <Filter
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+            />
             <input
               type="text"
               placeholder="Search campaigns..."
@@ -638,7 +644,9 @@ function CampaignsView() {
         <EmptyState
           icon={<Megaphone size={48} className="text-text-tertiary" />}
           title="No Campaigns Found"
-          description={searchTerm ? 'Try adjusting your search.' : 'Create your first marketing campaign.'}
+          description={
+            searchTerm ? 'Try adjusting your search.' : 'Create your first marketing campaign.'
+          }
           variant="compact"
         />
       ) : (
@@ -675,7 +683,9 @@ function AnalyticsView() {
         <button
           onClick={() => setView('overview')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            view === 'overview' ? 'bg-surface-primary shadow-sm text-primary-600' : 'text-text-secondary'
+            view === 'overview'
+              ? 'bg-surface-primary shadow-sm text-primary-600'
+              : 'text-text-secondary'
           }`}
         >
           Overview
@@ -683,7 +693,9 @@ function AnalyticsView() {
         <button
           onClick={() => setView('conversions')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            view === 'conversions' ? 'bg-surface-primary shadow-sm text-primary-600' : 'text-text-secondary'
+            view === 'conversions'
+              ? 'bg-surface-primary shadow-sm text-primary-600'
+              : 'text-text-secondary'
           }`}
         >
           Conversions
@@ -691,7 +703,9 @@ function AnalyticsView() {
         <button
           onClick={() => setView('revenue')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-            view === 'revenue' ? 'bg-surface-primary shadow-sm text-primary-600' : 'text-text-secondary'
+            view === 'revenue'
+              ? 'bg-surface-primary shadow-sm text-primary-600'
+              : 'text-text-secondary'
           }`}
         >
           Revenue
@@ -720,7 +734,9 @@ function AnalyticsView() {
                       <span className="text-sm text-text-tertiary">
                         {stage.conversionRate.toFixed(1)}%
                       </span>
-                      <span className={`text-sm ${stage.dropOff > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <span
+                        className={`text-sm ${stage.dropOff > 0 ? 'text-red-600' : 'text-green-600'}`}
+                      >
                         {stage.dropOff > 0 ? `-${stage.dropOff.toFixed(1)}%` : '0%'}
                       </span>
                     </div>
@@ -744,11 +760,15 @@ function AnalyticsView() {
             <h3 className="text-lg font-semibold text-text-primary mb-4">Conversions by Segment</h3>
             <div className="space-y-3">
               {segmentConversions.map((segment) => (
-                <div key={segment.segment} className="flex items-center justify-between p-3 bg-surface-secondary rounded-lg">
+                <div
+                  key={segment.segment}
+                  className="flex items-center justify-between p-3 bg-surface-secondary rounded-lg"
+                >
                   <div>
                     <p className="font-medium text-text-primary">{segment.segment}</p>
                     <p className="text-sm text-text-tertiary">
-                      {segment.conversions.toLocaleString('ro-RO')} conversions • Avg: {segment.avgValue.toFixed(2)} RON
+                      {segment.conversions.toLocaleString('ro-RO')} conversions • Avg:{' '}
+                      {segment.avgValue.toFixed(2)} RON
                     </p>
                   </div>
                   <p className="font-bold text-text-primary">
@@ -765,9 +785,7 @@ function AnalyticsView() {
         <div className="bg-surface-primary border border-border-primary rounded-xl p-6 text-center">
           <Target size={48} className="mx-auto text-text-tertiary mb-4" />
           <h3 className="text-lg font-semibold text-text-primary mb-2">Conversions Analytics</h3>
-          <p className="text-text-secondary">
-            Detailed conversion analytics view coming soon.
-          </p>
+          <p className="text-text-secondary">Detailed conversion analytics view coming soon.</p>
         </div>
       )}
 
@@ -775,9 +793,7 @@ function AnalyticsView() {
         <div className="bg-surface-primary border border-border-primary rounded-xl p-6 text-center">
           <DollarSign size={48} className="mx-auto text-text-tertiary mb-4" />
           <h3 className="text-lg font-semibold text-text-primary mb-2">Revenue Analytics</h3>
-          <p className="text-text-secondary">
-            Detailed revenue analytics view coming soon.
-          </p>
+          <p className="text-text-secondary">Detailed revenue analytics view coming soon.</p>
         </div>
       )}
     </div>
@@ -829,7 +845,7 @@ function AttributionView() {
     }
   };
 
-  const filteredEvents = events.filter(e => {
+  const filteredEvents = events.filter((e) => {
     const matchesType = eventTypeFilter === 'all' || e.eventType === eventTypeFilter;
     const matchesChannel = channelFilter === 'all' || e.channel === channelFilter;
     return matchesType && matchesChannel;
@@ -886,12 +902,12 @@ function AttributionView() {
     {
       key: 'campaignId',
       label: 'Campaign',
-      render: (value) => value ? <span className="font-mono text-xs">{value}</span> : '-',
+      render: (value) => (value ? <span className="font-mono text-xs">{value}</span> : '-'),
     },
     {
       key: 'value',
       label: 'Value',
-      render: (value) => value ? `${value.toFixed(2)} RON` : '-',
+      render: (value) => (value ? `${value.toFixed(2)} RON` : '-'),
     },
     {
       key: 'timestamp',
@@ -930,7 +946,12 @@ function AttributionView() {
             <option value="display">Display</option>
             <option value="whatsapp">WhatsApp</option>
           </select>
-          <button onClick={() => {/* TODO: export */}} className="btn-secondary">
+          <button
+            onClick={() => {
+              /* TODO: export */
+            }}
+            className="btn-secondary"
+          >
             <Download size={18} className="mr-2" />
             Export
           </button>
@@ -960,8 +981,9 @@ function AttributionView() {
           <div>
             <p className="font-medium text-blue-800 dark:text-blue-400 mb-1">Attribution Model</p>
             <p className="text-sm text-blue-700 dark:text-blue-500">
-              Using last-touch attribution model. Credits the last marketing touchpoint before conversion.
-              Attribution events are tracked across all channels and stored for analysis.
+              Using last-touch attribution model. Credits the last marketing touchpoint before
+              conversion. Attribution events are tracked across all channels and stored for
+              analysis.
             </p>
           </div>
         </div>

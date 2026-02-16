@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   XCircle,
   History,
-  Warehouse,
+  Warehouse as WarehouseIcon,
   Filter,
   X,
   Edit2,
@@ -64,7 +64,9 @@ export function WMSPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-text-primary">Warehouse Management</h1>
-          <p className="text-text-secondary mt-1">Manage inventory, stock movements, and warehouse operations</p>
+          <p className="text-text-secondary mt-1">
+            Manage inventory, stock movements, and warehouse operations
+          </p>
         </div>
       </div>
 
@@ -99,9 +101,9 @@ export function WMSPage() {
           }`}
         >
           Alerts
-          {alerts.filter(a => !a.acknowledged).length > 0 && (
+          {alerts.filter((a) => !a.acknowledged).length > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-              {alerts.filter(a => !a.acknowledged).length}
+              {alerts.filter((a) => !a.acknowledged).length}
             </span>
           )}
         </button>
@@ -138,28 +140,17 @@ export function WMSPage() {
       )}
 
       {/* Stock Levels View */}
-      {viewMode === 'stock' && (
-        <StockLevelsView />
-      )}
+      {viewMode === 'stock' && <StockLevelsView />}
 
       {/* Alerts View */}
-      {viewMode === 'alerts' && (
-        <AlertsView
-          onRefresh={loadDashboardData}
-        />
-      )}
+      {viewMode === 'alerts' && <AlertsView onRefresh={loadDashboardData} />}
 
       {/* Movements View */}
-      {viewMode === 'movements' && (
-        <MovementsView />
-      )}
+      {viewMode === 'movements' && <MovementsView />}
 
       {/* Warehouses View */}
       {viewMode === 'warehouses' && (
-        <WarehousesView
-          warehouses={warehouses}
-          onRefresh={loadDashboardData}
-        />
+        <WarehousesView warehouses={warehouses} onRefresh={loadDashboardData} />
       )}
     </div>
   );
@@ -177,8 +168,8 @@ function DashboardView({
   onRefresh: () => void;
   onViewAlerts: () => void;
 }) {
-  const criticalAlerts = alerts.filter(a => a.severity === 'high' && !a.acknowledged);
-  const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged);
+  const criticalAlerts = alerts.filter((a) => a.severity === 'high' && !a.acknowledged);
+  const unacknowledgedAlerts = alerts.filter((a) => !a.acknowledged);
 
   return (
     <div className="space-y-6">
@@ -190,7 +181,7 @@ function DashboardView({
               <p className="text-sm text-text-tertiary">Warehouses</p>
               <p className="text-2xl font-bold text-text-primary">{warehouses.length}</p>
             </div>
-            <Warehouse size={24} className="text-blue-500" />
+            <WarehouseIcon size={24} className="text-blue-500" />
           </div>
         </div>
 
@@ -218,7 +209,9 @@ function DashboardView({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-text-tertiary">Acknowledged</p>
-              <p className="text-2xl font-bold text-green-600">{alerts.filter(a => a.acknowledged).length}</p>
+              <p className="text-2xl font-bold text-green-600">
+                {alerts.filter((a) => a.acknowledged).length}
+              </p>
             </div>
             <CheckCircle2 size={24} className="text-green-500" />
           </div>
@@ -242,15 +235,21 @@ function DashboardView({
           </div>
           <div className="space-y-3">
             {criticalAlerts.slice(0, 5).map((alert) => (
-              <div key={alert.id} className="flex items-center justify-between bg-white dark:bg-surface-primary rounded-lg p-3">
+              <div
+                key={alert.id}
+                className="flex items-center justify-between bg-white dark:bg-surface-primary rounded-lg p-3"
+              >
                 <div>
                   <p className="font-medium text-text-primary">{alert.productName}</p>
                   <p className="text-sm text-text-secondary">
-                    Current: {alert.currentStock} / Reorder: {alert.reorderPoint} (Shortage: {alert.shortage})
+                    Current: {alert.currentStock} / Reorder: {alert.reorderPoint} (Shortage:{' '}
+                    {alert.shortage})
                   </p>
                 </div>
                 <button
-                  onClick={() => {/* TODO: acknowledge alert */}}
+                  onClick={() => {
+                    /* TODO: acknowledge alert */
+                  }}
                   className="p-2 hover:bg-red-100 dark:hover:bg-red-800 rounded-lg text-red-600"
                 >
                   <CheckCircle2 size={16} />
@@ -259,10 +258,7 @@ function DashboardView({
             ))}
           </div>
           {criticalAlerts.length > 5 && (
-            <button
-              onClick={onViewAlerts}
-              className="mt-4 text-sm text-red-600 hover:underline"
-            >
+            <button onClick={onViewAlerts} className="mt-4 text-sm text-red-600 hover:underline">
               View all {criticalAlerts.length} critical alerts
             </button>
           )}
@@ -274,7 +270,7 @@ function DashboardView({
         <h3 className="text-lg font-semibold text-text-primary mb-4">Warehouses</h3>
         {warehouses.length === 0 ? (
           <EmptyState
-            icon={<Warehouse size={48} className="text-text-tertiary" />}
+            icon={<WarehouseIcon size={48} className="text-text-tertiary" />}
             title="No Warehouses"
             description="Add warehouses to manage your inventory across locations."
             variant="compact"
@@ -285,7 +281,7 @@ function DashboardView({
               <div key={warehouse.id} className="bg-surface-secondary rounded-lg p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <Warehouse size={20} className="text-blue-600" />
+                    <WarehouseIcon size={20} className="text-blue-600" />
                   </div>
                   <div>
                     <p className="font-medium text-text-primary">{warehouse.name}</p>
@@ -308,7 +304,9 @@ function StockLevelsView() {
   const [stockLevels, setStockLevels] = useState<StockLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'normal' | 'warning' | 'critical'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'normal' | 'warning' | 'critical'>(
+    'all',
+  );
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [limit] = useState(50);
@@ -345,7 +343,7 @@ function StockLevelsView() {
     loadStockLevels();
   };
 
-  const filteredStockLevels = stockLevels.filter(stock => {
+  const filteredStockLevels = stockLevels.filter((stock) => {
     if (statusFilter === 'all') return true;
     if (statusFilter === 'normal') return stock.status === 'Normal';
     if (statusFilter === 'warning') return stock.status === 'Atentionare';
@@ -358,20 +356,23 @@ function StockLevelsView() {
       alert('Please fill in all fields');
       return;
     }
-    wmsService.adjustStock({
-      productId: selectedStock.productId,
-      warehouseId: selectedStock.warehouseId,
-      quantity: adjustData.quantity,
-      reason: adjustData.reason,
-    }).then(() => {
-      alert('Stock adjusted successfully');
-      setShowAdjustModal(false);
-      setAdjustData({ quantity: 0, reason: '' });
-      loadStockLevels();
-    }).catch((error) => {
-      console.error('Error adjusting stock:', error);
-      alert('Failed to adjust stock');
-    });
+    wmsService
+      .adjustStock({
+        productId: selectedStock.productId,
+        warehouseId: selectedStock.warehouseId,
+        quantity: adjustData.quantity,
+        reason: adjustData.reason,
+      })
+      .then(() => {
+        alert('Stock adjusted successfully');
+        setShowAdjustModal(false);
+        setAdjustData({ quantity: 0, reason: '' });
+        loadStockLevels();
+      })
+      .catch((error) => {
+        console.error('Error adjusting stock:', error);
+        alert('Failed to adjust stock');
+      });
   };
 
   const getStatusConfig = (status: string) => {
@@ -453,7 +454,10 @@ function StockLevelsView() {
       <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Search products..."
@@ -531,7 +535,10 @@ function StockLevelsView() {
           <div className="bg-surface-primary rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-border-primary flex items-center justify-between">
               <h3 className="text-lg font-semibold text-text-primary">Adjust Stock</h3>
-              <button onClick={() => setShowAdjustModal(false)} className="p-2 hover:bg-surface-secondary rounded-lg">
+              <button
+                onClick={() => setShowAdjustModal(false)}
+                className="p-2 hover:bg-surface-secondary rounded-lg"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -539,16 +546,23 @@ function StockLevelsView() {
               <div className="bg-surface-secondary rounded-lg p-4">
                 <p className="font-medium text-text-primary">{selectedStock.name}</p>
                 <p className="text-sm text-text-secondary">SKU: {selectedStock.sku}</p>
-                <p className="text-sm text-text-secondary">Current Available: {selectedStock.available}</p>
+                <p className="text-sm text-text-secondary">
+                  Current Available: {selectedStock.available}
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">Adjustment Amount</label>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Adjustment Amount
+                </label>
                 <div className="flex items-center gap-2">
                   <select
                     value={adjustData.quantity < 0 ? 'remove' : 'add'}
                     onChange={(e) => {
                       const absQty = Math.abs(adjustData.quantity);
-                      setAdjustData({ ...adjustData, quantity: e.target.value === 'remove' ? -absQty : absQty });
+                      setAdjustData({
+                        ...adjustData,
+                        quantity: e.target.value === 'remove' ? -absQty : absQty,
+                      });
                     }}
                     className="px-3 py-2 bg-surface-secondary border border-border-primary rounded-lg"
                   >
@@ -561,7 +575,10 @@ function StockLevelsView() {
                     value={Math.abs(adjustData.quantity)}
                     onChange={(e) => {
                       const absQty = parseInt(e.target.value) || 0;
-                      setAdjustData({ ...adjustData, quantity: adjustData.quantity < 0 ? -absQty : absQty });
+                      setAdjustData({
+                        ...adjustData,
+                        quantity: adjustData.quantity < 0 ? -absQty : absQty,
+                      });
                     }}
                     className="flex-1 px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
                   />
@@ -608,7 +625,8 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
     try {
       setLoading(true);
       const data = await wmsService.getLowStockAlerts({
-        acknowledged: filter === 'unacknowledged' ? false : filter === 'acknowledged' ? true : undefined,
+        acknowledged:
+          filter === 'unacknowledged' ? false : filter === 'acknowledged' ? true : undefined,
       });
       setAlerts(data);
     } catch (error) {
@@ -680,15 +698,16 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
     {
       key: 'id',
       label: 'Actions',
-      render: (_, row) => !row.acknowledged && (
-        <button
-          onClick={() => handleAcknowledge(row.id)}
-          className="p-2 hover:bg-green-500/10 text-green-600 rounded-lg"
-          title="Acknowledge"
-        >
-          <CheckCircle2 size={16} />
-        </button>
-      ),
+      render: (_, row) =>
+        !row.acknowledged && (
+          <button
+            onClick={() => handleAcknowledge(row.id)}
+            className="p-2 hover:bg-green-500/10 text-green-600 rounded-lg"
+            title="Acknowledge"
+          >
+            <CheckCircle2 size={16} />
+          </button>
+        ),
     },
   ];
 
@@ -796,7 +815,8 @@ function MovementsView() {
         const isNegative = row.movementType === 'OUT';
         return (
           <span className={`font-mono ${isNegative ? 'text-red-600' : 'text-green-600'}`}>
-            {isNegative ? '-' : '+'}{value}
+            {isNegative ? '-' : '+'}
+            {value}
           </span>
         );
       },
@@ -829,7 +849,10 @@ function MovementsView() {
       <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+              size={18}
+            />
             <input
               type="text"
               placeholder="Enter Product SKU or ID..."
@@ -902,13 +925,11 @@ function WarehousesView({
       render: (value, row) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-            <Warehouse size={20} className="text-blue-600" />
+            <WarehouseIcon size={20} className="text-blue-600" />
           </div>
           <div>
             <p className="font-medium text-text-primary">{value}</p>
-            {row.address && (
-              <p className="text-xs text-text-tertiary">{row.address}</p>
-            )}
+            {row.address && <p className="text-xs text-text-tertiary">{row.address}</p>}
           </div>
         </div>
       ),
@@ -934,7 +955,10 @@ function WarehousesView({
           <button onClick={onRefresh} className="btn-secondary">
             <RefreshCw size={18} />
           </button>
-          <button onClick={() => setShowAddModal(true)} className="btn-primary flex items-center gap-2">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn-primary flex items-center gap-2"
+          >
             <Plus size={18} />
             Add Warehouse
           </button>
@@ -944,7 +968,7 @@ function WarehousesView({
       {/* Warehouses Table */}
       {warehouses.length === 0 ? (
         <EmptyState
-          icon={<Warehouse size={48} className="text-text-tertiary" />}
+          icon={<WarehouseIcon size={48} className="text-text-tertiary" />}
           title="No Warehouses"
           description="Add warehouses to manage your inventory across locations."
           actionLabel="Add Warehouse"
@@ -960,7 +984,10 @@ function WarehousesView({
           <div className="bg-surface-primary rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-border-primary flex items-center justify-between">
               <h3 className="text-lg font-semibold text-text-primary">Add Warehouse</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-surface-secondary rounded-lg">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="p-2 hover:bg-surface-secondary rounded-lg"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -977,7 +1004,9 @@ function WarehousesView({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">Address</label>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Address
+                </label>
                 <textarea
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}

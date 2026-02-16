@@ -43,21 +43,31 @@ const createMockConversationRepository = (): jest.Mocked<IConversationRepository
 });
 
 const createMockWhatsAppApi = (): jest.Mocked<IWhatsAppBusinessApi> => ({
-  sendTextMessage: jest.fn<any>().mockResolvedValue({ messageId: 'wa-msg-id', status: 'queued', timestamp: new Date() }),
-  sendTemplateMessage: jest.fn<any>().mockResolvedValue({ messageId: 'wa-msg-id', status: 'queued', timestamp: new Date() }),
-  sendMediaMessage: jest.fn<any>().mockResolvedValue({ messageId: 'wa-msg-id', status: 'queued', timestamp: new Date() }),
+  sendTextMessage: jest
+    .fn<any>()
+    .mockResolvedValue({ messageId: 'wa-msg-id', status: 'queued', timestamp: new Date() }),
+  sendTemplateMessage: jest
+    .fn<any>()
+    .mockResolvedValue({ messageId: 'wa-msg-id', status: 'queued', timestamp: new Date() }),
+  sendMediaMessage: jest
+    .fn<any>()
+    .mockResolvedValue({ messageId: 'wa-msg-id', status: 'queued', timestamp: new Date() }),
   getTemplateStatus: jest.fn(),
   markMessageRead: jest.fn(),
   uploadMedia: jest.fn(),
   healthCheck: jest.fn(),
+  getConnectionStatus: jest.fn(),
+  generateQRCode: jest.fn(),
+  disconnect: jest.fn(),
 });
 
-const createMockLogger = (): jest.Mocked<Logger> => ({
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-} as unknown as jest.Mocked<Logger>);
+const createMockLogger = (): jest.Mocked<Logger> =>
+  ({
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }) as unknown as jest.Mocked<Logger>;
 
 describe('SendMessage Use-Case', () => {
   let useCase: SendMessage;
@@ -72,12 +82,7 @@ describe('SendMessage Use-Case', () => {
     whatsappApi = createMockWhatsAppApi();
     logger = createMockLogger();
 
-    useCase = new SendMessage(
-      messageRepository,
-      conversationRepository,
-      whatsappApi,
-      logger
-    );
+    useCase = new SendMessage(messageRepository, conversationRepository, whatsappApi, logger);
   });
 
   describe('Validation', () => {
@@ -346,11 +351,11 @@ describe('SendMessage Use-Case', () => {
 
       expect(logger.debug).toHaveBeenCalledWith(
         'SendMessage use-case started',
-        expect.objectContaining({ phone: '+40723456789' })
+        expect.objectContaining({ phone: '+40723456789' }),
       );
       expect(logger.info).toHaveBeenCalledWith(
         'SendMessage use-case completed',
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });

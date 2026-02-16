@@ -1,5 +1,3 @@
-import { ApiResponse, PaginatedResponse } from '../types/common';
-
 const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 const TOKEN_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
@@ -16,6 +14,7 @@ interface RequestConfig {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   retryCount?: number;
+  params?: Record<string, unknown>;
 }
 
 class ApiClient {
@@ -138,7 +137,40 @@ class ApiClient {
     this.clearToken();
   }
 
-  private async request<T>(
+  private buildUrl(url: string, params?: Record<string, unknown>): string {
+    if (!params) {
+      return `${this.baseUrl}${url}`;
+    }
+
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') {
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          if (item !== undefined && item !== null && item !== '') {
+            searchParams.append(key, String(item));
+          }
+        });
+        return;
+      }
+
+      searchParams.append(key, String(value));
+    });
+
+    const query = searchParams.toString();
+    if (!query) {
+      return `${this.baseUrl}${url}`;
+    }
+
+    const separator = url.includes('?') ? '&' : '?';
+    return `${this.baseUrl}${url}${separator}${query}`;
+  }
+
+  private async request<T = any>(
     url: string,
     method: string = 'GET',
     body?: unknown,
@@ -161,7 +193,9 @@ class ApiClient {
       requestInit.body = JSON.stringify(body);
     }
 
-    let response = await fetch(`${this.baseUrl}${url}`, requestInit);
+    const fullUrl = this.buildUrl(url, config.params);
+
+    let response = await fetch(fullUrl, requestInit);
 
     if (response.status === 401) {
       try {
@@ -169,7 +203,7 @@ class ApiClient {
         if (newToken) {
           headers['Authorization'] = `Bearer ${newToken}`;
         }
-        response = await fetch(`${this.baseUrl}${url}`, {
+        response = await fetch(fullUrl, {
           ...requestInit,
           headers,
         });
@@ -186,23 +220,23 @@ class ApiClient {
     return response.json();
   }
 
-  async get<T>(url: string, config?: RequestConfig): Promise<T> {
+  async get<T = any>(url: string, config?: RequestConfig): Promise<T> {
     return this.request<T>(url, 'GET', undefined, config);
   }
 
-  async post<T>(url: string, body?: unknown, config?: RequestConfig): Promise<T> {
+  async post<T = any>(url: string, body?: unknown, config?: RequestConfig): Promise<T> {
     return this.request<T>(url, 'POST', body, config);
   }
 
-  async put<T>(url: string, body?: unknown, config?: RequestConfig): Promise<T> {
+  async put<T = any>(url: string, body?: unknown, config?: RequestConfig): Promise<T> {
     return this.request<T>(url, 'PUT', body, config);
   }
 
-  async patch<T>(url: string, body?: unknown, config?: RequestConfig): Promise<T> {
+  async patch<T = any>(url: string, body?: unknown, config?: RequestConfig): Promise<T> {
     return this.request<T>(url, 'PATCH', body, config);
   }
 
-  async delete<T>(url: string, config?: RequestConfig): Promise<T> {
+  async delete<T = any>(url: string, config?: RequestConfig): Promise<T> {
     return this.request<T>(url, 'DELETE', undefined, config);
   }
 }

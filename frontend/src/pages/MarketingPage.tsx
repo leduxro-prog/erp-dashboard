@@ -42,7 +42,14 @@ import {
 } from '@/services/marketing.service';
 import { toast } from 'react-hot-toast';
 
-type ViewMode = 'campaigns' | 'campaign-editor' | 'steps-editor' | 'audiences' | 'discounts' | 'sequences' | 'deliveries';
+type ViewMode =
+  | 'campaigns'
+  | 'campaign-editor'
+  | 'steps-editor'
+  | 'audiences'
+  | 'discounts'
+  | 'sequences'
+  | 'deliveries';
 
 export function MarketingPage() {
   const queryClient = useQueryClient();
@@ -71,7 +78,10 @@ export function MarketingPage() {
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-text-tertiary">
-        <span className="cursor-pointer hover:text-primary-600" onClick={() => setViewMode('campaigns')}>
+        <span
+          className="cursor-pointer hover:text-primary-600"
+          onClick={() => setViewMode('campaigns')}
+        >
           Campaigns
         </span>
         {selectedCampaignId && (
@@ -104,10 +114,12 @@ export function MarketingPage() {
 
       {/* View Content */}
       {viewMode === 'campaigns' && (
-        <CampaignsView onSelectCampaign={(id) => {
-          setSelectedCampaignId(id);
-          setViewMode('campaign-editor');
-        }} />
+        <CampaignsView
+          onSelectCampaign={(id) => {
+            setSelectedCampaignId(id);
+            setViewMode('campaign-editor');
+          }}
+        />
       )}
 
       {viewMode === 'campaign-editor' && (
@@ -153,13 +165,9 @@ export function MarketingPage() {
         />
       )}
 
-      {viewMode === 'discounts' && (
-        <DiscountsView />
-      )}
+      {viewMode === 'discounts' && <DiscountsView />}
 
-      {viewMode === 'sequences' && (
-        <SequencesView />
-      )}
+      {viewMode === 'sequences' && <SequencesView />}
 
       {viewMode === 'deliveries' && selectedCampaignId && (
         <DeliveriesView
@@ -183,19 +191,22 @@ function CampaignsView({ onSelectCampaign }: { onSelectCampaign: (id: string) =>
   // Fetch campaigns with react-query
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['campaigns', { status: statusFilter, type: typeFilter, search: searchTerm }],
-    queryFn: () => marketingService.getCampaigns({
-      page: 1,
-      pageSize: 50,
-      status: statusFilter === 'all' ? undefined : statusFilter,
-      type: typeFilter === 'all' ? undefined : typeFilter,
-      search: searchTerm || undefined,
-    }),
+    queryFn: () =>
+      marketingService.getCampaigns({
+        page: 1,
+        pageSize: 50,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        type: typeFilter === 'all' ? undefined : typeFilter,
+        search: searchTerm || undefined,
+      }),
   });
 
-  const filteredCampaigns = data?.data?.filter((c: Campaign) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredCampaigns =
+    data?.data?.filter(
+      (c: Campaign) =>
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.description?.toLowerCase().includes(searchTerm.toLowerCase()),
+    ) || [];
 
   const { mutate: activateMutation } = useMutation({
     mutationFn: (id: string) => marketingService.activateCampaign(id),
@@ -243,9 +254,7 @@ function CampaignsView({ onSelectCampaign }: { onSelectCampaign: (id: string) =>
       render: (value, row) => (
         <div>
           <p className="font-medium text-text-primary">{value}</p>
-          {row.description && (
-            <p className="text-xs text-text-tertiary">{row.description}</p>
-          )}
+          {row.description && <p className="text-xs text-text-tertiary">{row.description}</p>}
         </div>
       ),
     },
@@ -292,9 +301,7 @@ function CampaignsView({ onSelectCampaign }: { onSelectCampaign: (id: string) =>
       label: 'Performance',
       render: (value) => (
         <div className="flex gap-2 text-xs">
-          <span className="bg-surface-secondary px-2 py-1 rounded">
-            {value.sent} sent
-          </span>
+          <span className="bg-surface-secondary px-2 py-1 rounded">{value.sent} sent</span>
           <span className="bg-green-500/10 text-green-700 px-2 py-1 rounded">
             {value.conversions} conv
           </span>
@@ -341,7 +348,10 @@ function CampaignsView({ onSelectCampaign }: { onSelectCampaign: (id: string) =>
       <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+            />
             <input
               type="text"
               placeholder="Search campaigns..."
@@ -390,7 +400,9 @@ function CampaignsView({ onSelectCampaign }: { onSelectCampaign: (id: string) =>
         <EmptyState
           icon={<Megaphone size={48} className="text-text-tertiary" />}
           title="No Campaigns Found"
-          description={searchTerm ? 'Try adjusting your search.' : 'Create your first marketing campaign.'}
+          description={
+            searchTerm ? 'Try adjusting your search.' : 'Create your first marketing campaign.'
+          }
           actionLabel="Create Campaign"
           onAction={() => onSelectCampaign('new')}
         />
@@ -430,7 +442,10 @@ function CampaignEditor({
   // Fetch campaign details if editing
   const { data: campaign, isLoading } = useQuery({
     queryKey: ['campaign', campaignId],
-    queryFn: () => campaignId && campaignId !== 'new' ? marketingService.getCampaign(campaignId) : Promise.resolve(null),
+    queryFn: () =>
+      campaignId && campaignId !== 'new'
+        ? marketingService.getCampaign(campaignId)
+        : Promise.resolve(null),
     enabled: !!campaignId,
   });
 
@@ -454,7 +469,9 @@ function CampaignEditor({
         ? marketingService.updateCampaign(campaignId, data)
         : marketingService.createCampaign(data),
     onSuccess: () => {
-      toast.success(`Campaign ${campaignId && campaignId !== 'new' ? 'updated' : 'created'} successfully`);
+      toast.success(
+        `Campaign ${campaignId && campaignId !== 'new' ? 'updated' : 'created'} successfully`,
+      );
       onSave();
     },
     onError: (error: any) => {
@@ -527,7 +544,9 @@ function CampaignEditor({
               <select
                 required
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as Campaign['type'] })}
+                onChange={(e) =>
+                  setFormData({ ...formData, type: e.target.value as Campaign['type'] })
+                }
                 className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
               >
                 <option value="email">Email</option>
@@ -567,9 +586,7 @@ function CampaignEditor({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">
-                End Date
-              </label>
+              <label className="block text-sm font-medium text-text-secondary mb-2">End Date</label>
               <input
                 type="date"
                 value={formData.endDate}
@@ -585,7 +602,10 @@ function CampaignEditor({
               <AlertTriangle size={18} className="text-blue-600 flex-shrink-0" />
               <div className="text-sm text-blue-800 dark:text-blue-400">
                 <p className="font-medium mb-1">Frequency Guidelines</p>
-                <p>Ensure sufficient time between communications to the same audience. Recommended minimum: 7 days for email campaigns.</p>
+                <p>
+                  Ensure sufficient time between communications to the same audience. Recommended
+                  minimum: 7 days for email campaigns.
+                </p>
               </div>
             </div>
           </div>
@@ -622,9 +642,7 @@ function CampaignEditor({
               </div>
               <h3 className="font-semibold text-text-primary">Campaign Steps</h3>
             </div>
-            <p className="text-sm text-text-secondary">
-              Configure sequence and timing
-            </p>
+            <p className="text-sm text-text-secondary">Configure sequence and timing</p>
           </button>
         )}
 
@@ -640,27 +658,17 @@ function CampaignEditor({
               </div>
               <h3 className="font-semibold text-text-primary">Schedule & Send</h3>
             </div>
-            <p className="text-sm text-text-secondary">
-              Set delivery channels and schedule
-            </p>
+            <p className="text-sm text-text-secondary">Set delivery channels and schedule</p>
           </button>
         )}
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-3">
-        <button
-          onClick={onCancel}
-          className="btn-secondary"
-        >
+        <button onClick={onCancel} className="btn-secondary">
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={isPending}
-          className="btn-primary"
-        >
+        <button type="button" onClick={handleSubmit} disabled={isPending} className="btn-primary">
           {isPending ? 'Saving...' : 'Save Campaign'}
         </button>
       </div>
@@ -673,7 +681,11 @@ function StepsEditor({ campaignId, onBack }: { campaignId: string; onBack: () =>
   const queryClient = useQueryClient();
   const [showAddStepModal, setShowAddStepModal] = useState(false);
 
-  const { data: steps, isLoading, refetch } = useQuery({
+  const {
+    data: steps,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['campaign-steps', campaignId],
     queryFn: () => marketingService.getCampaignSteps(campaignId),
   });
@@ -735,7 +747,9 @@ function StepsEditor({ campaignId, onBack }: { campaignId: string; onBack: () =>
       label: 'Content',
       render: (value) => (
         <div>
-          <p className="font-medium text-text-primary text-sm">{value.subject || value.body.substring(0, 50)}</p>
+          <p className="font-medium text-text-primary text-sm">
+            {value.subject || value.body.substring(0, 50)}
+          </p>
           {value.delayMinutes && (
             <p className="text-xs text-text-tertiary">Delay: {value.delayMinutes}min</p>
           )}
@@ -753,16 +767,19 @@ function StepsEditor({ campaignId, onBack }: { campaignId: string; onBack: () =>
     {
       key: 'metrics',
       label: 'Metrics',
-      render: (value) => value ? (
-        <div className="flex gap-2 text-xs">
-          <span className="bg-blue-500/10 text-blue-700 px-2 py-1 rounded">
-            {value.sent} sent
-          </span>
-          <span className="bg-green-500/10 text-green-700 px-2 py-1 rounded">
-            {value.opened} opened
-          </span>
-        </div>
-      ) : '-',
+      render: (value) =>
+        value ? (
+          <div className="flex gap-2 text-xs">
+            <span className="bg-blue-500/10 text-blue-700 px-2 py-1 rounded">
+              {value.sent} sent
+            </span>
+            <span className="bg-green-500/10 text-green-700 px-2 py-1 rounded">
+              {value.opened} opened
+            </span>
+          </div>
+        ) : (
+          '-'
+        ),
     },
     {
       key: 'id',
@@ -770,7 +787,9 @@ function StepsEditor({ campaignId, onBack }: { campaignId: string; onBack: () =>
       render: (_, row) => (
         <div className="flex gap-1">
           <button
-            onClick={() => {/* TODO: edit step */}}
+            onClick={() => {
+              /* TODO: edit step */
+            }}
             className="p-2 hover:bg-surface-secondary rounded-lg text-primary-600"
             title="Edit Step"
           >
@@ -797,7 +816,9 @@ function StepsEditor({ campaignId, onBack }: { campaignId: string; onBack: () =>
             ← Back to Campaign
           </button>
           <h2 className="text-xl font-semibold text-text-primary">Campaign Steps</h2>
-          <p className="text-text-secondary">Configure the sequence and timing of campaign communications</p>
+          <p className="text-text-secondary">
+            Configure the sequence and timing of campaign communications
+          </p>
         </div>
         <button
           onClick={() => setShowAddStepModal(true)}
@@ -860,7 +881,8 @@ function AddStepModal({
   });
 
   const { mutate: saveStep, isPending } = useMutation({
-    mutationFn: (step: Partial<CampaignStep>) => marketingService.saveCampaignStep(campaignId, step),
+    mutationFn: (step: Partial<CampaignStep>) =>
+      marketingService.saveCampaignStep(campaignId, step),
     onSuccess: () => {
       toast.success('Step added successfully');
       onSave();
@@ -900,7 +922,9 @@ function AddStepModal({
               <label className="block text-sm font-medium text-text-secondary mb-2">Type</label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as CampaignStep['type'] })}
+                onChange={(e) =>
+                  setFormData({ ...formData, type: e.target.value as CampaignStep['type'] })
+                }
                 className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
               >
                 <option value="email">Email</option>
@@ -912,17 +936,23 @@ function AddStepModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">Delay (minutes)</label>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Delay (minutes)
+              </label>
               <input
                 type="number"
                 min="0"
                 value={formData.delayMinutes}
-                onChange={(e) => setFormData({ ...formData, delayMinutes: parseInt(e.target.value) })}
+                onChange={(e) =>
+                  setFormData({ ...formData, delayMinutes: parseInt(e.target.value) })
+                }
                 className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-2">Scheduled At</label>
+              <label className="block text-sm font-medium text-text-secondary mb-2">
+                Scheduled At
+              </label>
               <input
                 type="datetime-local"
                 value={formData.scheduledAt}
@@ -937,7 +967,12 @@ function AddStepModal({
               <input
                 type="text"
                 value={formData.content.subject}
-                onChange={(e) => setFormData({ ...formData, content: { ...formData.content, subject: e.target.value } })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    content: { ...formData.content, subject: e.target.value },
+                  })
+                }
                 className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
                 placeholder="Email subject line..."
               />
@@ -947,7 +982,9 @@ function AddStepModal({
             <label className="block text-sm font-medium text-text-secondary mb-2">Content</label>
             <textarea
               value={formData.content.body}
-              onChange={(e) => setFormData({ ...formData, content: { ...formData.content, body: e.target.value } })}
+              onChange={(e) =>
+                setFormData({ ...formData, content: { ...formData.content, body: e.target.value } })
+              }
               className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
               rows={4}
               placeholder="Message content..."
@@ -959,7 +996,12 @@ function AddStepModal({
           <button onClick={onClose} className="btn-secondary flex-1">
             Cancel
           </button>
-          <button type="submit" onClick={handleSubmit} disabled={isPending} className="btn-primary flex-1">
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="btn-primary flex-1"
+          >
             {isPending ? 'Adding...' : 'Add Step'}
           </button>
         </div>
@@ -974,7 +1016,11 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [previewData, setPreviewData] = useState<AudiencePreview | null>(null);
 
-  const { data: segments, isLoading, refetch } = useQuery({
+  const {
+    data: segments,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['audience-segments'],
     queryFn: () => marketingService.getAudienceSegments(),
   });
@@ -998,10 +1044,12 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
     },
   });
 
-  const filteredSegments = segments?.data?.filter(s =>
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredSegments =
+    segments?.data?.filter(
+      (s) =>
+        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.description?.toLowerCase().includes(searchTerm.toLowerCase()),
+    ) || [];
 
   const columns: Column<AudienceSegment>[] = [
     {
@@ -1031,9 +1079,11 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
       label: 'Criteria',
       render: (value) => {
         const criteria = value as AudienceSegment['criteria'];
-        const criteriaList = [];
-        if (criteria.ageRange) criteriaList.push(`Age: ${criteria.ageRange[0]}-${criteria.ageRange[1]}`);
-        if (criteria.loyaltyTier?.length) criteriaList.push(`Tier: ${criteria.loyaltyTier.join(', ')}`);
+        const criteriaList: string[] = [];
+        if (criteria.ageRange)
+          criteriaList.push(`Age: ${criteria.ageRange[0]}-${criteria.ageRange[1]}`);
+        if (criteria.loyaltyTier?.length)
+          criteriaList.push(`Tier: ${criteria.loyaltyTier.join(', ')}`);
         if (criteria.tags?.length) criteriaList.push(`Tags: ${criteria.tags.join(', ')}`);
         return <p className="text-sm text-text-secondary">{criteriaList.join(' • ') || '-'}</p>;
       },
@@ -1059,7 +1109,10 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
           <p className="text-text-secondary">Define target audiences for your campaigns</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn-primary flex items-center gap-2"
+          >
             <Plus size={18} />
             Create Segment
           </button>
@@ -1079,12 +1132,18 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
                 </p>
               </div>
             </div>
-            <button onClick={() => setPreviewData(null)} className="p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg">
+            <button
+              onClick={() => setPreviewData(null)}
+              className="p-1 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg"
+            >
               <X size={16} className="text-blue-600" />
             </button>
           </div>
           {previewData.segments.map((seg) => (
-            <div key={seg.segmentId} className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-500">
+            <div
+              key={seg.segmentId}
+              className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-500"
+            >
               <span>{seg.segmentName}: </span>
               <span className="font-medium">{seg.count?.toLocaleString('ro-RO')}</span>
             </div>
@@ -1106,7 +1165,10 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
       {/* Search */}
       <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
         <div className="relative max-w-md">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+          />
           <input
             type="text"
             placeholder="Search audience segments..."
@@ -1140,13 +1202,24 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
           <div className="bg-surface-primary rounded-xl max-w-lg w-full">
             <div className="p-6 border-b border-border-primary flex items-center justify-between">
               <h3 className="text-lg font-semibold text-text-primary">Create Audience Segment</h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-surface-secondary rounded-lg">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-2 hover:bg-surface-secondary rounded-lg"
+              >
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={(e) => { e.preventDefault(); createSegment({ name: 'New Segment', type: 'static', isActive: true }); }} className="p-6 space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                createSegment({ name: 'New Segment', type: 'static', isActive: true });
+              }}
+              className="p-6 space-y-4"
+            >
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">Segment Name *</label>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Segment Name *
+                </label>
                 <input
                   type="text"
                   required
@@ -1155,7 +1228,9 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">Segment Type</label>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Segment Type
+                </label>
                 <select className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg">
                   <option value="static">Static - Manual Criteria</option>
                   <option value="dynamic">Dynamic - Auto-updating</option>
@@ -1166,14 +1241,26 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="age" className="rounded" />
-                    <label htmlFor="age" className="text-sm text-text-primary">Age Range</label>
-                    <input type="number" placeholder="From" className="w-20 px-2 py-1 bg-surface-primary border border-border-primary rounded" />
+                    <label htmlFor="age" className="text-sm text-text-primary">
+                      Age Range
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="From"
+                      className="w-20 px-2 py-1 bg-surface-primary border border-border-primary rounded"
+                    />
                     <span className="text-text-tertiary">-</span>
-                    <input type="number" placeholder="To" className="w-20 px-2 py-1 bg-surface-primary border border-border-primary rounded" />
+                    <input
+                      type="number"
+                      placeholder="To"
+                      className="w-20 px-2 py-1 bg-surface-primary border border-border-primary rounded"
+                    />
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="loyalty" className="rounded" />
-                    <label htmlFor="loyalty" className="text-sm text-text-primary">Loyalty Tier</label>
+                    <label htmlFor="loyalty" className="text-sm text-text-primary">
+                      Loyalty Tier
+                    </label>
                     <select className="w-40 px-2 py-1 bg-surface-primary border border-border-primary rounded">
                       <option value="">Select tier...</option>
                       <option value="silver">Silver</option>
@@ -1183,7 +1270,9 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="tags" className="rounded" />
-                    <label htmlFor="tags" className="text-sm text-text-primary">Tags</label>
+                    <label htmlFor="tags" className="text-sm text-text-primary">
+                      Tags
+                    </label>
                     <select className="w-40 px-2 py-1 bg-surface-primary border border-border-primary rounded">
                       <option value="">Select tag...</option>
                       <option value="new_customer">New Customer</option>
@@ -1211,7 +1300,11 @@ function AudiencesView({ onBack }: { onBack: () => void }) {
 
 // Deliveries View Component
 function DeliveriesView({ campaignId, onBack }: { campaignId: string; onBack: () => void }) {
-  const { data: deliveries, isLoading, refetch } = useQuery({
+  const {
+    data: deliveries,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['campaign-deliveries', campaignId],
     queryFn: () => marketingService.getCampaignDeliveries(campaignId),
   });
@@ -1323,10 +1416,12 @@ function DeliveriesView({ campaignId, onBack }: { campaignId: string; onBack: ()
           <p className="text-text-secondary">Configure delivery channels and schedule</p>
         </div>
         <button
-          onClick={() => scheduleCampaign({
-            scheduledAt: new Date(Date.now() + 86400000).toISOString(),
-            channels: ['email', 'sms', 'push', 'whatsapp'],
-          })}
+          onClick={() =>
+            scheduleCampaign({
+              scheduledAt: new Date(Date.now() + 86400000).toISOString(),
+              channels: ['email', 'sms', 'push', 'whatsapp'],
+            })
+          }
           className="btn-primary flex items-center gap-2"
         >
           <Calendar size={18} />
@@ -1345,10 +1440,12 @@ function DeliveriesView({ campaignId, onBack }: { campaignId: string; onBack: ()
           title="No Deliveries Yet"
           description="Schedule this campaign to set up deliveries across channels."
           actionLabel="Schedule Campaign"
-          onAction={() => scheduleCampaign({
-            scheduledAt: new Date(Date.now() + 86400000).toISOString(),
-            channels: ['email', 'sms', 'push', 'whatsapp'],
-          })}
+          onAction={() =>
+            scheduleCampaign({
+              scheduledAt: new Date(Date.now() + 86400000).toISOString(),
+              channels: ['email', 'sms', 'push', 'whatsapp'],
+            })
+          }
         />
       ) : (
         <DataTable columns={columns} data={deliveries} />
@@ -1363,14 +1460,19 @@ function DiscountsView() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const { data: codes, isLoading, refetch } = useQuery({
+  const {
+    data: codes,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['discount-codes', { status: statusFilter, search: searchTerm }],
-    queryFn: () => marketingService.getDiscountCodes({
-      page: 1,
-      pageSize: 50,
-      active: statusFilter === 'all' ? undefined : statusFilter === 'active',
-      search: searchTerm || undefined,
-    }),
+    queryFn: () =>
+      marketingService.getDiscountCodes({
+        page: 1,
+        pageSize: 50,
+        active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+        search: searchTerm || undefined,
+      }),
   });
 
   const { mutate: deactivateCode } = useMutation({
@@ -1384,9 +1486,10 @@ function DiscountsView() {
     },
   });
 
-  const filteredCodes = codes?.data?.filter((c: DiscountCode) =>
-    c.code.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredCodes =
+    codes?.data?.filter((c: DiscountCode) =>
+      c.code.toLowerCase().includes(searchTerm.toLowerCase()),
+    ) || [];
 
   const getTypeConfig = (type: string) => {
     switch (type) {
@@ -1411,7 +1514,10 @@ function DiscountsView() {
         <div className="flex items-center gap-2">
           <Hash size={16} className="text-primary-600" />
           <span className="font-mono font-semibold">{value}</span>
-          <StatusBadge status={getTypeConfig(row.type).color} label={getTypeConfig(row.type).label} />
+          <StatusBadge
+            status={getTypeConfig(row.type).color}
+            label={getTypeConfig(row.type).label}
+          />
         </div>
       ),
     },
@@ -1429,7 +1535,8 @@ function DiscountsView() {
       label: 'Validity',
       render: (_, row) => (
         <span className="text-sm">
-          {new Date(row.validFrom).toLocaleDateString('ro-RO')} - {new Date(row.validUntil).toLocaleDateString('ro-RO')}
+          {new Date(row.validFrom).toLocaleDateString('ro-RO')} -{' '}
+          {new Date(row.validUntil).toLocaleDateString('ro-RO')}
         </span>
       ),
     },
@@ -1452,15 +1559,16 @@ function DiscountsView() {
     {
       key: 'id',
       label: 'Actions',
-      render: (_, row) => row.isActive && (
-        <button
-          onClick={() => deactivateCode(row.id)}
-          className="p-2 hover:bg-red-500/10 text-red-600 rounded-lg"
-          title="Deactivate"
-        >
-          <X size={16} />
-        </button>
-      ),
+      render: (_, row) =>
+        row.isActive && (
+          <button
+            onClick={() => deactivateCode(row.id)}
+            className="p-2 hover:bg-red-500/10 text-red-600 rounded-lg"
+            title="Deactivate"
+          >
+            <X size={16} />
+          </button>
+        ),
     },
   ];
 
@@ -1472,7 +1580,10 @@ function DiscountsView() {
           <h2 className="text-xl font-semibold text-text-primary">Discount Codes</h2>
           <p className="text-text-secondary">Manage promotional codes and offers</p>
         </div>
-        <button onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="btn-primary flex items-center gap-2"
+        >
           <Plus size={18} />
           Create Code
         </button>
@@ -1482,7 +1593,10 @@ function DiscountsView() {
       <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+            />
             <input
               type="text"
               placeholder="Search codes..."
@@ -1526,15 +1640,21 @@ function DiscountsView() {
           <div className="bg-surface-primary rounded-xl max-w-lg w-full">
             <div className="p-6 border-b border-border-primary flex items-center justify-between">
               <h3 className="text-lg font-semibold text-text-primary">Create Discount Code</h3>
-              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-surface-secondary rounded-lg">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-2 hover:bg-surface-secondary rounded-lg"
+              >
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              toast.success('Discount code created (mock)');
-              setShowCreateModal(false);
-            }} className="p-6 space-y-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                toast.success('Discount code created (mock)');
+                setShowCreateModal(false);
+              }}
+              className="p-6 space-y-4"
+            >
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">Code *</label>
                 <input
@@ -1546,7 +1666,9 @@ function DiscountsView() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">Type *</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    Type *
+                  </label>
                   <select className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg">
                     <option value="percentage">Percentage</option>
                     <option value="fixed_amount">Fixed Amount</option>
@@ -1555,7 +1677,9 @@ function DiscountsView() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">Value *</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    Value *
+                  </label>
                   <input
                     type="number"
                     required
@@ -1566,7 +1690,9 @@ function DiscountsView() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">Max Uses</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    Max Uses
+                  </label>
                   <input
                     type="number"
                     className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
@@ -1574,7 +1700,9 @@ function DiscountsView() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">Valid Until</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    Valid Until
+                  </label>
                   <input
                     type="date"
                     className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
@@ -1627,12 +1755,15 @@ function SequencesView() {
           title="No Email Sequences"
           description="Create automated sequences for welcome emails, cart abandonment, and more."
           actionLabel="Create Sequence"
-          onAction={() => toast.info('Create sequence feature coming soon')}
+          onAction={() => toast('Create sequence feature coming soon')}
         />
       ) : (
         <div className="space-y-4">
           {sequences.data.map((seq) => (
-            <div key={seq.id} className="bg-surface-primary border border-border-primary rounded-xl p-6">
+            <div
+              key={seq.id}
+              className="bg-surface-primary border border-border-primary rounded-xl p-6"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-text-primary">{seq.name}</h3>
@@ -1640,7 +1771,10 @@ function SequencesView() {
                     <p className="text-sm text-text-tertiary">{seq.description}</p>
                   )}
                 </div>
-                <StatusBadge status={seq.status === 'active' ? 'green' : 'gray'} label={seq.status === 'active' ? 'Active' : 'Inactive'} />
+                <StatusBadge
+                  status={seq.status === 'active' ? 'green' : 'gray'}
+                  label={seq.status === 'active' ? 'Active' : 'Inactive'}
+                />
               </div>
               <div className="flex items-center gap-6 text-sm text-text-secondary">
                 <span>{seq.emails.length} emails</span>
@@ -1651,7 +1785,9 @@ function SequencesView() {
               </div>
               <div className="flex items-center gap-4 text-sm">
                 <span>Trigger: </span>
-                <span className="font-medium text-text-primary capitalize">{seq.trigger.replace('_', ' ')}</span>
+                <span className="font-medium text-text-primary capitalize">
+                  {seq.trigger.replace('_', ' ')}
+                </span>
               </div>
             </div>
           ))}

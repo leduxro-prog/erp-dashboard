@@ -130,17 +130,18 @@ class MarketingService {
   /**
    * Get campaigns with filters
    */
-  async getCampaigns(params: {
-    page?: number;
-    pageSize?: number;
-    status?: string;
-    type?: string;
-    search?: string;
-  } = {}): Promise<PaginatedResponse<Campaign>> {
-    const response = await apiClient.get<PaginatedResponse<Campaign>>(
-      '/marketing/campaigns',
-      { params },
-    );
+  async getCampaigns(
+    params: {
+      page?: number;
+      pageSize?: number;
+      status?: string;
+      type?: string;
+      search?: string;
+    } = {},
+  ): Promise<PaginatedResponse<Campaign>> {
+    const response = await apiClient.get<PaginatedResponse<Campaign>>('/marketing/campaigns', {
+      params,
+    });
     return response;
   }
 
@@ -148,9 +149,7 @@ class MarketingService {
    * Get single campaign
    */
   async getCampaign(id: string): Promise<Campaign> {
-    const response = await apiClient.get<ApiResponse<Campaign>>(
-      `/marketing/campaigns/${id}`,
-    );
+    const response = await apiClient.get<ApiResponse<Campaign>>(`/marketing/campaigns/${id}`);
     return response.data;
   }
 
@@ -158,10 +157,7 @@ class MarketingService {
    * Create campaign
    */
   async createCampaign(data: Partial<Campaign>): Promise<Campaign> {
-    const response = await apiClient.post<ApiResponse<Campaign>>(
-      '/marketing/campaigns',
-      data,
-    );
+    const response = await apiClient.post<ApiResponse<Campaign>>('/marketing/campaigns', data);
     return response.data;
   }
 
@@ -169,10 +165,7 @@ class MarketingService {
    * Update campaign
    */
   async updateCampaign(id: string, data: Partial<Campaign>): Promise<Campaign> {
-    const response = await apiClient.put<ApiResponse<Campaign>>(
-      `/marketing/campaigns/${id}`,
-      data,
-    );
+    const response = await apiClient.put<ApiResponse<Campaign>>(`/marketing/campaigns/${id}`, data);
     return response.data;
   }
 
@@ -287,11 +280,14 @@ class MarketingService {
   /**
    * Schedule campaign
    */
-  async scheduleCampaign(campaignId: string, data: {
-    scheduledAt: string;
-    channels: string[];
-    timeZone?: string;
-  }): Promise<{ jobId: string }> {
+  async scheduleCampaign(
+    campaignId: string,
+    data: {
+      scheduledAt: string;
+      channels: string[];
+      timeZone?: string;
+    },
+  ): Promise<{ jobId: string }> {
     const response = await apiClient.post<ApiResponse<{ jobId: string }>>(
       `/marketing/campaigns/${campaignId}/schedule`,
       data,
@@ -337,40 +333,47 @@ class MarketingService {
       conversions: number;
     }>;
   }> {
-    const response = await apiClient.get<ApiResponse<{
-      sent: number;
-      delivered: number;
-      opened: number;
-      clicked: number;
-      conversions: number;
-      revenue: number;
-      roi: number;
-      byDate: Array<{
-        date: string;
-        sent: number;
-        opened: number;
-        clicked: number;
-        conversions: number;
-      }>;
-      byStep: Array<{
-        stepId: string;
-        stepOrder: number;
+    const response = await apiClient.get<
+      ApiResponse<{
         sent: number;
         delivered: number;
         opened: number;
         clicked: number;
         conversions: number;
-      }>;
-    }>>(
-      `/marketing/campaigns/${id}/analytics`,
-    );
+        revenue: number;
+        roi: number;
+        byDate: Array<{
+          date: string;
+          sent: number;
+          opened: number;
+          clicked: number;
+          conversions: number;
+        }>;
+        byStep: Array<{
+          stepId: string;
+          stepOrder: number;
+          sent: number;
+          delivered: number;
+          opened: number;
+          clicked: number;
+          conversions: number;
+        }>;
+      }>
+    >(`/marketing/campaigns/${id}/analytics`);
     return response.data;
   }
 
   /**
    * Get discount codes
    */
-  async getDiscountCodes(params: { page?: number; pageSize?: number; active?: boolean } = {}): Promise<PaginatedResponse<DiscountCode>> {
+  async getDiscountCodes(
+    params: {
+      page?: number;
+      pageSize?: number;
+      active?: boolean;
+      search?: string;
+    } = {},
+  ): Promise<PaginatedResponse<DiscountCode>> {
     const response = await apiClient.get<PaginatedResponse<DiscountCode>>(
       '/marketing/discount-codes',
       { params },
@@ -402,7 +405,11 @@ class MarketingService {
   /**
    * Generate bulk discount codes
    */
-  async generateBulkDiscountCodes(baseCode: string, count: number, data: Partial<DiscountCode>): Promise<{ codes: string[] }> {
+  async generateBulkDiscountCodes(
+    baseCode: string,
+    count: number,
+    data: Partial<DiscountCode>,
+  ): Promise<{ codes: string[] }> {
     const response = await apiClient.post<ApiResponse<{ codes: string[] }>>(
       '/marketing/discount-codes/bulk-generate',
       { baseCode, count, ...data },
@@ -425,16 +432,15 @@ class MarketingService {
    * Deactivate discount code
    */
   async deactivateDiscountCode(id: string): Promise<void> {
-    await apiClient.post(
-      `/marketing/discount-codes/${id}/deactivate`,
-      {},
-    );
+    await apiClient.post(`/marketing/discount-codes/${id}/deactivate`, {});
   }
 
   /**
    * Get email sequences
    */
-  async getEmailSequences(params: { page?: number; pageSize?: number; status?: string } = {}): Promise<PaginatedResponse<EmailSequence>> {
+  async getEmailSequences(
+    params: { page?: number; pageSize?: number; status?: string } = {},
+  ): Promise<PaginatedResponse<EmailSequence>> {
     const response = await apiClient.get<PaginatedResponse<EmailSequence>>(
       '/marketing/email-sequences',
       { params },
@@ -477,27 +483,34 @@ class MarketingService {
   /**
    * Get email templates
    */
-  async getEmailTemplates(): Promise<Array<{
-    id: string;
-    name: string;
-    category: string;
-    thumbnail?: string;
-  }>> {
-    const response = await apiClient.get<ApiResponse<Array<{
+  async getEmailTemplates(): Promise<
+    Array<{
       id: string;
       name: string;
       category: string;
       thumbnail?: string;
-    }>>>(
-      '/marketing/email-templates',
-    );
+    }>
+  > {
+    const response = await apiClient.get<
+      ApiResponse<
+        Array<{
+          id: string;
+          name: string;
+          category: string;
+          thumbnail?: string;
+        }>
+      >
+    >('/marketing/email-templates');
     return response.data;
   }
 
   /**
    * Get marketing statistics
    */
-  async getStatistics(dateFrom?: string, dateTo?: string): Promise<{
+  async getStatistics(
+    dateFrom?: string,
+    dateTo?: string,
+  ): Promise<{
     totalCampaigns: number;
     activeCampaigns: number;
     totalEmails: number;
@@ -506,18 +519,17 @@ class MarketingService {
     totalConversions: number;
     totalRevenue: number;
   }> {
-    const response = await apiClient.get<ApiResponse<{
-      totalCampaigns: number;
-      activeCampaigns: number;
-      totalEmails: number;
-      avgOpenRate: number;
-      avgClickRate: number;
-      totalConversions: number;
-      totalRevenue: number;
-    }>>(
-      '/marketing/statistics',
-      { params: { dateFrom, dateTo } },
-    );
+    const response = await apiClient.get<
+      ApiResponse<{
+        totalCampaigns: number;
+        activeCampaigns: number;
+        totalEmails: number;
+        avgOpenRate: number;
+        avgClickRate: number;
+        totalConversions: number;
+        totalRevenue: number;
+      }>
+    >('/marketing/statistics', { params: { dateFrom, dateTo } });
     return response.data;
   }
 }

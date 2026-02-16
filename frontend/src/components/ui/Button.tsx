@@ -2,7 +2,7 @@ import React from 'react';
 import classNames from 'classnames';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'default';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
@@ -10,6 +10,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantMap = {
+  default: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
   primary: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
   secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 active:bg-gray-400',
   danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800',
@@ -44,7 +45,7 @@ export const Button: React.FC<ButtonProps> = ({
         variantMap[variant],
         sizeMap[size],
         isDisabled && 'opacity-50 cursor-not-allowed',
-        className
+        className,
       )}
       disabled={isDisabled}
       {...props}

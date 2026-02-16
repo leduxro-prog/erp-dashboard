@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sync, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 
 const WooCommercePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('sync-status');
@@ -14,34 +14,132 @@ const WooCommercePage: React.FC = () => {
   };
 
   const productSyncTable = [
-    { id: 1, sku: 'LAPTOP-001', woo_id: 'WOO-2145', name: 'Laptop Pro 15"', status: 'Synced', last_sync: '5 min ago' },
-    { id: 2, sku: 'MON-027-4K', woo_id: 'WOO-2146', name: 'Monitor 27"', status: 'Synced', last_sync: '5 min ago' },
-    { id: 3, sku: 'KEY-MECH-01', woo_id: 'WOO-2147', name: 'Keyboard', status: 'Error', last_sync: '2 hours ago' },
-    { id: 4, sku: 'MOUSE-GAM-01', woo_id: 'WOO-2148', name: 'Mouse Gaming', status: 'Synced', last_sync: '5 min ago' },
-    { id: 5, sku: 'HEAD-PRO-01', woo_id: 'WOO-2149', name: 'Headphones', status: 'Pending', last_sync: 'In progress' },
+    {
+      id: 1,
+      sku: 'LAPTOP-001',
+      woo_id: 'WOO-2145',
+      name: 'Laptop Pro 15"',
+      status: 'Synced',
+      last_sync: '5 min ago',
+    },
+    {
+      id: 2,
+      sku: 'MON-027-4K',
+      woo_id: 'WOO-2146',
+      name: 'Monitor 27"',
+      status: 'Synced',
+      last_sync: '5 min ago',
+    },
+    {
+      id: 3,
+      sku: 'KEY-MECH-01',
+      woo_id: 'WOO-2147',
+      name: 'Keyboard',
+      status: 'Error',
+      last_sync: '2 hours ago',
+    },
+    {
+      id: 4,
+      sku: 'MOUSE-GAM-01',
+      woo_id: 'WOO-2148',
+      name: 'Mouse Gaming',
+      status: 'Synced',
+      last_sync: '5 min ago',
+    },
+    {
+      id: 5,
+      sku: 'HEAD-PRO-01',
+      woo_id: 'WOO-2149',
+      name: 'Headphones',
+      status: 'Pending',
+      last_sync: 'In progress',
+    },
   ];
 
   const ordersImportLog = [
-    { id: '#ORD-2024-001', woo_order: 'WOO-12345', customer: 'ABC Corp', date: '2024-01-08', status: 'Imported', amount: 2450 },
-    { id: '#ORD-2024-002', woo_order: 'WOO-12346', customer: 'XYZ Ltd', date: '2024-01-08', status: 'Imported', amount: 1250 },
-    { id: '#ORD-2024-003', woo_order: 'WOO-12347', customer: 'Tech Inc', date: '2024-01-07', status: 'Error', amount: 3800 },
+    {
+      id: '#ORD-2024-001',
+      woo_order: 'WOO-12345',
+      customer: 'ABC Corp',
+      date: '2024-01-08',
+      status: 'Imported',
+      amount: 2450,
+    },
+    {
+      id: '#ORD-2024-002',
+      woo_order: 'WOO-12346',
+      customer: 'XYZ Ltd',
+      date: '2024-01-08',
+      status: 'Imported',
+      amount: 1250,
+    },
+    {
+      id: '#ORD-2024-003',
+      woo_order: 'WOO-12347',
+      customer: 'Tech Inc',
+      date: '2024-01-07',
+      status: 'Error',
+      amount: 3800,
+    },
   ];
 
   const failedSyncs = [
-    { type: 'Product', reference: 'KEYBOARD-001', error: 'Missing required field: price', attempt: 3, last_try: '2024-01-08 14:32' },
-    { type: 'Order', reference: 'WOO-12347', error: 'Customer not found in CYPHER', attempt: 2, last_try: '2024-01-07 16:45' },
+    {
+      type: 'Product',
+      reference: 'KEYBOARD-001',
+      error: 'Missing required field: price',
+      attempt: 3,
+      last_try: '2024-01-08 14:32',
+    },
+    {
+      type: 'Order',
+      reference: 'WOO-12347',
+      error: 'Customer not found in CYPHER',
+      attempt: 2,
+      last_try: '2024-01-07 16:45',
+    },
   ];
 
   const stockSyncStatus = [
-    { product: 'LAPTOP-001', cypher_stock: 12, woo_stock: 12, status: 'Synced', next_sync: '2024-01-08 14:30' },
-    { product: 'MON-027-4K', cypher_stock: 25, woo_stock: 24, status: 'Out of Sync', next_sync: 'Now' },
+    {
+      product: 'LAPTOP-001',
+      cypher_stock: 12,
+      woo_stock: 12,
+      status: 'Synced',
+      next_sync: '2024-01-08 14:30',
+    },
+    {
+      product: 'MON-027-4K',
+      cypher_stock: 25,
+      woo_stock: 24,
+      status: 'Out of Sync',
+      next_sync: 'Now',
+    },
     { product: 'KEY-MECH-01', cypher_stock: 3, woo_stock: 5, status: 'Error', next_sync: 'Retry' },
   ];
 
   const collectData = [
-    { order: '#ORD-2024-045', customer: 'John Doe', items: 3, status: 'Ready for Pickup', date: '2024-01-08' },
-    { order: '#ORD-2024-046', customer: 'Jane Smith', items: 2, status: 'Not Ready', date: '2024-01-09' },
-    { order: '#ORD-2024-047', customer: 'Bob Wilson', items: 1, status: 'Picked Up', date: '2024-01-07' },
+    {
+      order: '#ORD-2024-045',
+      customer: 'John Doe',
+      items: 3,
+      status: 'Ready for Pickup',
+      date: '2024-01-08',
+    },
+    {
+      order: '#ORD-2024-046',
+      customer: 'Jane Smith',
+      items: 2,
+      status: 'Not Ready',
+      date: '2024-01-09',
+    },
+    {
+      order: '#ORD-2024-047',
+      customer: 'Bob Wilson',
+      items: 1,
+      status: 'Picked Up',
+      date: '2024-01-07',
+    },
   ];
 
   return (
@@ -100,7 +198,7 @@ const WooCommercePage: React.FC = () => {
             { id: 'failed', label: 'Erori' },
             { id: 'stock', label: 'Stoc' },
             { id: 'collect', label: 'Click & Collect' },
-          ].map(tab => (
+          ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -131,13 +229,15 @@ const WooCommercePage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {productSyncTable.map(prod => (
+                {productSyncTable.map((prod) => (
                   <tr key={prod.id}>
                     <td className="font-mono text-sm font-bold">{prod.sku}</td>
                     <td className="text-sm text-slate-600">{prod.woo_id}</td>
                     <td>{prod.name}</td>
                     <td>
-                      <span className={`${prod.status === 'Synced' ? 'badge-success' : prod.status === 'Error' ? 'badge-danger' : 'badge-warning'}`}>
+                      <span
+                        className={`${prod.status === 'Synced' ? 'badge-success' : prod.status === 'Error' ? 'badge-danger' : 'badge-warning'}`}
+                      >
                         {prod.status}
                       </span>
                     </td>
@@ -166,13 +266,19 @@ const WooCommercePage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {ordersImportLog.map(ord => (
+                {ordersImportLog.map((ord) => (
                   <tr key={ord.id}>
                     <td className="font-bold text-slate-900">{ord.id}</td>
                     <td className="text-sm text-slate-600">{ord.woo_order}</td>
                     <td>{ord.customer}</td>
                     <td className="text-sm text-slate-600">{ord.date}</td>
-                    <td><span className={`${ord.status === 'Imported' ? 'badge-success' : 'badge-danger'}`}>{ord.status}</span></td>
+                    <td>
+                      <span
+                        className={`${ord.status === 'Imported' ? 'badge-success' : 'badge-danger'}`}
+                      >
+                        {ord.status}
+                      </span>
+                    </td>
                     <td className="font-bold">{ord.amount.toLocaleString()} RON</td>
                   </tr>
                 ))}
@@ -189,7 +295,9 @@ const WooCommercePage: React.FC = () => {
             <div key={idx} className="card">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <p className="font-bold text-slate-900">{sync.type}: {sync.reference}</p>
+                  <p className="font-bold text-slate-900">
+                    {sync.type}: {sync.reference}
+                  </p>
                   <p className="text-sm text-red-600 mt-1">{sync.error}</p>
                 </div>
                 <div className="text-right">
@@ -221,11 +329,19 @@ const WooCommercePage: React.FC = () => {
                   <tr key={idx}>
                     <td className="font-bold text-slate-900">{stock.product}</td>
                     <td className="font-bold">{stock.cypher_stock}</td>
-                    <td className={stock.cypher_stock !== stock.woo_stock ? 'text-red-600 font-bold' : 'font-bold'}>
+                    <td
+                      className={
+                        stock.cypher_stock !== stock.woo_stock
+                          ? 'text-red-600 font-bold'
+                          : 'font-bold'
+                      }
+                    >
                       {stock.woo_stock}
                     </td>
                     <td>
-                      <span className={`${stock.status === 'Synced' ? 'badge-success' : stock.status === 'Out of Sync' ? 'badge-warning' : 'badge-danger'}`}>
+                      <span
+                        className={`${stock.status === 'Synced' ? 'badge-success' : stock.status === 'Out of Sync' ? 'badge-warning' : 'badge-danger'}`}
+                      >
                         {stock.status}
                       </span>
                     </td>
@@ -259,7 +375,9 @@ const WooCommercePage: React.FC = () => {
                     <td>{item.customer}</td>
                     <td className="text-sm">{item.items} articole</td>
                     <td>
-                      <span className={`${item.status === 'Ready for Pickup' ? 'badge-success' : item.status === 'Picked Up' ? 'badge-success' : 'badge-warning'}`}>
+                      <span
+                        className={`${item.status === 'Ready for Pickup' ? 'badge-success' : item.status === 'Picked Up' ? 'badge-success' : 'badge-warning'}`}
+                      >
                         {item.status}
                       </span>
                     </td>

@@ -1,5 +1,5 @@
 import api from './api';
-import { CartItem } from '../stores/cart.store';
+import { LocalCartItem } from '../stores/cart.store';
 
 export interface CheckoutAddress {
   street: string;
@@ -105,7 +105,11 @@ export const cartService = {
     return response.data;
   },
 
-  async saveAddress(label: string, address: CheckoutAddress | string, addressType: 'shipping' | 'billing' | 'both' = 'both') {
+  async saveAddress(
+    label: string,
+    address: CheckoutAddress | string,
+    addressType: 'shipping' | 'billing' | 'both' = 'both',
+  ) {
     const response = await api.post('/b2b/checkout/addresses', {
       label,
       address,
@@ -117,7 +121,10 @@ export const cartService = {
   /**
    * Create order from cart items (legacy - use processCheckout for full checkout)
    */
-  async createOrder(items: CartItem[], orderData: Omit<CreateOrderRequest, 'items'>): Promise<CreateOrderResponse> {
+  async createOrder(
+    items: LocalCartItem[],
+    orderData: Omit<CreateOrderRequest, 'items'>,
+  ): Promise<CreateOrderResponse> {
     const request: CreateOrderRequest = {
       items: items.map((item) => ({
         product_id: item.productId,

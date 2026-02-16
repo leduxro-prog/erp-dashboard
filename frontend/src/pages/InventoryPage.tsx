@@ -56,7 +56,7 @@ export function InventoryPage() {
       if (search) params.set('search', search);
 
       const response = await apiClient.get<StockLevelsResponse>(
-        `/inventory/stock-levels?${params.toString()}`
+        `/inventory/stock-levels?${params.toString()}`,
       );
       const data = (response as any)?.data || response;
       setStockLevels(data.items || []);
@@ -74,9 +74,9 @@ export function InventoryPage() {
     fetchStockLevels();
   }, [fetchStockLevels]);
 
-  const criticalCount = stockLevels.filter(s => s.status === 'Critic').length;
-  const warningCount = stockLevels.filter(s => s.status === 'Atentionare').length;
-  const normalCount = stockLevels.filter(s => s.status === 'Normal').length;
+  const criticalCount = stockLevels.filter((s) => s.status === 'Critic').length;
+  const warningCount = stockLevels.filter((s) => s.status === 'Atentionare').length;
+  const normalCount = stockLevels.filter((s) => s.status === 'Normal').length;
 
   const columns: Column<StockLevelItem>[] = [
     {
@@ -93,7 +93,8 @@ export function InventoryPage() {
               loading="lazy"
               decoding="async"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2"%3E%3Crect x="3" y="3" width="18" height="18" rx="2"/%3E%3Ccircle cx="8.5" cy="8.5" r="1.5"/%3E%3Cpath d="m21 15-5-5L5 21"/%3E%3C/svg%3E';
+                (e.target as HTMLImageElement).src =
+                  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2"%3E%3Crect x="3" y="3" width="18" height="18" rx="2"/%3E%3Ccircle cx="8.5" cy="8.5" r="1.5"/%3E%3Cpath d="m21 15-5-5L5 21"/%3E%3C/svg%3E';
               }}
             />
           ) : (
@@ -102,7 +103,7 @@ export function InventoryPage() {
             </div>
           )}
         </div>
-      )
+      ),
     },
     { key: 'sku', label: 'SKU', sortable: true },
     { key: 'name', label: 'Produs', sortable: true },
@@ -112,32 +113,38 @@ export function InventoryPage() {
       sortable: true,
       render: (value) => (
         <span className="font-medium text-blue-400">
-          {(value as number).toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RON
+          {(value as number).toLocaleString('ro-RO', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}{' '}
+          RON
         </span>
-      )
+      ),
     },
     {
       key: 'current',
       label: 'Stoc curent',
       sortable: true,
-      render: (value) => <span className="font-medium">{(value as number).toLocaleString()}</span>
+      render: (value) => <span className="font-medium">{(value as number).toLocaleString()}</span>,
     },
     {
       key: 'reserved',
       label: 'Rezervat',
       sortable: true,
-      render: (value) => (value as number).toLocaleString()
+      render: (value) => (value as number).toLocaleString(),
     },
     {
       key: 'available',
       label: 'Disponibil',
       sortable: true,
-      render: (value) => <span className="font-medium text-green-400">{(value as number).toLocaleString()}</span>
+      render: (value) => (
+        <span className="font-medium text-green-400">{(value as number).toLocaleString()}</span>
+      ),
     },
     {
       key: 'reorderPoint',
       label: 'Limita min',
-      sortable: true
+      sortable: true,
     },
     {
       key: 'status',
@@ -145,9 +152,9 @@ export function InventoryPage() {
       render: (value) => {
         const status = value as string;
         const statusMap: Record<string, 'pending' | 'processing' | 'completed'> = {
-          'Normal': 'completed',
-          'Atentionare': 'processing',
-          'Critic': 'pending',
+          Normal: 'completed',
+          Atentionare: 'processing',
+          Critic: 'pending',
         };
         return <StatusBadge status={statusMap[status] || 'pending'} label={status} />;
       },
@@ -159,7 +166,9 @@ export function InventoryPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold text-white">Inventar</h1>
-          <p className="text-gray-300 mt-1">Gestiunea nivelurilor de stoc — {total.toLocaleString()} produse</p>
+          <p className="text-gray-300 mt-1">
+            Gestiunea nivelurilor de stoc — {total.toLocaleString()} produse
+          </p>
         </div>
         <button
           className="btn-primary flex items-center gap-2"
@@ -182,7 +191,7 @@ export function InventoryPage() {
           icon={<AlertTriangle size={20} />}
           title="Produse sub limita"
           value={criticalCount.toString()}
-          color="error"
+          color="danger"
         />
         <KPICard
           icon={<AlertTriangle size={20} />}
@@ -206,15 +215,16 @@ export function InventoryPage() {
           placeholder="Cauta dupa SKU sau nume produs..."
           className="w-full pl-10 pr-4 py-2 border border-gray-600 bg-gray-800 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
         />
       </div>
 
       {/* Error */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
-        </div>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
       )}
 
       {/* Data Table */}
@@ -226,7 +236,11 @@ export function InventoryPage() {
         <EmptyState
           icon={<div className="text-4xl">📊</div>}
           title={search ? 'Nu s-au gasit produse' : 'Nu exista date de stoc'}
-          description={search ? 'Incearca sa modifici termenul de cautare' : 'Datele de stoc vor aparea aici dupa sincronizare'}
+          description={
+            search
+              ? 'Incearca sa modifici termenul de cautare'
+              : 'Datele de stoc vor aparea aici dupa sincronizare'
+          }
         />
       ) : (
         <>
@@ -242,14 +256,14 @@ export function InventoryPage() {
                 <button
                   className="btn-secondary"
                   disabled={page <= 1}
-                  onClick={() => setPage(p => p - 1)}
+                  onClick={() => setPage((p) => p - 1)}
                 >
                   Anterior
                 </button>
                 <button
                   className="btn-secondary"
                   disabled={page >= totalPages}
-                  onClick={() => setPage(p => p + 1)}
+                  onClick={() => setPage((p) => p + 1)}
                 >
                   Urmator
                 </button>

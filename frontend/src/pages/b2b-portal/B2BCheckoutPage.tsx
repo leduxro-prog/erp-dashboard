@@ -470,7 +470,7 @@ export const B2BCheckoutPage: React.FC = () => {
 
               <button
                 onClick={handleNextStep}
-                disabled={stockValidation && !stockValidation.valid}
+                disabled={Boolean(stockValidation && !stockValidation.valid)}
                 className="mt-6 w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center"
               >
                 Continue to Delivery
