@@ -23,14 +23,14 @@ services:
     container_name: cypher-erp-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - '80:80'
     depends_on:
       app:
         condition: service_healthy
     networks:
       - cypher-network
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:80/health" ]
+      test: ['CMD', 'wget', '--no-verbose', '--spider', 'http://127.0.0.1:80/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -44,15 +44,15 @@ services:
           cpus: '0.25'
           memory: 256M
       labels:
-        - "com.cypher.service=frontend"
-        - "com.cypher.environment=${NODE_ENV:-development}"
-        - "com.cypher.version=${VERSION:-0.1.0}"
+        - 'com.cypher.service=frontend'
+        - 'com.cypher.environment=${NODE_ENV:-development}'
+        - 'com.cypher.version=${VERSION:-0.1.0}'
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "50m"
-        max-file: "5"
-        labels: "service,environment"
+        max-size: '50m'
+        max-file: '5'
+        labels: 'service,environment'
 
   # ==============================================================================
   # CYPHER ERP Application (Backend API)
@@ -66,13 +66,17 @@ services:
     container_name: cypher-erp-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3000
       API_PREFIX: ${API_PREFIX:-/api/v1}
       APP_NAME: ${APP_NAME:-CYPHER ERP}
-      APP_URL: ${APP_URL:-http://localhost:3000}
+      APP_URL: ${APP_URL:-https://api.ledux.ro}
+      FRONTEND_URL: ${FRONTEND_URL:-https://ledux.ro}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://api.ledux.ro}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.ledux.ro}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
       VERSION: ${VERSION:-0.1.0}
 
       # Database Configuration
@@ -152,7 +156,7 @@ services:
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-1000}
 
       # CORS
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80,http://65.108.255.104}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://ledux.ro,https://www.ledux.ro,https://erp.ledux.ro,https://api.ledux.ro}
       CORS_CREDENTIALS: ${CORS_CREDENTIALS:-true}
 
     depends_on:
@@ -169,7 +173,7 @@ services:
       - ./config:/app/config
 
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/health" ]
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://127.0.0.1:3000/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -189,16 +193,16 @@ services:
         max_attempts: 3
         window: 120s
       labels:
-        - "com.cypher.service=app"
-        - "com.cypher.environment=${NODE_ENV:-production}"
-        - "com.cypher.version=${VERSION:-0.1.0}"
+        - 'com.cypher.service=app'
+        - 'com.cypher.environment=${NODE_ENV:-production}'
+        - 'com.cypher.version=${VERSION:-0.1.0}'
 
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "100m"
-        max-file: "10"
-        labels: "service,environment,version"
+        max-size: '100m'
+        max-file: '10'
+        labels: 'service,environment,version'
 
   # ==============================================================================
   # PostgreSQL Database
@@ -208,30 +212,30 @@ services:
     container_name: cypher-erp-db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_DB: ${DB_NAME:-cypher_erp}
       POSTGRES_USER: ${DB_USER:-cypher_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-cypher_secret}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
       POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
 
     command:
-      - "postgres"
-      - "-c"
-      - "max_connections=200"
-      - "-c"
-      - "shared_buffers=256MB"
-      - "-c"
-      - "effective_cache_size=1GB"
-      - "-c"
-      - "maintenance_work_mem=64MB"
-      - "-c"
-      - "checkpoint_completion_target=0.9"
-      - "-c"
-      - "wal_buffers=16MB"
-      - "-c"
-      - "default_statistics_target=100"
+      - 'postgres'
+      - '-c'
+      - 'max_connections=200'
+      - '-c'
+      - 'shared_buffers=256MB'
+      - '-c'
+      - 'effective_cache_size=1GB'
+      - '-c'
+      - 'maintenance_work_mem=64MB'
+      - '-c'
+      - 'checkpoint_completion_target=0.9'
+      - '-c'
+      - 'wal_buffers=16MB'
+      - '-c'
+      - 'default_statistics_target=100'
 
     volumes:
       - db-data:/var/lib/postgresql/data
@@ -241,7 +245,7 @@ services:
       - cypher-network
 
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-cypher_user} -d ${DB_NAME:-cypher_erp}" ]
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-cypher_user} -d ${DB_NAME:-cypher_erp}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -261,15 +265,15 @@ services:
         max_attempts: 3
         window: 120s
       labels:
-        - "com.cypher.service=db"
-        - "com.cypher.environment=${NODE_ENV:-production}"
+        - 'com.cypher.service=db'
+        - 'com.cypher.environment=${NODE_ENV:-production}'
 
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "100m"
-        max-file: "10"
-        labels: "service,environment"
+        max-size: '100m'
+        max-file: '10'
+        labels: 'service,environment'
 
   # ==============================================================================
   # Redis Cache
@@ -279,7 +283,7 @@ services:
     container_name: cypher-erp-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - '6379:6379'
     command: >
       sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
         redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD" --maxmemory 256mb --maxmemory-policy allkeys-lru;
@@ -297,7 +301,7 @@ services:
       - cypher-network
 
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -317,15 +321,15 @@ services:
         max_attempts: 5
         window: 60s
       labels:
-        - "com.cypher.service=redis"
-        - "com.cypher.environment=${NODE_ENV:-production}"
+        - 'com.cypher.service=redis'
+        - 'com.cypher.environment=${NODE_ENV:-production}'
 
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "50m"
-        max-file: "5"
-        labels: "service,environment"
+        max-size: '50m'
+        max-file: '5'
+        labels: 'service,environment'
 
   # ==============================================================================
   # MeiliSearch - High Performance Search Engine
@@ -335,7 +339,7 @@ services:
     container_name: cypher-erp-search
     restart: unless-stopped
     ports:
-      - "7700:7700"
+      - '7700:7700'
 
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKey}
@@ -348,7 +352,7 @@ services:
       - cypher-network
 
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health" ]
+      test: ['CMD', 'wget', '--no-verbose', '--spider', 'http://127.0.0.1:7700/health']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -368,15 +372,15 @@ services:
         max_attempts: 3
         window: 120s
       labels:
-        - "com.cypher.service=meilisearch"
-        - "com.cypher.environment=${NODE_ENV:-production}"
+        - 'com.cypher.service=meilisearch'
+        - 'com.cypher.environment=${NODE_ENV:-production}'
 
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "50m"
-        max-file: "5"
-        labels: "service,environment"
+        max-size: '50m'
+        max-file: '5'
+        labels: 'service,environment'
 
   # ==============================================================================
   # PgAdmin - Database Management UI (Optional)
@@ -386,7 +390,7 @@ services:
     container_name: cypher-erp-pgadmin
     restart: unless-stopped
     ports:
-      - "5050:80"
+      - '5050:80'
 
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@ledux.ro}
@@ -405,7 +409,7 @@ services:
         condition: service_healthy
 
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/misc/ping" ]
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:80/misc/ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -425,15 +429,15 @@ services:
         max_attempts: 3
         window: 60s
       labels:
-        - "com.cypher.service=pgadmin"
-        - "com.cypher.environment=${NODE_ENV:-production}"
+        - 'com.cypher.service=pgadmin'
+        - 'com.cypher.environment=${NODE_ENV:-production}'
 
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "50m"
-        max-file: "5"
-        labels: "service,environment"
+        max-size: '50m'
+        max-file: '5'
+        labels: 'service,environment'
 
   # ==============================================================================
   # AI Agents Service (Python)
@@ -445,7 +449,7 @@ services:
     container_name: cypher-erp-ai
     restart: unless-stopped
     ports:
-      - "8001:8000"
+      - '8001:8000'
 
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -465,7 +469,7 @@ services:
       - ./modules/ai-agents:/app
 
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8000/" ]
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:8000/']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -485,15 +489,15 @@ services:
         max_attempts: 3
         window: 120s
       labels:
-        - "com.cypher.service=ai-service"
-        - "com.cypher.environment=${NODE_ENV:-production}"
+        - 'com.cypher.service=ai-service'
+        - 'com.cypher.environment=${NODE_ENV:-production}'
 
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "100m"
-        max-file: "10"
-        labels: "service,environment"
+        max-size: '100m'
+        max-file: '10'
+        labels: 'service,environment'
 
   # ==============================================================================
   # RabbitMQ - Event Bus
@@ -505,11 +509,11 @@ services:
 
     ports:
       # AMQP protocol port
-      - "5672:5672"
+      - '5672:5672'
       # Management UI port
-      - "15672:15672"
+      - '15672:15672'
       # Prometheus metrics port (optional)
-      - "15692:15692"
+      - '15692:15692'
 
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
@@ -520,7 +524,7 @@ services:
       RABBITMQ_DISK_FREE_LIMIT: 1GB
 
       # Enable plugins
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit log_levels [{connection,error},{default,warning}]"
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbit log_levels [{connection,error},{default,warning}]'
 
     volumes:
       # Persist data across container restarts
@@ -529,7 +533,7 @@ services:
       - rabbitmq-config:/etc/rabbitmq
 
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -552,15 +556,15 @@ services:
         max_attempts: 5
         window: 180s
       labels:
-        - "com.cypher.service=rabbitmq"
-        - "com.cypher.environment=${NODE_ENV:-production}"
+        - 'com.cypher.service=rabbitmq'
+        - 'com.cypher.environment=${NODE_ENV:-production}'
 
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "100m"
-        max-file: "10"
-        labels: "service,environment"
+        max-size: '100m'
+        max-file: '10'
+        labels: 'service,environment'
 
 # ==============================================================================
 # Networks
@@ -574,7 +578,7 @@ networks:
       config:
         - subnet: 172.20.0.0/16
     labels:
-      - "com.cypher.network=default"
+      - 'com.cypher.network=default'
 
 # ==============================================================================
 # Volumes

@@ -53,4 +53,10 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# SSH keys (NEVER commit private keys)
 .ssh/deploy_key
+deployment/hetzner_key
+*.pem
+id_rsa*
+id_ed25519*

@@ -1,38 +1,23 @@
 #!/bin/bash
+# ==============================================================================
+# DEPRECATED - Password-based deploy script
+# ==============================================================================
+# This script is deprecated. Use deploy_with_key.sh instead.
+#
+# Why: This script relied on password-based SSH, which is insecure.
+# The only supported deployment methods are:
+#   1. GitHub Actions: .github/workflows/deploy-hetzner.yml
+#   2. Manual deploy:  deployment/deploy_with_key.sh (SSH key auth)
+# ==============================================================================
 
-# Deployment Script for Hetzner CAX21
-# Usage: ./deploy.sh
+set -euo pipefail
 
-SERVER_IP="65.108.255.104"
-SERVER_USER="root"
-TARGET_DIR="/opt/cypher-erp"
-SSH_CMD="ssh $SERVER_USER@$SERVER_IP"
-
-echo "Deploying to $SERVER_USER@$SERVER_IP..."
-
-# 1. Verify connection
-echo "Verifying SSH connection..."
-$SSH_CMD "echo 'Connection successful'"
-
-# 2. Create target directory
-echo "Creating target directory..."
-$SSH_CMD "mkdir -p $TARGET_DIR"
-
-# 3. Request Password once if needed for rsync? 
-# Note: It's better to use SSH keys. If using password, rsync will prompt.
-echo "Syncing files..."
-rsync -avz --exclude 'node_modules' --exclude '.git' --exclude 'dist' --exclude 'coverage' --exclude '.env' ./ $SERVER_USER@$SERVER_IP:$TARGET_DIR
-
-# 4. Copy .env (if it exists locally, or handle securely)
-if [ -f .env ]; then
-    echo "Copying .env file..."
-    scp .env $SERVER_USER@$SERVER_IP:$TARGET_DIR/.env
-else
-    echo "WARNING: .env file not found locally. Ensure it exists on the server!"
-fi
-
-# 5. Run Docker Compose
-echo "Starting services..."
-$SSH_CMD "cd $TARGET_DIR && docker compose -f docker-compose.yml up -d --build"
-
-echo "Deployment complete!"
+echo "================================================================"
+echo "DEPRECATED: This script is no longer supported."
+echo ""
+echo "Use key-based deployment instead:"
+echo "  ./deployment/deploy_with_key.sh"
+echo ""
+echo "Or use GitHub Actions (deploy-hetzner.yml)."
+echo "================================================================"
+exit 1

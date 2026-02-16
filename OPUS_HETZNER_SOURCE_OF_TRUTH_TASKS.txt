@@ -1,0 +1,145 @@
+OPUS TASK PACK - HETZNER SOURCE OF TRUTH (NO CUTOVER YET)
+
+Context
+- Source of truth for infra/deploy must remain Hetzner.
+- We do NOT migrate to ledux.ro now.
+- We prepare everything so cutover is one controlled step later.
+
+Hard constraints
+1) Do not switch live traffic to domain now.
+2) Do not remove current Hetzner IP access path.
+3) No breaking changes for ERP/B2B auth routes.
+4) Keep deploy reversible (rollback path required).
+
+==================================================
+WS-H1: Config hardening (domain-ready, no migration)
+==================================================
+
+Goal
+- Remove localhost/IP defaults from production runtime paths.
+- Keep values environment-driven.
+
+Files to update
+- docker-compose.yml
+  - APP_URL default must not be localhost in prod path
+  - CORS_ORIGINS default must include domain placeholders, not hardcoded IP
+- .env.example
+  - use CORS_ORIGINS (not CORS_ORIGIN)
+  - add FRONTEND_URL, COOKIE_DOMAIN, COOKIE_SECURE, PUBLIC_BASE_URL
+- src/server.ts
+  - remove localhost-only fallback for CORS in production
+- frontend/nginx.conf
+  - remove server_name localhost-only assumption (domain-ready)
+- frontend/src/config.ts
+  - keep API_URL env-based; validate production fallback behavior
+
+Acceptance criteria
+- App starts with explicit env only (no unsafe localhost fallback in prod).
+- CORS works with configured origins list from env.
+- Frontend still proxies /api correctly.
+
+==================================================
+WS-H2: Hetzner-only CI/CD path
+==================================================
+
+Goal
+- Keep one deploy truth: Hetzner.
+- Avoid AWS/ECS confusion in active release path.
+
+Files to update
+- .github/workflows/deploy.yml
+  - disable or archive AWS ECS path as non-primary
+- add .github/workflows/deploy-hetzner.yml
+  - trigger on main (and manual dispatch)
+  - steps: checkout -> build checks -> deploy via SSH key to Hetzner -> smoke tests
+
+Use secrets (GitHub)
+- HETZNER_HOST
+- HETZNER_USER
+- HETZNER_SSH_KEY
+- HETZNER_TARGET_DIR
+- APP_BASE_URL
+
+Acceptance criteria
+- Deploy from GitHub Actions reaches Hetzner successfully.
+- Post-deploy smoke checks pass.
+- No AWS credentials needed for standard release.
+
+==================================================
+WS-H3: Deployment script security cleanup
+==================================================
+
+Goal
+- Remove insecure deployment artifacts and plaintext credentials.
+
+Files to clean
+- deployment/deploy_auto.py (contains plaintext password logic)
+- deployment/check_credentials.py (password brute check pattern)
+
+Actions
+- mark as deprecated + remove secrets usage
+- replace with key-based deploy only
+- ensure deploy_with_key.sh uses strict non-interactive mode and fail-fast
+
+Acceptance criteria
+- No plaintext server passwords in repo.
+- Deployment scripts use key-based auth only.
+
+==================================================
+WS-H4: Domain cutover runbook (prepared now, executed later)
+==================================================
+
+Goal
+- Create deterministic cutover checklist for when implementation is complete.
+
+Add docs
+- docs/HETZNER_CUTOVER_RUNBOOK.md
+
+Runbook must include
+1) Pre-cutover checks
+   - ci:green, DB backup, health endpoints, queue health
+2) DNS switch plan
+   - A records, TTL lowering, verification windows
+3) TLS plan
+   - cert issuance/renewal and validation
+4) Validation matrix
+   - ERP login, B2B login, forgot/reset, SmartBill sync, Brand Manager flows
+5) Rollback plan
+   - DNS rollback + container rollback + verification
+
+Acceptance criteria
+- Team can execute cutover in <30 minutes with clear rollback.
+
+==================================================
+WS-H5: Smoke + synthetic checks for domain readiness
+==================================================
+
+Goal
+- Add repeatable checks for pre/post deploy and future domain move.
+
+Add scripts
+- scripts/smoke-hetzner.sh
+- scripts/smoke-domain-ready.sh
+
+Checks should include
+- /health
+- /api/v1/health
+- b2b products endpoints
+- auth endpoints
+- frontend root loads expected bundle
+
+Acceptance criteria
+- Scripts are idempotent and fail with clear exit codes.
+
+==================================================
+Definition of Done (overall)
+==================================================
+
+- Hetzner is the single documented deploy path.
+- Config is domain-ready but no traffic migrated yet.
+- No plaintext credentials in deployment scripts.
+- Runbook and smoke checks are present and tested.
+- ci:green passes after changes.
+
+Final note
+- After these tasks, we can schedule cutover only when all product implementation is confirmed complete.

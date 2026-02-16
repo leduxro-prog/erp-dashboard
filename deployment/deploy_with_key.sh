@@ -1,50 +1,84 @@
 #!/bin/bash
+# ==============================================================================
+# Deploy to Hetzner via SSH Key (key-based auth only)
+# ==============================================================================
+# Usage:
+#   ./deployment/deploy_with_key.sh
+#   SSH_KEY=/path/to/key ./deployment/deploy_with_key.sh
+#
+# Required environment variables (or defaults):
+#   HETZNER_HOST       - Server IP/hostname  (default: from env)
+#   HETZNER_USER       - SSH user            (default: root)
+#   SSH_KEY            - Path to SSH key     (default: ~/.ssh/hetzner_deploy)
+#   TARGET_DIR         - Remote project dir  (default: /opt/cypher-erp)
+# ==============================================================================
 
-# Deployment Script using SSH Key
-# Usage: ./deploy_with_key.sh
+set -euo pipefail
 
-SERVER_IP="65.108.255.104"
-SERVER_USER="root"
-SSH_KEY="deployment/hetzner_key"
-TARGET_DIR="/opt/cypher-erp"
+# ---------- Config (from env, no hardcoded secrets) ----------
+SERVER_IP="${HETZNER_HOST:?ERROR: HETZNER_HOST env var is required}"
+SERVER_USER="${HETZNER_USER:-root}"
+SSH_KEY="${SSH_KEY:-$HOME/.ssh/hetzner_deploy}"
+TARGET_DIR="${HETZNER_TARGET_DIR:-/opt/cypher-erp}"
 
-# SSH Options: Disable host key checking for automation, use specific key
-SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+# Strict SSH options: key-only, no password fallback, fail-fast
+SSH_OPTS="-i $SSH_KEY -o PasswordAuthentication=no -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
+SSH_CMD="ssh $SSH_OPTS $SERVER_USER@$SERVER_IP"
+SCP_CMD="scp $SSH_OPTS"
+RSYNC_SSH="ssh $SSH_OPTS"
 
-echo "=== Deploying with SSH Key to $SERVER_IP ==="
-
-# 1. Verify connection
-echo "Checking connection..."
-ssh $SSH_OPTS $SERVER_USER@$SERVER_IP "echo 'Connection Successful'"
-if [ $? -ne 0 ]; then
-    echo "Connection failed! Check key or IP."
-    exit 1
+# ---------- Validation ----------
+if [ ! -f "$SSH_KEY" ]; then
+  echo "[ERROR] SSH key not found: $SSH_KEY"
+  echo "Set SSH_KEY env var to point to your private key."
+  exit 1
 fi
 
-# 2. Upload Setup Script & Execute (if needed)
-echo "Uploading setup script..."
-scp $SSH_OPTS deployment/setup_server.sh $SERVER_USER@$SERVER_IP:/root/setup_server.sh
-ssh $SSH_OPTS $SERVER_USER@$SERVER_IP "chmod +x /root/setup_server.sh && /root/setup_server.sh"
+# Ensure key permissions are correct
+chmod 600 "$SSH_KEY"
 
-# 3. Create target directory
-ssh $SSH_OPTS $SERVER_USER@$SERVER_IP "mkdir -p $TARGET_DIR"
+echo "=== Deploying to $SERVER_USER@$SERVER_IP via SSH key ==="
+echo "    Key:       $SSH_KEY"
+echo "    Target:    $TARGET_DIR"
+echo ""
 
-# 4. Sync Files
-echo "Syncing application files..."
-rsync -avz -e "ssh $SSH_OPTS" \
-    --exclude 'node_modules' \
-    --exclude '.git' \
-    --exclude 'dist' \
-    --exclude 'coverage' \
-    --exclude '.env' \
-    ./ $SERVER_USER@$SERVER_IP:$TARGET_DIR
+# ---------- 1. Verify connection ----------
+echo "[1/5] Verifying SSH connection..."
+$SSH_CMD "echo 'Connection verified'" || {
+  echo "[ERROR] SSH connection failed. Check key and host."
+  exit 1
+}
 
-# 5. Copy .env
-echo "Copying .env..."
-scp $SSH_OPTS .env $SERVER_USER@$SERVER_IP:$TARGET_DIR/.env
+# ---------- 2. Pre-deploy backup ----------
+echo "[2/5] Creating pre-deploy database backup..."
+$SSH_CMD "cd $TARGET_DIR && \
+  docker compose exec -T db pg_dump -U \$(grep DB_USER .env | cut -d= -f2) \$(grep DB_NAME .env | cut -d= -f2) | \
+  gzip > /tmp/cypher-pre-deploy-\$(date +%Y%m%d%H%M%S).sql.gz" \
+  2>/dev/null || echo "[WARN] DB backup failed (non-blocking, continuing)"
 
-# 6. Start Services
-echo "Starting Docker services..."
-ssh $SSH_OPTS $SERVER_USER@$SERVER_IP "cd $TARGET_DIR && docker compose up -d --build"
+# ---------- 3. Create target directory ----------
+echo "[3/5] Ensuring target directory exists..."
+$SSH_CMD "mkdir -p $TARGET_DIR"
 
-echo "=== Deployment Complete! ==="
+# ---------- 4. Sync files ----------
+echo "[4/5] Syncing application files..."
+rsync -avz --delete \
+  -e "$RSYNC_SSH" \
+  --exclude 'node_modules' \
+  --exclude '.git' \
+  --exclude 'dist' \
+  --exclude 'coverage' \
+  --exclude '.env' \
+  --exclude 'logs' \
+  --exclude 'deployment/hetzner_key' \
+  ./ "$SERVER_USER@$SERVER_IP:$TARGET_DIR"
+
+# ---------- 5. Build and restart ----------
+echo "[5/5] Building and restarting Docker services..."
+$SSH_CMD "cd $TARGET_DIR && docker compose build --no-cache app frontend && docker compose up -d --force-recreate app frontend"
+
+echo ""
+echo "=== Deployment Complete ==="
+echo ""
+echo "Run smoke checks:"
+echo "  scripts/smoke-hetzner.sh"

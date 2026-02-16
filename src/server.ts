@@ -131,8 +131,36 @@ async function bootstrap(): Promise<void> {
     bootstrapLogger.info('Event bus initialized');
 
     // Step 5: Configure CORS
-    const corsOrigins = config.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001';
-    const allowedOrigins = corsOrigins.split(',').map((origin) => origin.trim());
+    const configuredCorsOrigins = config.CORS_ORIGINS?.trim();
+
+    const defaultOriginsByEnv =
+      config.NODE_ENV === 'production'
+        ? [
+            process.env.FRONTEND_URL,
+            process.env.PUBLIC_BASE_URL,
+            'https://ledux.ro',
+            'https://www.ledux.ro',
+            'https://erp.ledux.ro',
+            'https://api.ledux.ro',
+          ]
+        : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'];
+
+    const allowedOrigins = Array.from(
+      new Set(
+        (configuredCorsOrigins
+          ? configuredCorsOrigins.split(',')
+          : defaultOriginsByEnv.filter((origin): origin is string => Boolean(origin))
+        )
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      ),
+    );
+
+    if (config.NODE_ENV === 'production' && !configuredCorsOrigins) {
+      bootstrapLogger.warn(
+        'CORS_ORIGINS is not configured; using production-safe domain defaults.',
+      );
+    }
 
     const corsOptions: CorsOptions = {
       origin: (origin, callback) => {

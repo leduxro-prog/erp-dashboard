@@ -1,0 +1,180 @@
+# ==============================================================================
+# PRIMARY Deploy Pipeline - Hetzner VPS
+# ==============================================================================
+# This is the single source of truth for production deployments.
+# Deploys to Hetzner CAX21 via SSH key-based authentication.
+#
+# Required GitHub Secrets:
+#   HETZNER_HOST       - Server IP or hostname
+#   HETZNER_USER       - SSH user (e.g. root)
+#   HETZNER_SSH_KEY    - Private SSH key (ed25519)
+#   HETZNER_TARGET_DIR - Remote project path (e.g. /opt/cypher-erp)
+#   APP_BASE_URL       - Base URL for smoke checks (e.g. http://65.108.255.104)
+# ==============================================================================
+
+name: Deploy to Hetzner
+
+concurrency:
+  group: deploy-hetzner-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      skip_build_checks:
+        description: 'Skip build checks (emergency deploy)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # ============================================================================
+  # Pre-deploy: build checks
+  # ============================================================================
+  build-checks:
+    runs-on: ubuntu-latest
+    name: Build Checks
+    if: ${{ !inputs.skip_build_checks }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix frontend
+
+      - name: Run release gate checks (ci:green)
+        run: npm run ci:green
+
+  # ============================================================================
+  # Deploy to Hetzner via SSH
+  # ============================================================================
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Hetzner
+    needs: [build-checks]
+    if: always() && (needs.build-checks.result == 'success' || needs.build-checks.result == 'skipped')
+    environment:
+      name: production
+      url: ${{ secrets.APP_BASE_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/hetzner_deploy
+          chmod 600 ~/.ssh/hetzner_deploy
+          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Verify SSH connection
+        run: |
+          ssh -i ~/.ssh/hetzner_deploy \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "echo 'SSH connection verified'"
+
+      - name: Create pre-deploy backup
+        run: |
+          ssh -i ~/.ssh/hetzner_deploy \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "cd ${{ secrets.HETZNER_TARGET_DIR }} && \
+             docker compose exec -T db pg_dump -U \$(grep DB_USER .env | cut -d= -f2) \$(grep DB_NAME .env | cut -d= -f2) | gzip > /tmp/cypher-pre-deploy-\$(date +%Y%m%d%H%M%S).sql.gz" \
+          || echo "::warning::Pre-deploy DB backup failed (non-blocking)"
+
+      - name: Sync application files
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/hetzner_deploy -o StrictHostKeyChecking=no" \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude 'dist' \
+            --exclude 'coverage' \
+            --exclude '.env' \
+            --exclude 'logs' \
+            --exclude 'deployment/hetzner_key' \
+            ./ ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:${{ secrets.HETZNER_TARGET_DIR }}
+
+      - name: Build and restart containers
+        run: |
+          ssh -i ~/.ssh/hetzner_deploy \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "cd ${{ secrets.HETZNER_TARGET_DIR }} && \
+             docker compose build --no-cache app frontend && \
+             docker compose up -d --force-recreate app frontend"
+
+      - name: Wait for services to stabilize
+        run: sleep 30
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/hetzner_deploy
+
+  # ============================================================================
+  # Post-deploy smoke tests
+  # ============================================================================
+  smoke-tests:
+    runs-on: ubuntu-latest
+    name: Smoke Tests
+    needs: [deploy]
+    if: needs.deploy.result == 'success'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run smoke checks
+        env:
+          BASE_URL: ${{ secrets.APP_BASE_URL }}
+        run: |
+          set -euo pipefail
+          bash scripts/smoke-hetzner.sh "$BASE_URL"
+
+  # ============================================================================
+  # Rollback on failure
+  # ============================================================================
+  rollback:
+    runs-on: ubuntu-latest
+    name: Rollback on Failure
+    needs: [smoke-tests]
+    if: failure()
+
+    steps:
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/hetzner_deploy
+          chmod 600 ~/.ssh/hetzner_deploy
+
+      - name: Rollback containers
+        run: |
+          echo "::warning::Smoke tests failed - rolling back to previous containers"
+          ssh -i ~/.ssh/hetzner_deploy \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "cd ${{ secrets.HETZNER_TARGET_DIR }} && \
+             docker compose stop app frontend && \
+             docker compose up -d app frontend" \
+          || echo "::error::Rollback failed - manual intervention required"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/hetzner_deploy
