@@ -48,6 +48,18 @@ interface Category {
   slug?: string;
 }
 
+interface FacetOption {
+  value: string;
+  label: string;
+  count: number;
+}
+
+interface CategoryFacet {
+  key: string;
+  label: string;
+  options: FacetOption[];
+}
+
 type SortOption =
   | 'name-asc'
   | 'name-desc'
@@ -519,7 +531,22 @@ export function ProductsPage() {
   const [priceMax, setPriceMax] = useState('');
   const [appliedPriceMin, setAppliedPriceMin] = useState<number | null>(null);
   const [appliedPriceMax, setAppliedPriceMax] = useState<number | null>(null);
+  const [categoryFacets, setCategoryFacets] = useState<CategoryFacet[]>([]);
+  const [specificFilters, setSpecificFilters] = useState<Record<string, string[]>>({});
   const [sortBy, setSortBy] = useState<SortOption>('name-asc');
+
+  const selectedCategoryName = useMemo(() => {
+    if (!categoryId) {
+      return '';
+    }
+
+    return categories.find((c) => String(c.id) === categoryId)?.name || '';
+  }, [categories, categoryId]);
+
+  const activeSpecificFilterCount = useMemo(
+    () => Object.values(specificFilters).filter((values) => values.length > 0).length,
+    [specificFilters],
+  );
 
   // Table columns — defined here to access setUploadProduct
   const columns: Column<Product>[] = useMemo(
@@ -660,6 +687,13 @@ export function ProductsPage() {
         limit: '500',
       });
       if (search) params.set('search', search);
+      if (selectedCategoryName) {
+        params.set('category', selectedCategoryName);
+      }
+
+      Object.entries(specificFilters).forEach(([key, values]) => {
+        values.forEach((value) => params.append(key, value));
+      });
 
       const response = await apiClient.get(`/inventory/products?${params.toString()}`);
       const data = (response as any)?.data || response;
@@ -673,11 +707,79 @@ export function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, selectedCategoryName, specificFilters]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    if (!selectedCategoryName) {
+      setCategoryFacets([]);
+      setSpecificFilters({});
+      return;
+    }
+
+    apiClient
+      .get(`/inventory/products/facets?category=${encodeURIComponent(selectedCategoryName)}`)
+      .then((res: any) => {
+        const payload = res?.data || res;
+        const facets = Array.isArray(payload?.facets)
+          ? payload.facets
+          : Array.isArray(payload?.data?.facets)
+            ? payload.data.facets
+            : [];
+
+        const normalized: CategoryFacet[] = facets
+          .map((facet: any) => ({
+            key: String(facet?.key || '').trim(),
+            label: String(facet?.label || '').trim(),
+            options: Array.isArray(facet?.options)
+              ? facet.options
+                  .map((option: any) => ({
+                    value: String(option?.value || '').trim(),
+                    label: String(option?.label || option?.value || '').trim(),
+                    count: Number(option?.count || 0),
+                  }))
+                  .filter((option: FacetOption) => option.value.length > 0)
+              : [],
+          }))
+          .filter((facet: CategoryFacet) => facet.key && facet.label && facet.options.length > 0);
+
+        setCategoryFacets(normalized);
+        setSpecificFilters((prev) => {
+          const next: Record<string, string[]> = {};
+          const facetKeys = new Set(normalized.map((facet) => facet.key));
+
+          for (const [key, values] of Object.entries(prev)) {
+            if (facetKeys.has(key)) {
+              next[key] = values;
+            }
+          }
+
+          return next;
+        });
+      })
+      .catch(() => {
+        setCategoryFacets([]);
+        setSpecificFilters({});
+      });
+  }, [selectedCategoryName]);
+
+  const toggleSpecificFilter = (key: string, value: string) => {
+    setPage(1);
+    setSpecificFilters((prev) => {
+      const existing = prev[key] || [];
+      const nextValues = existing.includes(value)
+        ? existing.filter((item) => item !== value)
+        : [...existing, value];
+
+      return {
+        ...prev,
+        [key]: nextValues,
+      };
+    });
+  };
 
   // Count active filters
   const activeFilterCount = useMemo(() => {
@@ -685,9 +787,17 @@ export function ProductsPage() {
     if (categoryId) count++;
     if (statusFilter !== 'Toate') count++;
     if (appliedPriceMin !== null || appliedPriceMax !== null) count++;
+    if (activeSpecificFilterCount > 0) count += activeSpecificFilterCount;
     if (sortBy !== 'name-asc') count++;
     return count;
-  }, [categoryId, statusFilter, appliedPriceMin, appliedPriceMax, sortBy]);
+  }, [
+    categoryId,
+    statusFilter,
+    appliedPriceMin,
+    appliedPriceMax,
+    activeSpecificFilterCount,
+    sortBy,
+  ]);
 
   const resetFilters = () => {
     setCategoryId('');
@@ -696,10 +806,13 @@ export function ProductsPage() {
     setPriceMax('');
     setAppliedPriceMin(null);
     setAppliedPriceMax(null);
+    setSpecificFilters({});
     setSortBy('name-asc');
+    setPage(1);
   };
 
   const applyPriceFilter = () => {
+    setPage(1);
     setAppliedPriceMin(priceMin ? Number(priceMin) : null);
     setAppliedPriceMax(priceMax ? Number(priceMax) : null);
   };
@@ -736,18 +849,6 @@ export function ProductsPage() {
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
-    // Category filter
-    if (categoryId) {
-      const cat = categories.find((c) => String(c.id) === categoryId);
-      if (cat) {
-        result = result.filter(
-          (p) =>
-            String(p.categoryId ?? '') === categoryId ||
-            p.categoryName.toLowerCase() === cat.name.toLowerCase(),
-        );
-      }
-    }
-
     // Status filter
     if (statusFilter !== 'Toate') {
       result = result.filter((p) => p.status === statusFilter);
@@ -782,7 +883,7 @@ export function ProductsPage() {
     });
 
     return result;
-  }, [products, categoryId, categories, statusFilter, appliedPriceMin, appliedPriceMax, sortBy]);
+  }, [products, statusFilter, appliedPriceMin, appliedPriceMax, sortBy]);
 
   return (
     <div className="p-8 space-y-6">
@@ -828,7 +929,11 @@ export function ProductsPage() {
         {/* Category dropdown */}
         <select
           value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
+          onChange={(e) => {
+            setCategoryId(e.target.value);
+            setSpecificFilters({});
+            setPage(1);
+          }}
           className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">Toate categoriile</option>
@@ -912,6 +1017,41 @@ export function ProductsPage() {
           </div>
         )}
       </div>
+
+      {selectedCategoryName && categoryFacets.length > 0 && (
+        <div className="rounded-lg border border-blue-800/50 bg-blue-950/20 p-3 space-y-3">
+          <p className="text-sm font-medium text-blue-300">
+            Filtre specifice — {selectedCategoryName}
+          </p>
+
+          {categoryFacets.map((facet) => {
+            const selectedValues = specificFilters[facet.key] || [];
+            return (
+              <div key={facet.key} className="space-y-2">
+                <p className="text-xs uppercase tracking-wide text-gray-400">{facet.label}</p>
+                <div className="flex flex-wrap gap-2">
+                  {facet.options.map((option) => {
+                    const selected = selectedValues.includes(option.value);
+                    return (
+                      <button
+                        key={`${facet.key}:${option.value}`}
+                        onClick={() => toggleSpecificFilter(facet.key, option.value)}
+                        className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                          selected
+                            ? 'bg-blue-600 text-white border border-blue-500'
+                            : 'bg-gray-800 text-gray-300 border border-gray-600 hover:bg-gray-700'
+                        }`}
+                      >
+                        {option.label} ({option.count})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Filtered count info */}
       {activeFilterCount > 0 && !loading && (
