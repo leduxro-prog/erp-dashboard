@@ -109,3 +109,36 @@ export interface GetInvoiceStatusDto {
   paymentDate: Date | null;
   daysUntilDue: number;
 }
+
+export interface RegisterCatalogProductDto {
+  sku: string;
+  name: string;
+  price?: number;
+  currency?: string;
+  measuringUnit?: string;
+  isService?: boolean;
+  isTaxIncluded?: boolean;
+  taxName?: string;
+  taxPercentage?: number;
+}
+
+export interface RegisterCatalogProductResultDto {
+  saved: boolean;
+  product: {
+    sku: string;
+    name: string;
+    price: number;
+    currency: string;
+    measuringUnit: string;
+    isService: boolean;
+    isTaxIncluded: boolean;
+    taxName: string;
+    taxPercentage: number;
+  };
+  document: {
+    isDraft: boolean;
+    series?: string;
+    number?: string;
+    status?: string;
+  };
+}

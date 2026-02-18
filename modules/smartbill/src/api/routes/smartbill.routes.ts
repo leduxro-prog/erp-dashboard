@@ -29,10 +29,11 @@ import {
   createProformaSchema,
   getInvoiceSchema,
   getProformaSchema,
-  syncStockSchema,
   getWarehousesSchema,
   getInvoiceStatusSchema,
   markInvoicePaidSchema,
+  registerCatalogProductSchema,
+  syncStockSchema,
 } from '../validators/smartbill.validators';
 
 export function createSmartBillRoutes(controller: SmartBillController): Router {
@@ -70,6 +71,13 @@ export function createSmartBillRoutes(controller: SmartBillController): Router {
 
   router.post('/sync-stock', validateRequest(syncStockSchema), requireRole(['admin']), (req, res) =>
     controller.syncStock(req, res),
+  );
+
+  router.post(
+    '/catalog/register-product',
+    requireRole(['admin', 'manager']),
+    validateRequest(registerCatalogProductSchema),
+    (req, res) => controller.registerCatalogProduct(req, res),
   );
 
   router.get('/warehouses', validateRequest(getWarehousesSchema), (req, res) =>

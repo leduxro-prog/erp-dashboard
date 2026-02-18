@@ -18,6 +18,10 @@ interface StockLevelItem {
   current: number;
   reserved: number;
   available: number;
+  localStock: number;
+  supplierStock: number;
+  supplierLeadTime: number;
+  totalStock: number;
   reorderPoint: number;
   status: 'Normal' | 'Atentionare' | 'Critic';
   updatedAt: string;
@@ -122,24 +126,29 @@ export function InventoryPage() {
       ),
     },
     {
-      key: 'current',
-      label: 'Stoc curent',
-      sortable: true,
-      render: (value) => <span className="font-medium">{(value as number).toLocaleString()}</span>,
-    },
-    {
-      key: 'reserved',
-      label: 'Rezervat',
-      sortable: true,
-      render: (value) => (value as number).toLocaleString(),
-    },
-    {
-      key: 'available',
-      label: 'Disponibil',
+      key: 'localStock',
+      label: 'Stoc Local (SmartBill)',
       sortable: true,
       render: (value) => (
         <span className="font-medium text-green-400">{(value as number).toLocaleString()}</span>
       ),
+    },
+    {
+      key: 'supplierStock',
+      label: 'Stoc Furnizor',
+      sortable: true,
+      render: (value, row) => (
+        <span className="font-medium text-blue-400">
+          {(value as number).toLocaleString()}
+          {(value as number) > 0 && row.supplierLeadTime ? ` (${row.supplierLeadTime} zile)` : ''}
+        </span>
+      ),
+    },
+    {
+      key: 'totalStock',
+      label: 'Stoc Total',
+      sortable: true,
+      render: (value) => <span className="font-medium">{(value as number).toLocaleString()}</span>,
     },
     {
       key: 'reorderPoint',

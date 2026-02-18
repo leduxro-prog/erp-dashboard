@@ -233,12 +233,41 @@ class B2BApiClient {
 
   async getFilters() {
     const response = await this.client.get('/b2b/products/filters');
-    return this.unwrapData(response.data);
+    const data = this.unwrapData(response.data);
+
+    const kelvin = Array.isArray(data?.color_temperatures)
+      ? data.color_temperatures.map((item: any) => ({
+          label: item?.label || `${item?.value}K`,
+          value: String(item?.value),
+          count: Number(item?.count || 0),
+        }))
+      : [];
+
+    const ip = Array.isArray(data?.ip_ratings)
+      ? data.ip_ratings.map((item: any) => ({
+          label: item?.value,
+          value: item?.value,
+          count: Number(item?.count || 0),
+        }))
+      : [];
+
+    return {
+      ...data,
+      kelvin,
+      ip,
+    };
   }
 
   async getCategories() {
     const response = await this.client.get('/b2b/products/categories');
-    return this.unwrapData(response.data);
+    const data = this.unwrapData(response.data);
+    const categories = Array.isArray(data?.categories) ? data.categories : [];
+
+    const names = categories
+      .map((category: any) => String(category?.name || '').trim())
+      .filter((name: string) => name.length > 0);
+
+    return [...new Set(names)];
   }
 
   async getInvoices(params?: {

@@ -80,9 +80,19 @@ export class B2BCheckoutService {
       const stockResult = await this.dataSource.query(
         `SELECT 
           p.id, p.name, p.sku,
-          COALESCE(SUM(sl.quantity_available), 0) as stock_available
+          COALESCE(
+            SUM(
+              CASE
+                WHEN w.is_active = true AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+                  THEN sl.quantity_available
+                ELSE 0
+              END
+            ),
+            0
+          ) as stock_available
         FROM products p
         LEFT JOIN stock_levels sl ON p.id = sl.product_id
+        LEFT JOIN warehouses w ON w.id = sl.warehouse_id
         WHERE p.id = $1
         GROUP BY p.id, p.name, p.sku`,
         [item.product_id],
@@ -359,10 +369,15 @@ export class B2BCheckoutService {
           `UPDATE stock_levels
            SET quantity_available = quantity_available - $1,
                updated_at = NOW()
-           WHERE product_id = $2
-           AND id = (
-             SELECT id FROM stock_levels
-             WHERE product_id = $2 AND quantity_available >= $1
+           WHERE id = (
+             SELECT sl.id
+             FROM stock_levels sl
+             JOIN warehouses w ON w.id = sl.warehouse_id
+             WHERE sl.product_id = $2
+               AND w.is_active = true
+               AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+               AND sl.quantity_available >= $1
+             ORDER BY sl.quantity_available DESC
              LIMIT 1
            )`,
           [item.quantity, item.product_id],

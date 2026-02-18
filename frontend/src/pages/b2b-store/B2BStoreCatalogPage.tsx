@@ -32,10 +32,15 @@ interface Product {
   image_url: string;
   stock_local: number;
   stock_supplier: number;
+  stock_total?: number;
   supplier_lead_time: number;
   rating?: number;
   category?: string;
 }
+
+const getTotalStock = (product: Product): number => {
+  return Number(product.stock_total ?? 0) || product.stock_local + product.stock_supplier;
+};
 
 // Specs parser - extract lighting specs from product name/description
 const parseSpecs = (product: Product) => {
@@ -128,7 +133,21 @@ export const B2BStoreCatalogPage: React.FC = () => {
       const [cats, filters] = await Promise.all([b2bApi.getCategories(), b2bApi.getFilters()]);
 
       if (cats && Array.isArray(cats)) {
-        setAvailableCategories(['Toate Produsele', ...cats]);
+        const normalizedCategories = cats
+          .map((cat) => {
+            if (typeof cat === 'string') {
+              return cat.trim();
+            }
+
+            if (cat && typeof cat === 'object' && 'name' in cat) {
+              return String((cat as { name?: unknown }).name || '').trim();
+            }
+
+            return '';
+          })
+          .filter((name) => name.length > 0);
+
+        setAvailableCategories(['Toate Produsele', ...normalizedCategories]);
       }
 
       if (filters) {
@@ -359,12 +378,12 @@ export const B2BStoreCatalogPage: React.FC = () => {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: '#0a0a0f' }}
+        style={{ background: '#f8f9fa' }}
       >
         <div className="text-center max-w-md p-8">
           <Package size={64} className="mx-auto mb-6" style={{ color: '#daa520' }} />
-          <h2 className="text-2xl font-bold text-white mb-3">Catalog Temporar Indisponibil</h2>
-          <p className="text-gray-400 mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Catalog Temporar Indisponibil</h2>
+          <p className="text-gray-500 mb-6">
             Catalogul nostru este momentan în mentenanță. Vă rugăm reveniți în curând.
           </p>
           <Link
@@ -384,12 +403,12 @@ export const B2BStoreCatalogPage: React.FC = () => {
       return (
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ background: '#0a0a0f' }}
+          style={{ background: '#f8f9fa' }}
         >
           <div className="text-center max-w-md p-8">
             <Shield size={64} className="mx-auto mb-6" style={{ color: '#daa520' }} />
-            <h2 className="text-2xl font-bold text-white mb-3">Acces Restricționat</h2>
-            <p className="text-gray-400 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Acces Restricționat</h2>
+            <p className="text-gray-500 mb-6">
               Catalogul este disponibil doar pentru clienții autentificați. Vă rugăm
               autentificați-vă pentru a vedea produsele.
             </p>
@@ -419,31 +438,31 @@ export const B2BStoreCatalogPage: React.FC = () => {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: '#0a0a0f' }}
+        style={{ background: '#f8f9fa' }}
       >
         <div className="text-center">
           <Loader className="animate-spin mx-auto mb-4" size={40} style={{ color: '#daa520' }} />
-          <p style={{ color: '#666' }}>Se încarcă catalogul...</p>
+          <p style={{ color: '#6b7280' }}>Se încarcă catalogul...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ background: '#0a0a0f', minHeight: '100vh' }}>
+    <div style={{ background: '#f8f9fa', minHeight: '100vh' }}>
       {/* Header */}
       <div
         className="py-10"
         style={{
           borderBottom: '1px solid rgba(218,165,32,0.1)',
-          background: 'linear-gradient(180deg, rgba(218,165,32,0.04) 0%, rgba(10,10,15,1) 100%)',
+          background: 'linear-gradient(180deg, rgba(218,165,32,0.06) 0%, #f8f9fa 100%)',
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white">Catalog Produse</h1>
-              <p className="text-sm mt-1" style={{ color: '#666' }}>
+              <h1 className="text-3xl font-bold text-gray-900">Catalog Produse</h1>
+              <p className="text-sm mt-1" style={{ color: '#6b7280' }}>
                 {filteredProducts.length} produse disponibile
               </p>
             </div>
@@ -457,12 +476,12 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none"
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#fff',
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    color: '#111827',
                   }}
                 />
-                <Search className="absolute left-3 top-3 h-4 w-4" style={{ color: '#555' }} />
+                <Search className="absolute left-3 top-3 h-4 w-4" style={{ color: '#9ca3af' }} />
               </div>
               {/* Filter Toggle (Mobile) */}
               <button
@@ -491,11 +510,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
             <div
               className="rounded-2xl p-5"
               style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-white text-sm mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900 text-sm mb-4 flex items-center gap-2">
                 <Package size={14} style={{ color: '#daa520' }} />
                 Categorii
               </h3>
@@ -506,7 +525,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                     onClick={() => setSelectedCategory(cat)}
                     className="w-full text-left px-3 py-2 rounded-lg text-sm transition-all"
                     style={{
-                      color: selectedCategory === cat ? '#daa520' : '#888',
+                      color: selectedCategory === cat ? '#daa520' : '#6b7280',
                       background:
                         selectedCategory === cat ? 'rgba(218,165,32,0.08)' : 'transparent',
                     }}
@@ -521,11 +540,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
             <div
               className="rounded-2xl p-5"
               style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-white text-sm mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900 text-sm mb-4 flex items-center gap-2">
                 <Thermometer size={14} style={{ color: '#daa520' }} />
                 Temperatură Culoare
               </h3>
@@ -539,7 +558,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                       className="rounded"
                       style={{ accentColor: '#daa520' }}
                     />
-                    <span className="text-sm" style={{ color: '#888' }}>
+                    <span className="text-sm" style={{ color: '#6b7280' }}>
                       {opt.label}
                     </span>
                     <span
@@ -551,7 +570,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                             : opt.value === '4000'
                               ? '#fff5e6'
                               : '#e8f4ff',
-                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderColor: '#d1d5db',
                       }}
                     />
                   </label>
@@ -563,11 +582,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
             <div
               className="rounded-2xl p-5"
               style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-white text-sm mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900 text-sm mb-4 flex items-center gap-2">
                 <Droplets size={14} style={{ color: '#daa520' }} />
                 Grad Protecție (IP)
               </h3>
@@ -581,7 +600,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                       className="rounded"
                       style={{ accentColor: '#daa520' }}
                     />
-                    <span className="text-sm" style={{ color: '#888' }}>
+                    <span className="text-sm" style={{ color: '#6b7280' }}>
                       {opt.label}
                     </span>
                   </label>
@@ -593,11 +612,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
             <div
               className="rounded-2xl p-5"
               style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-white text-sm mb-4">Preț (RON)</h3>
+              <h3 className="font-semibold text-gray-900 text-sm mb-4">Preț (RON)</h3>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -606,12 +625,12 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   onChange={(e) => setPriceMin(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#fff',
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    color: '#111827',
                   }}
                 />
-                <span style={{ color: '#555' }}>—</span>
+                <span style={{ color: '#6b7280' }}>—</span>
                 <input
                   type="number"
                   placeholder="Max"
@@ -619,9 +638,9 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   onChange={(e) => setPriceMax(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#fff',
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    color: '#111827',
                   }}
                 />
               </div>
@@ -631,11 +650,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
             <div
               className="rounded-2xl p-5"
               style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-white text-sm mb-4">Disponibilitate</h3>
+              <h3 className="font-semibold text-gray-900 text-sm mb-4">Disponibilitate</h3>
               <div className="space-y-2">
                 {[
                   { label: 'Toate', value: 'all' as const },
@@ -647,7 +666,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                     onClick={() => setStockFilter(opt.value)}
                     className="w-full text-left px-3 py-2 rounded-lg text-sm transition-all"
                     style={{
-                      color: stockFilter === opt.value ? '#daa520' : '#888',
+                      color: stockFilter === opt.value ? '#daa520' : '#6b7280',
                       background:
                         stockFilter === opt.value ? 'rgba(218,165,32,0.08)' : 'transparent',
                     }}
@@ -681,7 +700,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   onClick={() => setViewMode('grid')}
                   className="p-2 rounded-lg transition-all"
                   style={{
-                    color: viewMode === 'grid' ? '#daa520' : '#555',
+                    color: viewMode === 'grid' ? '#daa520' : '#9ca3af',
                     background: viewMode === 'grid' ? 'rgba(218,165,32,0.08)' : 'transparent',
                   }}
                 >
@@ -691,7 +710,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   onClick={() => setViewMode('list')}
                   className="p-2 rounded-lg transition-all"
                   style={{
-                    color: viewMode === 'list' ? '#daa520' : '#555',
+                    color: viewMode === 'list' ? '#daa520' : '#9ca3af',
                     background: viewMode === 'list' ? 'rgba(218,165,32,0.08)' : 'transparent',
                   }}
                 >
@@ -704,9 +723,9 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   onChange={(e) => setSortBy(e.target.value)}
                   className="appearance-none px-4 py-2 pr-8 rounded-xl text-sm focus:outline-none cursor-pointer"
                   style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#aaa',
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    color: '#374151',
                   }}
                 >
                   {sortOptions.map((opt) => (
@@ -718,7 +737,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 <ChevronDown
                   size={14}
                   className="absolute right-3 top-3 pointer-events-none"
-                  style={{ color: '#555' }}
+                  style={{ color: '#9ca3af' }}
                 />
               </div>
             </div>
@@ -740,9 +759,9 @@ export const B2BStoreCatalogPage: React.FC = () => {
             {/* No Results */}
             {!error && filteredProducts.length === 0 && (
               <div className="text-center py-20">
-                <Package size={48} className="mx-auto mb-4" style={{ color: '#333' }} />
-                <p className="text-lg font-medium text-white mb-2">Niciun produs găsit</p>
-                <p className="text-sm mb-4" style={{ color: '#666' }}>
+                <Package size={48} className="mx-auto mb-4" style={{ color: '#9ca3af' }} />
+                <p className="text-lg font-medium text-gray-900 mb-2">Niciun produs găsit</p>
+                <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
                   Încercați alte criterii de căutare.
                 </p>
                 <button
@@ -765,20 +784,20 @@ export const B2BStoreCatalogPage: React.FC = () => {
                       key={product.id}
                       className="rounded-2xl overflow-hidden group transition-all duration-300 hover:-translate-y-1"
                       style={{
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.06)',
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = 'rgba(218,165,32,0.2)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                        e.currentTarget.style.borderColor = '#e5e7eb';
                       }}
                     >
                       {/* Image */}
                       <div
                         className="relative h-52 overflow-hidden"
-                        style={{ background: '#111118' }}
+                        style={{ background: '#f3f4f6' }}
                       >
                         {product.image_url ? (
                           <img
@@ -788,7 +807,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                           />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <Zap size={40} style={{ color: '#222' }} />
+                            <Zap size={40} style={{ color: '#d1d5db' }} />
                           </div>
                         )}
                         {/* Quick View Overlay */}
@@ -805,7 +824,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                           </button>
                         </div>
                         {/* Stock badge */}
-                        {b2bSettings.showStock && product.stock_local > 0 && (
+                        {(b2bSettings.showStock || isAuthenticated) && product.stock_local > 0 && (
                           <div
                             className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide"
                             style={{ background: 'rgba(16, 185, 129, 0.9)', color: '#fff' }}
@@ -825,13 +844,13 @@ export const B2BStoreCatalogPage: React.FC = () => {
                         </p>
                         <Link to={`/b2b-store/product/${product.id}`}>
                           <h3
-                            className="font-bold text-white mb-1 line-clamp-2 hover:underline cursor-pointer leading-snug"
+                            className="font-bold text-gray-900 mb-1 line-clamp-2 hover:underline cursor-pointer leading-snug"
                             title={product.name}
                           >
                             {product.name}
                           </h3>
                         </Link>
-                        <p className="text-xs mb-3" style={{ color: '#555' }}>
+                        <p className="text-xs mb-3" style={{ color: '#6b7280' }}>
                           SKU: {product.sku}
                         </p>
 
@@ -888,7 +907,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                         </div>
 
                         {/* Stock Status */}
-                        {b2bSettings.showStock && (
+                        {(b2bSettings.showStock || isAuthenticated) && (
                           <div className="mb-4 flex flex-col gap-1 text-xs">
                             {product.stock_local > 0 ? (
                               <span
@@ -926,28 +945,38 @@ export const B2BStoreCatalogPage: React.FC = () => {
                                 zile)
                               </span>
                             )}
+                            <span
+                              className="flex items-center gap-1.5"
+                              style={{ color: '#6b7280' }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ background: '#6b7280' }}
+                              />
+                              Total: {getTotalStock(product)} buc
+                            </span>
                           </div>
                         )}
 
                         {/* Price + Cart */}
                         <div
                           className="flex items-center justify-between pt-4"
-                          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+                          style={{ borderTop: '1px solid #e5e7eb' }}
                         >
-                          {b2bSettings.showPrices ? (
+                          {b2bSettings.showPrices || isAuthenticated ? (
                             <div>
                               <div className="text-xl font-bold" style={{ color: '#daa520' }}>
                                 {product.price.toFixed(2)}{' '}
-                                <span className="text-xs font-normal" style={{ color: '#666' }}>
+                                <span className="text-xs font-normal" style={{ color: '#6b7280' }}>
                                   {product.currency}
                                 </span>
                               </div>
-                              <div className="text-[10px]" style={{ color: '#555' }}>
+                              <div className="text-[10px]" style={{ color: '#6b7280' }}>
                                 fără TVA
                               </div>
                             </div>
                           ) : (
-                            <div className="text-sm" style={{ color: '#666' }}>
+                            <div className="text-sm" style={{ color: '#6b7280' }}>
                               Autentifică-te pentru preț
                             </div>
                           )}
@@ -987,20 +1016,20 @@ export const B2BStoreCatalogPage: React.FC = () => {
                       key={product.id}
                       className="rounded-2xl overflow-hidden flex transition-all duration-300"
                       style={{
-                        background: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.06)',
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = 'rgba(218,165,32,0.2)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+                        e.currentTarget.style.borderColor = '#e5e7eb';
                       }}
                     >
                       {/* Image */}
                       <div
                         className="w-36 h-36 md:w-48 md:h-auto flex-shrink-0"
-                        style={{ background: '#111118' }}
+                        style={{ background: '#f3f4f6' }}
                       >
                         {product.image_url ? (
                           <img
@@ -1010,7 +1039,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Zap size={32} style={{ color: '#222' }} />
+                            <Zap size={32} style={{ color: '#d1d5db' }} />
                           </div>
                         )}
                       </div>
@@ -1024,7 +1053,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                             {product.category || 'LED'} · {product.sku}
                           </p>
                           <Link to={`/b2b-store/product/${product.id}`}>
-                            <h3 className="font-bold text-white mb-2 hover:underline">
+                            <h3 className="font-bold text-gray-900 mb-2 hover:underline">
                               {product.name}
                             </h3>
                           </Link>
@@ -1062,7 +1091,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          {b2bSettings.showStock && (
+                          {(b2bSettings.showStock || isAuthenticated) && (
                             <div className="flex gap-4 text-xs">
                               {product.stock_local > 0 && (
                                 <span style={{ color: '#10b981' }}>
@@ -1075,21 +1104,24 @@ export const B2BStoreCatalogPage: React.FC = () => {
                                   z)
                                 </span>
                               )}
+                              <span style={{ color: '#6b7280' }}>
+                                ● Total: {getTotalStock(product)}
+                              </span>
                             </div>
                           )}
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
-                          {b2bSettings.showPrices ? (
+                          {b2bSettings.showPrices || isAuthenticated ? (
                             <div className="text-right">
                               <div className="text-xl font-bold" style={{ color: '#daa520' }}>
                                 {product.price.toFixed(2)} {product.currency}
                               </div>
-                              <div className="text-[10px]" style={{ color: '#555' }}>
+                              <div className="text-[10px]" style={{ color: '#6b7280' }}>
                                 fără TVA
                               </div>
                             </div>
                           ) : (
-                            <div className="text-sm text-right" style={{ color: '#666' }}>
+                            <div className="text-sm text-right" style={{ color: '#6b7280' }}>
                               Autentifică-te
                               <br />
                               pentru preț
@@ -1146,14 +1178,14 @@ export const B2BStoreCatalogPage: React.FC = () => {
           <div
             className="w-full max-w-3xl rounded-2xl overflow-hidden"
             style={{
-              background: '#12121a',
-              border: '1px solid rgba(218,165,32,0.15)',
+              background: '#ffffff',
+              border: '1px solid #e5e7eb',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col md:flex-row">
               {/* Image */}
-              <div className="w-full md:w-1/2 h-64 md:h-auto" style={{ background: '#111118' }}>
+              <div className="w-full md:w-1/2 h-64 md:h-auto" style={{ background: '#f3f4f6' }}>
                 {quickViewProduct.image_url ? (
                   <img
                     src={quickViewProduct.image_url}
@@ -1162,7 +1194,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <Zap size={60} style={{ color: '#222' }} />
+                    <Zap size={60} style={{ color: '#d1d5db' }} />
                   </div>
                 )}
               </div>
@@ -1176,21 +1208,21 @@ export const B2BStoreCatalogPage: React.FC = () => {
                     >
                       {quickViewProduct.category || 'LED'}
                     </p>
-                    <h2 className="text-2xl font-bold text-white">{quickViewProduct.name}</h2>
-                    <p className="text-xs mt-1" style={{ color: '#555' }}>
+                    <h2 className="text-2xl font-bold text-gray-900">{quickViewProduct.name}</h2>
+                    <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
                       SKU: {quickViewProduct.sku}
                     </p>
                   </div>
                   <button
                     onClick={() => setQuickViewProduct(null)}
                     className="p-1.5 rounded-lg"
-                    style={{ color: '#666' }}
+                    style={{ color: '#6b7280' }}
                   >
                     <X size={20} />
                   </button>
                 </div>
 
-                <p className="text-sm mb-6 leading-relaxed" style={{ color: '#777' }}>
+                <p className="text-sm mb-6 leading-relaxed" style={{ color: '#6b7280' }}>
                   {quickViewProduct.description || 'Produs de iluminat LED de înaltă calitate.'}
                 </p>
 
@@ -1252,7 +1284,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 })()}
 
                 {/* Stock */}
-                {b2bSettings.showStock && (
+                {(b2bSettings.showStock || isAuthenticated) && (
                   <div className="mb-6 space-y-1.5 text-sm">
                     {quickViewProduct.stock_local > 0 ? (
                       <span className="flex items-center gap-2" style={{ color: '#10b981' }}>
@@ -1272,28 +1304,26 @@ export const B2BStoreCatalogPage: React.FC = () => {
                         {quickViewProduct.supplier_lead_time} zile)
                       </span>
                     )}
+                    <span className="flex items-center gap-2" style={{ color: '#6b7280' }}>
+                      <span className="w-2 h-2 rounded-full" style={{ background: '#6b7280' }} />
+                      Total: {getTotalStock(quickViewProduct)} buc
+                    </span>
                   </div>
                 )}
 
                 {/* Price */}
-                {b2bSettings.showPrices ? (
-                  <div
-                    className="mb-6 pb-6"
-                    style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-                  >
+                {b2bSettings.showPrices || isAuthenticated ? (
+                  <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #e5e7eb' }}>
                     <div className="text-3xl font-bold" style={{ color: '#daa520' }}>
                       {quickViewProduct.price.toFixed(2)}{' '}
-                      <span className="text-sm font-normal" style={{ color: '#666' }}>
+                      <span className="text-sm font-normal" style={{ color: '#6b7280' }}>
                         {quickViewProduct.currency} fără TVA
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className="mb-6 pb-6"
-                    style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-                  >
-                    <div className="text-lg" style={{ color: '#666' }}>
+                  <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <div className="text-lg" style={{ color: '#6b7280' }}>
                       Autentifică-te pentru a vedea prețul
                     </div>
                   </div>
