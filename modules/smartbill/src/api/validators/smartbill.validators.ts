@@ -52,6 +52,18 @@ export const getProformaSchema = Joi.object({
 
 export const syncStockSchema = Joi.object({});
 
+export const registerCatalogProductSchema = Joi.object({
+  sku: Joi.string().trim().min(1).max(100).required(),
+  name: Joi.string().trim().min(2).max(255).required(),
+  price: Joi.number().positive().optional().default(1),
+  currency: Joi.string().trim().length(3).optional().default('RON'),
+  measuringUnit: Joi.string().trim().min(1).max(50).optional().default('buc'),
+  isService: Joi.boolean().optional().default(false),
+  isTaxIncluded: Joi.boolean().optional().default(true),
+  taxName: Joi.string().trim().min(1).max(100).optional(),
+  taxPercentage: Joi.number().min(0).max(100).optional(),
+});
+
 export const getWarehousesSchema = Joi.object({});
 
 export const getInvoiceStatusSchema = Joi.object({
