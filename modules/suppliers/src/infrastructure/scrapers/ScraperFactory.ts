@@ -4,6 +4,8 @@ import { MasterledScraper } from './MasterledScraper';
 import { AreluxScraper } from './AreluxScraper';
 import { BraytronScraper } from './BraytronScraper';
 import { FslScraper } from './FslScraper';
+import { MplPowerScraper } from './MplPowerScraper';
+import { AzzardoXmlScraper } from './AzzardoXmlScraper';
 import { SupplierCode } from '../../domain';
 
 export class ScraperFactory {
@@ -29,6 +31,12 @@ export class ScraperFactory {
 
       case SupplierCode.FSL:
         return new FslScraper(this.browser);
+
+      case SupplierCode.MPL_POWER:
+        return new MplPowerScraper(this.browser);
+
+      case SupplierCode.AZZARDO:
+        return new AzzardoXmlScraper(this.browser);
 
       default:
         throw new Error(`Unknown supplier code: ${supplierCode}`);
