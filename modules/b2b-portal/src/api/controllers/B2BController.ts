@@ -224,36 +224,43 @@ export class B2BController {
       return 'Diverse';
     }
 
-    if (lower === 'kable ac') {
-      return 'Cabluri AC';
-    }
+    const mappedSubcategories: Record<string, string> = {
+      'kable ac': 'Cabluri AC',
+      'kable dc': 'Cabluri DC',
+      akcesoria: 'Accesorii',
+      falowniki: 'Invertoare',
+      'inwertery domowe': 'Invertoare rezidentiale',
+      czujniki: 'Senzori',
+      bramki: 'Gateway',
+      'panele dotykowe i stacje meteo': 'Panouri tactile si statii meteo',
+      adws: 'ADWS',
+      adin: 'ADIN',
+      gpv: 'GPV',
+      gpvp: 'GPVP',
+      cob: 'COB',
+      hqs: 'HQS',
+      backlight: 'Backlight',
+      'mi-light': 'MI-Light',
+      alulicht: 'ALULICHT',
+      'mw lighting': 'MW LIGHTING',
+      'helios profile led': 'Helios profile LED',
+      'pos-c / -c2': 'POS-C / -C2',
+      'pos adapter/desktop': 'POS Adapter/Desktop',
+      'sunny adapter': 'Sunny Adapter',
+      'led neon': 'LED Neon',
+      azzardo: 'Azzardo',
+      'panouri led': 'Panouri LED',
+      'downlight-uri': 'Downlight-uri',
+      'spoturi led': 'Spoturi LED',
+      'becuri led': 'Becuri LED',
+      'tuburi led': 'Tuburi LED',
+      'proiectoare led': 'Proiectoare LED',
+      'hale & depozite': 'Hale & Depozite',
+    };
 
-    if (lower === 'kable dc') {
-      return 'Cabluri DC';
-    }
-
-    if (lower === 'akcesoria') {
-      return 'Accesorii';
-    }
-
-    if (lower === 'falowniki') {
-      return 'Invertoare';
-    }
-
-    if (lower === 'inwertery domowe') {
-      return 'Invertoare rezidentiale';
-    }
-
-    if (lower === 'czujniki') {
-      return 'Senzori';
-    }
-
-    if (lower === 'bramki') {
-      return 'Gateway';
-    }
-
-    if (lower === 'panele dotykowe i stacje meteo') {
-      return 'Panouri tactile si statii meteo';
+    const mappedSubcategory = mappedSubcategories[lower];
+    if (mappedSubcategory) {
+      return mappedSubcategory;
     }
 
     if (lower.startsWith('kamery ')) {
@@ -268,7 +275,7 @@ export class B2BController {
       return raw.replace(/^inwertery/i, 'Invertoare');
     }
 
-    return raw;
+    return 'Diverse';
   }
 
   async verifyCui(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
