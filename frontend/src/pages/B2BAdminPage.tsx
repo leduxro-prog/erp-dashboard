@@ -14,6 +14,8 @@ import {
   FileText,
   TrendingUp,
   AlertTriangle,
+  Eye,
+  FileCheck2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth.store';
 
@@ -35,6 +37,90 @@ interface TopCustomerRow {
   credit_used: number;
   orders_count: number;
   profitability_method: 'item_cost' | 'estimated_fallback_global_ratio';
+}
+
+interface B2BOrderRow {
+  id: number;
+  order_number: string;
+  status: string;
+  created_at: string;
+  confirmed_at?: string | null;
+  payment_method?: string;
+  payment_status?: string;
+  subtotal: number;
+  discount_amount: number;
+  vat_amount: number;
+  total: number;
+  currency_code: string;
+  smartbill_id?: string | null;
+  customer: {
+    id: number;
+    company_name: string;
+    cui?: string;
+    email?: string;
+    tier?: string;
+    discount_percentage: number;
+  };
+  items_count: number;
+  total_quantity: number;
+  verified: boolean;
+}
+
+interface B2BOrderDetails extends B2BOrderRow {
+  payment_due_date?: string;
+  payment_terms_days: number;
+  customer_type: string;
+  notes?: string;
+  internal_notes?: string;
+  model: {
+    seller: {
+      company_name: string;
+      cui: string;
+      reg_com: string;
+      address: string;
+      email: string;
+      phone: string;
+      logo_url: string;
+    };
+    client: {
+      company_name: string;
+      cui?: string;
+      reg_com?: string;
+      address?: string;
+      contact_person?: string;
+      email?: string;
+      phone?: string;
+      tier?: string;
+      customer_type: string;
+    };
+    payment: {
+      method?: string;
+      status?: string;
+      due_date?: string;
+      terms_days: number;
+    };
+    pricing: {
+      subtotal: number;
+      discount_amount: number;
+      discount_percentage: number;
+      vat_amount: number;
+      total: number;
+      currency_code: string;
+    };
+    items: Array<{
+      id: number;
+      product_id: number;
+      product_name: string;
+      sku: string;
+      quantity_ordered: number;
+      stock_local: number;
+      stock_supplier: number;
+      unit_price: number;
+      total_price: number;
+      discount_percent: number;
+      stock_source: string;
+    }>;
+  };
 }
 
 const CustomerDetails: React.FC<CustomerDetailsProps> = ({ id, onClose, onRefresh }) => {
@@ -99,7 +185,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ id, onClose, onRefres
   return (
     <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
       {/* Header */}
-      <div className="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
+      <div className="bg-slate-900 px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 text-white">
         <div className="flex items-center gap-4">
           <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full transition">
             <ArrowLeft size={20} />
@@ -111,7 +197,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ id, onClose, onRefres
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 self-end sm:self-auto">
           <button onClick={fetchDetails} className="p-2 hover:bg-slate-800 rounded-full transition">
             <RefreshCw size={18} />
           </button>
@@ -128,7 +214,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ id, onClose, onRefres
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto">
+      <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto whitespace-nowrap">
         {[
           { id: 'profile', label: 'Profil Comercial', icon: Building2 },
           { id: 'credit', label: 'Credit & Plăți', icon: CreditCard },
@@ -154,7 +240,7 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ id, onClose, onRefres
       </div>
 
       {/* Content */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {activeTab === 'profile' && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -587,9 +673,15 @@ const CustomerDetails: React.FC<CustomerDetailsProps> = ({ id, onClose, onRefres
 };
 
 export const B2BAdminPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'customers' | 'registrations'>('customers');
+  const [activeTab, setActiveTab] = useState<'customers' | 'registrations' | 'orders'>('customers');
   const [customers, setCustomers] = useState<any[]>([]);
   const [registrations, setRegistrations] = useState<any[]>([]);
+  const [orders, setOrders] = useState<B2BOrderRow[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<B2BOrderDetails | null>(null);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [verifyLoadingId, setVerifyLoadingId] = useState<number | null>(null);
+  const [proformaLoadingId, setProformaLoadingId] = useState<number | null>(null);
+  const [pdfLoadingId, setPdfLoadingId] = useState<number | null>(null);
   const [topCustomers, setTopCustomers] = useState<TopCustomerRow[]>([]);
   const [topMetric, setTopMetric] = useState<
     'revenue' | 'profit' | 'margin' | 'unpaid' | 'credit_used'
@@ -605,6 +697,8 @@ export const B2BAdminPage: React.FC = () => {
   useEffect(() => {
     if (activeTab === 'customers') {
       loadCustomers();
+    } else if (activeTab === 'orders') {
+      loadOrders();
     } else {
       loadRegistrations();
     }
@@ -660,6 +754,108 @@ export const B2BAdminPage: React.FC = () => {
     }
   };
 
+  const loadOrders = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/v1/b2b-admin/orders', {
+        params: { search },
+      });
+      setOrders(response.data?.data?.orders || []);
+      if (selectedOrder) {
+        const fresh = (response.data?.data?.orders || []).find(
+          (order: B2BOrderRow) => order.id === selectedOrder.id,
+        );
+        if (!fresh) {
+          setSelectedOrder(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load B2B orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadOrderDetails = async (orderId: number) => {
+    setOrderLoading(true);
+    try {
+      const response = await axios.get(`/api/v1/b2b-admin/orders/${orderId}`);
+      setSelectedOrder(response.data?.data || null);
+    } catch (error) {
+      console.error('Failed to load B2B order details:', error);
+      alert('Nu s-au putut încărca detaliile comenzii B2B');
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+  const handleVerifyOrder = async (orderId: number) => {
+    const note = prompt('Notă verificare manuală (opțional):', 'Comandă verificată manual în ERP');
+    if (note === null) return;
+
+    setVerifyLoadingId(orderId);
+    try {
+      await axios.post(`/api/v1/b2b-admin/orders/${orderId}/verify`, {
+        note,
+      });
+      await loadOrders();
+      await loadOrderDetails(orderId);
+      alert('Comanda a fost marcată ca verificată manual.');
+    } catch (error: any) {
+      console.error('Failed to verify order:', error);
+      alert(error?.response?.data?.error || 'Nu s-a putut verifica comanda.');
+    } finally {
+      setVerifyLoadingId(null);
+    }
+  };
+
+  const handleCreateProformaFromOrder = async (orderId: number) => {
+    setProformaLoadingId(orderId);
+    try {
+      const response = await axios.post(`/api/v1/smartbill/proformas/from-b2b-order/${orderId}`, {
+        dueInDays: 30,
+      });
+
+      const payload = response.data?.data || response.data;
+      await loadOrders();
+      await loadOrderDetails(orderId);
+      alert(`Proforma SmartBill creată: ${payload?.proformaNumber || payload?.number || '-'}`);
+    } catch (error: any) {
+      console.error('Failed to create proforma from B2B order:', error);
+      alert(
+        error?.response?.data?.error?.message ||
+          error?.response?.data?.error ||
+          'Nu s-a putut genera proforma SmartBill.',
+      );
+    } finally {
+      setProformaLoadingId(null);
+    }
+  };
+
+  const handleDownloadOrderModelPdf = async (orderId: number, orderNumber: string) => {
+    setPdfLoadingId(orderId);
+    try {
+      const response = await axios.get(`/api/v1/b2b-admin/orders/${orderId}/model-pdf`, {
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `model_comanda_b2b_${orderNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download B2B order model PDF:', error);
+      alert('Nu s-a putut descărca PDF-ul modelului de comandă.');
+    } finally {
+      setPdfLoadingId(null);
+    }
+  };
+
   const handleApprove = async (id: number) => {
     if (!canManage) return;
     if (!confirm('Approve this registration?')) return;
@@ -692,9 +888,22 @@ export const B2BAdminPage: React.FC = () => {
     }
   };
 
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return '-';
+    return new Date(value).toLocaleString('ro-RO');
+  };
+
+  const formatMoney = (value: number, currency = 'RON') => {
+    return new Intl.NumberFormat('ro-RO', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(value || 0);
+  };
+
   if (selectedCustomerId) {
     return (
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <CustomerDetails
           id={selectedCustomerId}
           onClose={() => setSelectedCustomerId(null)}
@@ -705,22 +914,26 @@ export const B2BAdminPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">B2B Management</h1>
-          {activeTab === 'customers' && (
-            <div className="flex gap-2">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">B2B Management</h1>
+          {(activeTab === 'customers' || activeTab === 'orders') && (
+            <div className="flex w-full lg:w-auto gap-2">
               <input
                 type="text"
-                placeholder="Search customers..."
+                placeholder={
+                  activeTab === 'orders' ? 'Caută comenzi B2B...' : 'Search customers...'
+                }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && loadCustomers()}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                onKeyPress={(e) =>
+                  e.key === 'Enter' && (activeTab === 'orders' ? loadOrders() : loadCustomers())
+                }
+                className="w-full lg:w-72 px-4 py-2 border border-gray-300 rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500"
               />
               <button
-                onClick={loadCustomers}
+                onClick={activeTab === 'orders' ? loadOrders : loadCustomers}
                 className="p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition"
               >
                 <RefreshCw size={18} className="text-gray-600" />
@@ -731,7 +944,7 @@ export const B2BAdminPage: React.FC = () => {
 
         {/* Tabs */}
         <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
+          <nav className="flex -mb-px overflow-x-auto whitespace-nowrap">
             <button
               onClick={() => setActiveTab('customers')}
               className={`px-6 py-3 text-sm font-medium ${
@@ -752,11 +965,21 @@ export const B2BAdminPage: React.FC = () => {
             >
               Pending Registrations ({registrations.length})
             </button>
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`px-6 py-3 text-sm font-medium ${
+                activeTab === 'orders'
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Comenzi B2B ({orders.length})
+            </button>
           </nav>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {activeTab === 'customers' ? (
             <div>
               <div className="mb-6 rounded-xl border border-gray-200 bg-gradient-to-br from-slate-50 to-white p-5">
@@ -771,7 +994,7 @@ export const B2BAdminPage: React.FC = () => {
                       costurile reale pe produs).
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     <select
                       value={topMetric}
                       onChange={(e) => setTopMetric(e.target.value as any)}
@@ -947,6 +1170,342 @@ export const B2BAdminPage: React.FC = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'orders' ? (
+            <div className="space-y-6">
+              {loading ? (
+                <p className="text-gray-500 text-center py-8">Se încarcă comenzile B2B...</p>
+              ) : orders.length === 0 ? (
+                <p className="text-gray-500 text-center py-12">Nu există comenzi B2B.</p>
+              ) : (
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left text-xs font-bold text-gray-500 uppercase tracking-wider px-4 py-3">
+                          Comandă
+                        </th>
+                        <th className="text-left text-xs font-bold text-gray-500 uppercase tracking-wider px-4 py-3">
+                          Client
+                        </th>
+                        <th className="text-left text-xs font-bold text-gray-500 uppercase tracking-wider px-4 py-3">
+                          Plată
+                        </th>
+                        <th className="text-right text-xs font-bold text-gray-500 uppercase tracking-wider px-4 py-3">
+                          Total
+                        </th>
+                        <th className="text-left text-xs font-bold text-gray-500 uppercase tracking-wider px-4 py-3">
+                          Status
+                        </th>
+                        <th className="text-right text-xs font-bold text-gray-500 uppercase tracking-wider px-4 py-3">
+                          Acțiuni
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {orders.map((order) => (
+                        <tr key={order.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-bold text-gray-900">{order.order_number}</p>
+                            <p className="text-xs text-gray-500">
+                              {formatDateTime(order.created_at)}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {order.customer.company_name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {order.customer.cui || '-'} • Tier {order.customer.tier || '-'}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            <p>{order.payment_method || '-'}</p>
+                            <p className="text-xs text-gray-500">{order.payment_status || '-'}</p>
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-gray-900">
+                            {formatMoney(order.total, order.currency_code)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-1">
+                              <span className="inline-flex px-2 py-1 text-[10px] font-bold rounded-full bg-slate-100 text-slate-700 w-fit">
+                                {order.status}
+                              </span>
+                              <span
+                                className={`inline-flex px-2 py-1 text-[10px] font-bold rounded-full w-fit ${
+                                  order.verified
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-amber-100 text-amber-700'
+                                }`}
+                              >
+                                {order.verified ? 'Verificată' : 'Neverificată'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => loadOrderDetails(order.id)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-bold hover:bg-blue-700"
+                              >
+                                <Eye size={14} /> Vezi Model
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleDownloadOrderModelPdf(order.id, order.order_number)
+                                }
+                                disabled={pdfLoadingId === order.id}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-200 text-blue-700 rounded-md text-xs font-bold hover:bg-blue-50 disabled:opacity-50"
+                              >
+                                {pdfLoadingId === order.id ? 'PDF...' : 'PDF'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {selectedOrder && (
+                <div className="border border-slate-300 rounded-xl bg-white shadow-sm overflow-hidden">
+                  <div className="px-4 sm:px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                        Model Comandă B2B - {selectedOrder.order_number}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Creată: {formatDateTime(selectedOrder.created_at)} • Tip client:{' '}
+                        {selectedOrder.customer_type}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => window.print()}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-xs font-semibold hover:bg-gray-100"
+                      >
+                        Printează Model
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleDownloadOrderModelPdf(selectedOrder.id, selectedOrder.order_number)
+                        }
+                        disabled={pdfLoadingId === selectedOrder.id}
+                        className="px-3 py-2 border border-blue-200 text-blue-700 rounded-md text-xs font-semibold hover:bg-blue-50 disabled:opacity-50"
+                      >
+                        {pdfLoadingId === selectedOrder.id
+                          ? 'Generez PDF...'
+                          : 'Descarcă PDF model'}
+                      </button>
+                      <button
+                        onClick={() => handleVerifyOrder(selectedOrder.id)}
+                        disabled={verifyLoadingId === selectedOrder.id || selectedOrder.verified}
+                        className="px-3 py-2 bg-emerald-600 text-white rounded-md text-xs font-bold hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        {verifyLoadingId === selectedOrder.id
+                          ? 'Se verifică...'
+                          : selectedOrder.verified
+                            ? 'Verificată manual'
+                            : 'Marchează verificată'}
+                      </button>
+                      <button
+                        onClick={() => handleCreateProformaFromOrder(selectedOrder.id)}
+                        disabled={proformaLoadingId === selectedOrder.id || !selectedOrder.verified}
+                        className="px-3 py-2 bg-orange-600 text-white rounded-md text-xs font-bold hover:bg-orange-700 disabled:opacity-50"
+                      >
+                        {proformaLoadingId === selectedOrder.id
+                          ? 'Generez proforma...'
+                          : 'Transformă în Proforma SmartBill'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {orderLoading ? (
+                    <p className="text-sm text-gray-500 p-6">Se încarcă modelul comenzii...</p>
+                  ) : (
+                    <div className="p-4 sm:p-6 space-y-6">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 border-b border-gray-200 pb-6">
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={selectedOrder.model.seller.logo_url}
+                            alt="Ledux logo"
+                            className="h-12 w-auto"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">
+                              {selectedOrder.model.seller.company_name}
+                            </p>
+                            <p className="text-xs text-slate-600">
+                              CUI: {selectedOrder.model.seller.cui} • RC:{' '}
+                              {selectedOrder.model.seller.reg_com}
+                            </p>
+                            <p className="text-xs text-slate-600">
+                              {selectedOrder.model.seller.address}
+                            </p>
+                            <p className="text-xs text-slate-600">
+                              {selectedOrder.model.seller.email} •{' '}
+                              {selectedOrder.model.seller.phone}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-sm text-slate-700 space-y-1">
+                          <p>
+                            <span className="font-semibold">Client:</span>{' '}
+                            {selectedOrder.model.client.company_name}
+                          </p>
+                          <p>
+                            <span className="font-semibold">CUI:</span>{' '}
+                            {selectedOrder.model.client.cui || '-'}
+                          </p>
+                          <p>
+                            <span className="font-semibold">Persoană contact:</span>{' '}
+                            {selectedOrder.model.client.contact_person || '-'}
+                          </p>
+                          <p>
+                            <span className="font-semibold">Email:</span>{' '}
+                            {selectedOrder.model.client.email || '-'}
+                          </p>
+                          <p>
+                            <span className="font-semibold">Tip client:</span>{' '}
+                            {selectedOrder.customer_type}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                          <p className="text-xs uppercase text-slate-500 font-bold">
+                            Plată selectată
+                          </p>
+                          <p className="font-semibold text-slate-900 mt-1">
+                            {selectedOrder.model.payment.method || '-'}
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                          <p className="text-xs uppercase text-slate-500 font-bold">Scadență</p>
+                          <p className="font-semibold text-slate-900 mt-1">
+                            {formatDateTime(selectedOrder.model.payment.due_date)}
+                          </p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                          <p className="text-xs uppercase text-slate-500 font-bold">
+                            Discount client
+                          </p>
+                          <p className="font-semibold text-slate-900 mt-1">
+                            {selectedOrder.model.pricing.discount_percentage.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-gray-500">
+                                Produs
+                              </th>
+                              <th className="px-3 py-2 text-left text-[10px] font-bold uppercase text-gray-500">
+                                Cod produs
+                              </th>
+                              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-gray-500">
+                                Cant. comandată
+                              </th>
+                              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-gray-500">
+                                Stoc local
+                              </th>
+                              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-gray-500">
+                                Stoc furnizor
+                              </th>
+                              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-gray-500">
+                                Preț unitar
+                              </th>
+                              <th className="px-3 py-2 text-right text-[10px] font-bold uppercase text-gray-500">
+                                Preț total
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 bg-white">
+                            {selectedOrder.model.items.map((item) => (
+                              <tr key={item.id}>
+                                <td className="px-3 py-2 text-sm text-slate-900 font-medium">
+                                  {item.product_name}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-slate-700">{item.sku}</td>
+                                <td className="px-3 py-2 text-sm text-right">
+                                  {item.quantity_ordered}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-right">{item.stock_local}</td>
+                                <td className="px-3 py-2 text-sm text-right">
+                                  {item.stock_supplier}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-right">
+                                  {formatMoney(
+                                    item.unit_price,
+                                    selectedOrder.model.pricing.currency_code,
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-right font-semibold">
+                                  {formatMoney(
+                                    item.total_price,
+                                    selectedOrder.model.pricing.currency_code,
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="max-w-sm ml-auto space-y-2 text-sm w-full">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Subtotal</span>
+                          <span className="font-semibold">
+                            {formatMoney(
+                              selectedOrder.model.pricing.subtotal,
+                              selectedOrder.model.pricing.currency_code,
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Discount final</span>
+                          <span className="font-semibold text-emerald-700">
+                            -
+                            {formatMoney(
+                              selectedOrder.model.pricing.discount_amount,
+                              selectedOrder.model.pricing.currency_code,
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">TVA</span>
+                          <span className="font-semibold">
+                            {formatMoney(
+                              selectedOrder.model.pricing.vat_amount,
+                              selectedOrder.model.pricing.currency_code,
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-slate-200 pt-2">
+                          <span className="font-bold text-slate-900">Total</span>
+                          <span className="font-black text-blue-700">
+                            {formatMoney(
+                              selectedOrder.model.pricing.total,
+                              selectedOrder.model.pricing.currency_code,
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-500 border-t border-slate-200 pt-3 flex items-center gap-2">
+                        <FileCheck2 size={14} />
+                        Comanda trebuie verificată manual înainte de transformare în proforma
+                        SmartBill.
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

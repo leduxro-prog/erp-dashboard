@@ -1,118 +1,231 @@
-import { BarChart, ShoppingCart, TrendingUp, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart, ShoppingCart, TrendingUp, AlertCircle, Loader2 } from 'lucide-react';
 import { KPICard } from '@/components/ui/KPICard';
 import { Chart } from '@/components/ui/Chart';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { apiClient } from '@/services/api';
 
-interface RecentOrder {
-  id: string;
-  orderNumber: string;
-  customer: string;
-  amount: number;
-  status: 'pending' | 'processing' | 'completed';
-  date: string;
+interface SalesMetrics {
+  total_revenue: number;
+  revenue_growth: number;
+  total_orders: number;
+  orders_growth: number;
+  average_order_value: number;
+  aov_change: number;
+  conversion_rate: number;
+  conversion_change: number;
+  customer_acquisition_cost: number;
+  cac_change: number;
+  lifetime_value: number;
+  top_products: Array<{ product_id: string; name: string; revenue: number }>;
 }
 
-const mockOrders: RecentOrder[] = [
-  {
-    id: '1',
-    orderNumber: 'ORD-2024-001',
-    customer: 'ACME Corp',
-    amount: 2500.0,
-    status: 'completed',
-    date: '2024-02-05',
-  },
-  {
-    id: '2',
-    orderNumber: 'ORD-2024-002',
-    customer: 'TechStart Inc',
-    amount: 1850.5,
-    status: 'processing',
-    date: '2024-02-04',
-  },
-  {
-    id: '3',
-    orderNumber: 'ORD-2024-003',
-    customer: 'Global Solutions',
-    amount: 3200.0,
-    status: 'pending',
-    date: '2024-02-03',
-  },
-];
+interface InventoryMetrics {
+  total_stock_value: number;
+  stock_value_change: number;
+  inventory_turnover: number;
+  turnover_change: number;
+  stock_out_items: number;
+  low_stock_items: number;
+  excess_stock_items: number;
+  inventory_accuracy: number;
+  warehouse_utilization: number;
+}
 
-const chartData = [
-  { name: 'Week 1', sales: 2400, orders: 24 },
-  { name: 'Week 2', sales: 1398, orders: 21 },
-  { name: 'Week 3', sales: 9800, orders: 29 },
-  { name: 'Week 4', sales: 3908, orders: 20 },
-];
+interface OrderSummary {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  status: string;
+  grand_total: number;
+  currency: string;
+  created_at: string;
+  payment_status: string;
+}
 
-const sparklineData = [
-  { value: 400 },
-  { value: 600 },
-  { value: 500 },
-  { value: 700 },
-  { value: 650 },
-];
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('ro-RO', {
+    style: 'currency',
+    currency: 'RON',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
-const columns: Column<RecentOrder>[] = [
-  { key: 'orderNumber', label: 'Order Number', sortable: true },
-  { key: 'customer', label: 'Customer', sortable: true },
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat('ro-RO').format(value);
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('ro-RO', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
+const columns: Column<OrderSummary>[] = [
+  { key: 'order_number', label: 'Numar Comanda', sortable: true },
+  { key: 'customer_name', label: 'Client', sortable: true },
   {
-    key: 'amount',
-    label: 'Amount',
+    key: 'grand_total',
+    label: 'Total',
     sortable: true,
-    render: (value) => `$${value.toFixed(2)}`,
+    render: (value: number) => formatCurrency(value),
   },
   {
     key: 'status',
     label: 'Status',
-    render: (value) => <StatusBadge status={value} />,
+    render: (value: string) => <StatusBadge status={value} />,
   },
-  { key: 'date', label: 'Date', sortable: true },
+  {
+    key: 'created_at',
+    label: 'Data',
+    sortable: true,
+    render: (value: string) => formatDate(value),
+  },
 ];
 
 export function DashboardPage() {
-  return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-text-primary">Dashboard</h1>
-          <p className="text-text-secondary mt-1">Welcome back! Here's an overview of your business.</p>
+  const [salesKPI, setSalesKPI] = useState<SalesMetrics | null>(null);
+  const [inventoryKPI, setInventoryKPI] = useState<InventoryMetrics | null>(null);
+  const [recentOrders, setRecentOrders] = useState<OrderSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      setLoading(true);
+      setError(null);
+
+      const [salesResult, inventoryResult, ordersResult] = await Promise.allSettled([
+        apiClient.get<{ success: boolean; data: { metrics: SalesMetrics } }>(
+          '/analytics/kpi/sales',
+        ),
+        apiClient.get<{ success: boolean; data: { metrics: InventoryMetrics } }>(
+          '/analytics/kpi/inventory',
+        ),
+        apiClient.get<{
+          success: boolean;
+          data: OrderSummary[];
+          meta: { pagination: { total: number } };
+        }>('/orders?page=1&limit=5'),
+      ]);
+
+      const errors: string[] = [];
+
+      if (salesResult.status === 'fulfilled' && salesResult.value?.data?.metrics) {
+        setSalesKPI(salesResult.value.data.metrics);
+      } else {
+        errors.push('Eroare la incarcarea KPI vanzari');
+      }
+
+      if (inventoryResult.status === 'fulfilled' && inventoryResult.value?.data?.metrics) {
+        setInventoryKPI(inventoryResult.value.data.metrics);
+      } else {
+        errors.push('Eroare la incarcarea KPI inventar');
+      }
+
+      if (ordersResult.status === 'fulfilled' && ordersResult.value?.data) {
+        const ordersData = ordersResult.value.data;
+        setRecentOrders(Array.isArray(ordersData) ? ordersData : []);
+      } else {
+        errors.push('Eroare la incarcarea comenzilor recente');
+      }
+
+      if (errors.length > 0) {
+        setError(errors.join('. '));
+      }
+
+      setLoading(false);
+    }
+
+    fetchDashboardData();
+  }, []);
+
+  const chartData = salesKPI?.top_products?.length
+    ? salesKPI.top_products.map((p) => ({
+        name: p.name,
+        revenue: p.revenue,
+      }))
+    : [{ name: 'N/A', revenue: 0 }];
+
+  const inventoryChartData = inventoryKPI
+    ? [
+        { name: 'Stoc epuizat', items: inventoryKPI.stock_out_items },
+        { name: 'Stoc redus', items: inventoryKPI.low_stock_items },
+        { name: 'Stoc in exces', items: inventoryKPI.excess_stock_items },
+      ]
+    : [{ name: 'N/A', items: 0 }];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          <p className="text-text-secondary">Se incarca datele...</p>
         </div>
-        <button className="btn-primary">Export Report</button>
       </div>
+    );
+  }
+
+  return (
+    <div className="p-3 sm:p-4 lg:p-8 space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary">Dashboard</h1>
+          <p className="text-text-secondary mt-1">
+            Bun venit! Iata o privire de ansamblu asupra afacerii tale.
+          </p>
+        </div>
+        <button className="btn-primary w-full sm:w-auto">Export Raport</button>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-accent-warning/30 bg-accent-warning/10 px-4 py-3 text-sm text-accent-warning">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KPICard
           icon={<ShoppingCart size={20} />}
-          title="Total Orders"
-          value="1,234"
-          change={{ value: 12, isPositive: true }}
-          sparklineData={sparklineData}
+          title="Total Comenzi"
+          value={salesKPI ? formatNumber(salesKPI.total_orders) : '0'}
+          change={{
+            value: salesKPI?.orders_growth ?? 0,
+            isPositive: (salesKPI?.orders_growth ?? 0) >= 0,
+          }}
         />
         <KPICard
           icon={<TrendingUp size={20} />}
-          title="Revenue"
-          value="$45,230"
-          change={{ value: 8, isPositive: true }}
+          title="Venituri"
+          value={salesKPI ? formatCurrency(salesKPI.total_revenue) : '0 RON'}
+          change={{
+            value: salesKPI?.revenue_growth ?? 0,
+            isPositive: (salesKPI?.revenue_growth ?? 0) >= 0,
+          }}
           color="success"
-          sparklineData={sparklineData}
         />
         <KPICard
           icon={<BarChart size={20} />}
-          title="Average Order Value"
-          value="$367"
-          change={{ value: 3, isPositive: false }}
-          sparklineData={sparklineData}
+          title="Valoare Medie Comanda"
+          value={salesKPI ? formatCurrency(salesKPI.average_order_value) : '0 RON'}
+          change={{
+            value: salesKPI?.aov_change ?? 0,
+            isPositive: (salesKPI?.aov_change ?? 0) >= 0,
+          }}
         />
         <KPICard
           icon={<AlertCircle size={20} />}
-          title="Pending Orders"
-          value="23"
-          change={{ value: 5, isPositive: true }}
+          title="Produse Stoc Redus"
+          value={inventoryKPI ? formatNumber(inventoryKPI.low_stock_items) : '0'}
+          change={{
+            value: inventoryKPI?.stock_value_change ?? 0,
+            isPositive: (inventoryKPI?.stock_value_change ?? 0) >= 0,
+          }}
           color="warning"
-          sparklineData={sparklineData}
         />
       </div>
 
@@ -120,24 +233,29 @@ export function DashboardPage() {
         <Chart
           type="bar"
           data={chartData}
-          dataKey="sales"
+          dataKey="revenue"
           xAxisKey="name"
-          title="Weekly Sales"
+          title="Venituri per Produs (Top)"
           height={300}
         />
         <Chart
-          type="line"
-          data={chartData}
-          dataKey="orders"
+          type="bar"
+          data={inventoryChartData}
+          dataKey="items"
           xAxisKey="name"
-          title="Weekly Orders"
+          title="Stare Inventar"
           height={300}
+          colors={['#FF9500']}
         />
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">Recent Orders</h2>
-        <DataTable columns={columns} data={mockOrders} />
+        <h2 className="text-lg font-semibold text-text-primary mb-4">Comenzi Recente</h2>
+        {recentOrders.length > 0 ? (
+          <DataTable columns={columns} data={recentOrders} />
+        ) : (
+          <div className="card p-8 text-center text-text-secondary">Nu exista comenzi recente.</div>
+        )}
       </div>
     </div>
   );

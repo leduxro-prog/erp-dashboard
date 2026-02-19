@@ -203,7 +203,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-gray-800 border border-gray-600 rounded-xl shadow-2xl w-full max-w-2xl mx-4 p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-gray-800 border border-gray-600 rounded-xl shadow-2xl w-full max-w-2xl mx-3 sm:mx-4 p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="min-w-0">
@@ -241,7 +241,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
         )}
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-700">
+        <div className="flex border-b border-gray-700 overflow-x-auto">
           <button
             onClick={() => setTab('search')}
             className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 ${
@@ -315,7 +315,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
                 <p className="text-sm text-gray-300">
                   {candidates.length} imagini gasite — click pentru a selecta:
                 </p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {candidates.map((c, idx) => (
                     <button
                       key={idx}
@@ -407,7 +407,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+              className={`border-2 border-dashed rounded-xl p-5 sm:p-8 text-center cursor-pointer transition-all ${
                 dragOver
                   ? 'border-blue-400 bg-blue-400/10'
                   : preview
@@ -886,29 +886,29 @@ export function ProductsPage() {
   }, [products, statusFilter, appliedPriceMin, appliedPriceMax, sortBy]);
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 lg:p-8 space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-white">Produse</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white">Produse</h1>
           <p className="text-gray-300 mt-1">Catalog produse — {total.toLocaleString()} produse</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex w-full lg:w-auto flex-col sm:flex-row gap-3">
           <button
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center justify-center gap-2"
             onClick={fetchProducts}
             disabled={loading}
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             Actualizeaza
           </button>
-          <button className="btn-primary flex items-center gap-2">
+          <button className="btn-primary flex items-center justify-center gap-2">
             <Plus size={18} />
             Adauga Produs
           </button>
         </div>
       </div>
 
-      <div className="relative max-w-md">
+      <div className="relative w-full sm:max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
@@ -923,7 +923,7 @@ export function ProductsPage() {
       </div>
 
       {/* Filters row */}
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="flex flex-col xl:flex-row xl:flex-wrap gap-3 xl:items-center">
         <Filter size={16} className="text-gray-400" />
 
         {/* Category dropdown */}
@@ -934,7 +934,7 @@ export function ProductsPage() {
             setSpecificFilters({});
             setPage(1);
           }}
-          className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full sm:w-auto bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">Toate categoriile</option>
           {categories.map((cat) => (
@@ -945,12 +945,12 @@ export function ProductsPage() {
         </select>
 
         {/* Status pill buttons */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto pb-1">
           {STATUS_OPTIONS.map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                 statusFilter === s
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -962,14 +962,14 @@ export function ProductsPage() {
         </div>
 
         {/* Price range */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-gray-400">Pret:</span>
           <input
             type="number"
             placeholder="Min"
             value={priceMin}
             onChange={(e) => setPriceMin(e.target.value)}
-            className="w-24 bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-24 sm:w-28 bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           <span className="text-gray-500">-</span>
           <input
@@ -977,7 +977,7 @@ export function ProductsPage() {
             placeholder="Max"
             value={priceMax}
             onChange={(e) => setPriceMax(e.target.value)}
-            className="w-24 bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-24 sm:w-28 bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           <span className="text-xs text-gray-500">RON</span>
           <button
@@ -992,7 +992,7 @@ export function ProductsPage() {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full sm:w-auto bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           {(Object.entries(SORT_LABELS) as [SortOption, string][]).map(([key, label]) => (
             <option key={key} value={key}>
@@ -1003,7 +1003,7 @@ export function ProductsPage() {
 
         {/* Active filter count + reset */}
         {activeFilterCount > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2 xl:ml-auto">
             <span className="text-sm text-blue-400 font-medium">
               {activeFilterCount} {activeFilterCount === 1 ? 'filtru activ' : 'filtre active'}
             </span>
@@ -1111,7 +1111,7 @@ export function ProductsPage() {
           />
 
           {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-700">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4 pt-4 border-t border-gray-700">
               <p className="text-sm text-gray-300">
                 Pagina {page} din {totalPages} ({total.toLocaleString()} produse)
               </p>
@@ -1171,7 +1171,7 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-blue-400">{bulkResult.searched}</p>
                   <p className="text-xs text-gray-400 mt-1">Cautate</p>

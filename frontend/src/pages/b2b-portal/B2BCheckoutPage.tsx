@@ -304,7 +304,7 @@ export const B2BCheckoutPage: React.FC = () => {
   };
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center mb-8">
+    <div className="flex items-center justify-center mb-8 overflow-x-auto pb-2">
       {[1, 2, 3].map((s) => (
         <React.Fragment key={s}>
           <div
@@ -324,7 +324,9 @@ export const B2BCheckoutPage: React.FC = () => {
               s
             )}
           </div>
-          {s < 3 && <div className={`w-16 h-1 mx-2 ${step > s ? 'bg-blue-600' : 'bg-gray-200'}`} />}
+          {s < 3 && (
+            <div className={`w-10 sm:w-16 h-1 mx-2 ${step > s ? 'bg-blue-600' : 'bg-gray-200'}`} />
+          )}
         </React.Fragment>
       ))}
     </div>
@@ -332,7 +334,7 @@ export const B2BCheckoutPage: React.FC = () => {
 
   if (step === 4 && checkoutResult) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-8 sm:py-12 px-3 sm:px-0">
         <div className="mb-6">
           <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
             <svg
@@ -350,12 +352,14 @@ export const B2BCheckoutPage: React.FC = () => {
             </svg>
           </div>
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Order Placed Successfully!</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+          Order Placed Successfully!
+        </h2>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 inline-block">
           <p className="text-sm text-gray-600 mb-2">Order Number</p>
           <p className="text-3xl font-bold text-blue-600">{checkoutResult.order_number}</p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-3xl mx-auto mb-8">
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-sm text-gray-500">Total</p>
             <p className="text-lg font-semibold">{formatPrice(checkoutResult.total)}</p>
@@ -377,16 +381,16 @@ export const B2BCheckoutPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex justify-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
           <button
             onClick={() => navigate('/b2b-portal/orders')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto"
           >
             View Orders
           </button>
           <button
             onClick={() => navigate('/b2b-portal/catalog')}
-            className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 w-full sm:w-auto"
           >
             Continue Shopping
           </button>
@@ -396,8 +400,8 @@ export const B2BCheckoutPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">B2B Checkout</h1>
+    <div className="max-w-6xl mx-auto px-1 sm:px-0">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">B2B Checkout</h1>
 
       {renderStepIndicator()}
 
@@ -418,7 +422,7 @@ export const B2BCheckoutPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2">
           {step === 1 && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -510,7 +514,7 @@ export const B2BCheckoutPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Saved Addresses
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {savedAddresses.map((addr) => (
                       <button
                         key={addr.id}
@@ -554,7 +558,7 @@ export const B2BCheckoutPage: React.FC = () => {
                     }
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
                     <input
@@ -589,7 +593,7 @@ export const B2BCheckoutPage: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Contact Name *
@@ -641,10 +645,10 @@ export const B2BCheckoutPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-4 mt-6">
+              <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 w-full sm:w-auto"
                 >
                   Back
                 </button>
@@ -731,10 +735,10 @@ export const B2BCheckoutPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-4 mt-6">
+              <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <button
                   onClick={() => setStep(2)}
-                  className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 w-full sm:w-auto"
                 >
                   Back
                 </button>
@@ -791,7 +795,7 @@ export const B2BCheckoutPage: React.FC = () => {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:sticky lg:top-6">
             <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
 
             {customerProfile && (
