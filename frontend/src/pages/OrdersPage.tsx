@@ -347,16 +347,16 @@ export function OrdersPage() {
   ];
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-3 sm:p-4 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-text-primary">Orders</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-text-primary">Orders</h1>
           <p className="text-text-secondary mt-1">Manage and track all customer orders</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
         >
           <Plus size={18} />
           New Order
@@ -365,7 +365,7 @@ export function OrdersPage() {
 
       {/* Filters */}
       <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
             <Search
@@ -409,7 +409,7 @@ export function OrdersPage() {
           </select>
 
           {/* Export Button */}
-          <button className="btn-secondary flex items-center justify-center gap-2">
+          <button className="btn-secondary flex items-center justify-center gap-2 w-full">
             <Download size={18} />
             Export
           </button>
@@ -435,7 +435,7 @@ export function OrdersPage() {
 
           {/* Pagination */}
           {total > limit && (
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
               <p className="text-sm text-text-secondary">
                 Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}{' '}
                 orders
@@ -557,14 +557,14 @@ function CreateOrderModal({ onClose, onSuccess }: { onClose: () => void; onSucce
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-surface-primary rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-surface-primary border-b border-border-primary p-6 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-text-primary">Create New Order</h2>
+        <div className="sticky top-0 bg-surface-primary border-b border-border-primary p-4 sm:p-6 flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-semibold text-text-primary">Create New Order</h2>
           <button onClick={onClose} className="p-2 hover:bg-surface-secondary rounded-lg">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6">
           {/* Customer Information */}
           <div className="space-y-4">
             <h3 className="font-semibold text-text-primary">Customer Information</h3>
@@ -614,7 +614,7 @@ function CreateOrderModal({ onClose, onSuccess }: { onClose: () => void; onSucce
           <div className="space-y-4">
             <h3 className="font-semibold text-text-primary">Order Details</h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
                   Currency
@@ -647,7 +647,7 @@ function CreateOrderModal({ onClose, onSuccess }: { onClose: () => void; onSucce
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
                   Shipping Cost
@@ -713,7 +713,7 @@ function CreateOrderModal({ onClose, onSuccess }: { onClose: () => void; onSucce
             ) : (
               <div className="space-y-2">
                 {formData.items.map((item, index) => (
-                  <div key={index} className="grid grid-cols-6 gap-2 items-end">
+                  <div key={index} className="grid grid-cols-1 sm:grid-cols-6 gap-2 items-end">
                     <input
                       type="text"
                       placeholder="Product ID"
@@ -723,7 +723,7 @@ function CreateOrderModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                         newItems[index].product_id = e.target.value;
                         setFormData({ ...formData, items: newItems });
                       }}
-                      className="col-span-2 px-3 py-2 bg-surface-secondary border border-border-primary rounded-lg text-sm"
+                      className="sm:col-span-2 px-3 py-2 bg-surface-secondary border border-border-primary rounded-lg text-sm"
                       required
                     />
                     <input
@@ -749,7 +749,7 @@ function CreateOrderModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                         newItems[index].unit_price = parseFloat(e.target.value) || 0;
                         setFormData({ ...formData, items: newItems });
                       }}
-                      className="col-span-2 px-3 py-2 bg-surface-secondary border border-border-primary rounded-lg text-sm"
+                      className="sm:col-span-2 px-3 py-2 bg-surface-secondary border border-border-primary rounded-lg text-sm"
                       required
                     />
                     <button
@@ -758,7 +758,7 @@ function CreateOrderModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                         const newItems = formData.items.filter((_, i) => i !== index);
                         setFormData({ ...formData, items: newItems });
                       }}
-                      className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                      className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg sm:justify-self-end"
                     >
                       <X size={16} />
                     </button>
@@ -811,9 +811,9 @@ function OrderDetailModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-surface-primary rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-surface-primary border-b border-border-primary p-6 flex items-center justify-between">
+        <div className="sticky top-0 bg-surface-primary border-b border-border-primary p-4 sm:p-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-text-primary">Order Details</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold text-text-primary">Order Details</h2>
             <p className="text-sm text-text-secondary mt-1">Order #{order.order_number}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-surface-secondary rounded-lg">
@@ -821,10 +821,10 @@ function OrderDetailModal({
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           {/* Status and Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <StatusIcon size={20} className={`text-${statusConfig[order.status]?.color}-500`} />
                 <StatusBadge status={order.status} label={statusConfig[order.status]?.label} />
@@ -835,7 +835,7 @@ function OrderDetailModal({
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {!order.proforma_number && (
                 <button onClick={onGenerateProforma} className="btn-secondary text-sm">
                   <FileText size={16} className="mr-1" />
@@ -860,7 +860,7 @@ function OrderDetailModal({
               <User size={18} />
               Customer Information
             </h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-text-tertiary">Name</p>
                 <p className="text-text-primary font-medium">{order.customer_name}</p>

@@ -377,7 +377,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
   if (b2bSettings.catalogVisibility === 'hidden') {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-screen flex items-center justify-center px-4"
         style={{ background: '#f8f9fa' }}
       >
         <div className="text-center max-w-md p-8">
@@ -402,7 +402,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
     if (!isAuthenticated) {
       return (
         <div
-          className="min-h-screen flex items-center justify-center"
+          className="min-h-screen flex items-center justify-center px-4"
           style={{ background: '#f8f9fa' }}
         >
           <div className="text-center max-w-md p-8">
@@ -412,7 +412,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
               Catalogul este disponibil doar pentru clienții autentificați. Vă rugăm
               autentificați-vă pentru a vedea produsele.
             </p>
-            <div className="flex gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 to={`/b2b-store/login?redirect=${encodeURIComponent(location.pathname)}`}
                 className="inline-block px-6 py-3 rounded-lg font-medium"
@@ -437,7 +437,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
   if (loading) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-screen flex items-center justify-center px-4"
         style={{ background: '#f8f9fa' }}
       >
         <div className="text-center">
@@ -449,10 +449,10 @@ export const B2BStoreCatalogPage: React.FC = () => {
   }
 
   return (
-    <div style={{ background: '#f8f9fa', minHeight: '100vh' }}>
+    <div className="overflow-x-hidden" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
       {/* Header */}
       <div
-        className="py-10"
+        className="py-8 sm:py-10"
         style={{
           borderBottom: '1px solid rgba(218,165,32,0.1)',
           background: 'linear-gradient(180deg, rgba(218,165,32,0.06) 0%, #f8f9fa 100%)',
@@ -461,12 +461,12 @@ export const B2BStoreCatalogPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Catalog Produse</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Catalog Produse</h1>
               <p className="text-sm mt-1" style={{ color: '#6b7280' }}>
                 {filteredProducts.length} produse disponibile
               </p>
             </div>
-            <div className="flex gap-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               {/* Search */}
               <div className="relative flex-grow md:w-80">
                 <input
@@ -486,7 +486,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
               {/* Filter Toggle (Mobile) */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
+                className="lg:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
                 style={{
                   background: 'rgba(218,165,32,0.1)',
                   border: '1px solid rgba(218,165,32,0.2)',
@@ -500,11 +500,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* ========== SIDEBAR FILTERS ========== */}
           <aside
-            className={`w-72 flex-shrink-0 space-y-6 ${showFilters ? 'block' : 'hidden'} md:block`}
+            className={`w-full lg:w-72 flex-shrink-0 space-y-6 ${showFilters ? 'block' : 'hidden'} lg:block`}
           >
             {/* Categories */}
             <div
@@ -694,7 +694,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
           {/* ========== PRODUCT GRID ========== */}
           <div className="flex-1 min-w-0">
             {/* Toolbar */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setViewMode('grid')}
@@ -717,11 +717,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   <List size={18} />
                 </button>
               </div>
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="appearance-none px-4 py-2 pr-8 rounded-xl text-sm focus:outline-none cursor-pointer"
+                  className="appearance-none w-full sm:w-auto px-4 py-2 pr-8 rounded-xl text-sm focus:outline-none cursor-pointer"
                   style={{
                     background: '#ffffff',
                     border: '1px solid #d1d5db',
@@ -1014,7 +1014,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   return (
                     <div
                       key={product.id}
-                      className="rounded-2xl overflow-hidden flex transition-all duration-300"
+                      className="rounded-2xl overflow-hidden flex flex-col sm:flex-row transition-all duration-300"
                       style={{
                         background: '#ffffff',
                         border: '1px solid #e5e7eb',
@@ -1028,7 +1028,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                     >
                       {/* Image */}
                       <div
-                        className="w-36 h-36 md:w-48 md:h-auto flex-shrink-0"
+                        className="w-full h-52 sm:w-36 sm:h-36 md:w-48 md:h-auto flex-shrink-0"
                         style={{ background: '#f3f4f6' }}
                       >
                         {product.image_url ? (
@@ -1110,9 +1110,9 @@ export const B2BStoreCatalogPage: React.FC = () => {
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="flex items-center justify-between sm:justify-start gap-4 flex-shrink-0">
                           {b2bSettings.showPrices || isAuthenticated ? (
-                            <div className="text-right">
+                            <div className="text-left sm:text-right">
                               <div className="text-xl font-bold" style={{ color: '#daa520' }}>
                                 {product.price.toFixed(2)} {product.currency}
                               </div>
@@ -1176,7 +1176,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
           onClick={() => setQuickViewProduct(null)}
         >
           <div
-            className="w-full max-w-3xl rounded-2xl overflow-hidden"
+            className="w-full max-w-3xl rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
             style={{
               background: '#ffffff',
               border: '1px solid #e5e7eb',
@@ -1199,7 +1199,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 )}
               </div>
               {/* Details */}
-              <div className="flex-1 p-7">
+              <div className="flex-1 p-4 sm:p-7">
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p
@@ -1330,7 +1330,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Link to={`/b2b-store/product/${quickViewProduct.id}`} className="flex-1">
                     <Button
                       variant="outline"

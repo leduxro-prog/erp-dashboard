@@ -1,10 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { b2bApi } from '../../services/b2b-api';
-import { 
-  Package, ChevronLeft, Clock, CheckCircle2, Truck, 
-  AlertCircle, CreditCard, Building2, MapPin, Phone, 
-  Mail, ArrowRight, Download, Printer, Loader2, FileText
+import {
+  Package,
+  ChevronLeft,
+  Clock,
+  CheckCircle2,
+  Truck,
+  AlertCircle,
+  CreditCard,
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  ArrowRight,
+  Download,
+  Printer,
+  Loader2,
+  FileText,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -35,6 +48,8 @@ interface Order {
   smartbill_id?: string;
   invoice_number?: string;
   payment_status?: string;
+  subtotal?: number;
+  vatAmount?: number;
 }
 
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
@@ -59,6 +74,7 @@ export const B2BOrderDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [downloading, setDownloading] = useState(false);
+  const [downloadingModel, setDownloadingModel] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -93,6 +109,19 @@ export const B2BOrderDetailPage: React.FC = () => {
     }
   };
 
+  const handleDownloadOrderModel = async () => {
+    if (!order) return;
+    setDownloadingModel(true);
+    try {
+      await b2bApi.downloadOrderModelPdf(order.id, order.orderNumber);
+    } catch (err) {
+      console.error('Failed to download order model:', err);
+      alert('Nu s-a putut descărca modelul comenzii');
+    } finally {
+      setDownloadingModel(false);
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string = 'RON') => {
     return new Intl.NumberFormat('ro-RO', {
       style: 'currency',
@@ -107,7 +136,7 @@ export const B2BOrderDetailPage: React.FC = () => {
       month: 'long',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -160,7 +189,9 @@ export const B2BOrderDetailPage: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
               Comanda #{order.orderNumber}
-              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${status.bg} ${status.color} flex items-center gap-1.5`}>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${status.bg} ${status.color} flex items-center gap-1.5`}
+              >
                 <StatusIcon className="w-3.5 h-3.5" />
                 {status.label}
               </span>
@@ -176,8 +207,11 @@ export const B2BOrderDetailPage: React.FC = () => {
                       SmartBill: {order.invoice_number || order.smartbill_id}
                     </p>
                     {order.payment_status && (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter ${paymentStatusConfig[order.payment_status.toLowerCase()]?.bg || 'bg-gray-100'} ${paymentStatusConfig[order.payment_status.toLowerCase()]?.color || 'text-gray-600'}`}>
-                        {paymentStatusConfig[order.payment_status.toLowerCase()]?.label || order.payment_status}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tighter ${paymentStatusConfig[order.payment_status.toLowerCase()]?.bg || 'bg-gray-100'} ${paymentStatusConfig[order.payment_status.toLowerCase()]?.color || 'text-gray-600'}`}
+                      >
+                        {paymentStatusConfig[order.payment_status.toLowerCase()]?.label ||
+                          order.payment_status}
                       </span>
                     )}
                   </div>
@@ -194,33 +228,45 @@ export const B2BOrderDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            className="inline-flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            className="inline-flex items-center px-3 sm:px-4 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50"
+            onClick={handleDownloadOrderModel}
+            disabled={downloadingModel}
+          >
+            {downloadingModel ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <FileText className="w-4 h-4 mr-2" />
+            )}
+            Descarcă Model Comandă
+          </button>
+          <button
+            className="inline-flex items-center px-3 sm:px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
             onClick={() => window.print()}
           >
             <Printer className="w-4 h-4 mr-2" />
             Printează
           </button>
           {!isCancelled && (
-            <button 
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:bg-gray-400"
+            <button
+              className="inline-flex items-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:bg-gray-400"
               onClick={handleDownloadInvoice}
               disabled={downloading || !order.smartbill_id}
-              title={!order.smartbill_id ? "Factura nu a fost încă generată în SmartBill" : ""}
+              title={!order.smartbill_id ? 'Factura nu a fost încă generată în SmartBill' : ''}
             >
               {downloading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Download className="w-4 h-4 mr-2" />
               )}
-              {order.smartbill_id ? "Descarcă Factura" : "Factură în curs de generare"}
+              {order.smartbill_id ? 'Descarcă Factura' : 'Factură în curs de generare'}
             </button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2 space-y-6">
           {/* Order Items */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -235,38 +281,61 @@ export const B2BOrderDetailPage: React.FC = () => {
             </div>
             <div className="divide-y divide-gray-100">
               {order.items?.map((item) => (
-                <div key={item.id} className="p-6 flex items-center gap-4 hover:bg-gray-50/50 transition-colors">
+                <div
+                  key={item.id}
+                  className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-gray-50/50 transition-colors"
+                >
                   <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0 border border-gray-100">
                     {item.image_url ? (
-                      <img src={item.image_url} alt={item.product_name} className="w-12 h-12 object-contain" />
+                      <img
+                        src={item.image_url}
+                        alt={item.product_name}
+                        className="w-12 h-12 object-contain"
+                      />
                     ) : (
                       <Package className="w-8 h-8 text-gray-300" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-bold text-gray-900 truncate">{item.product_name}</h3>
+                    <h3 className="text-sm font-bold text-gray-900 truncate">
+                      {item.product_name}
+                    </h3>
                     <p className="text-xs text-gray-500 mt-0.5">SKU: {item.sku}</p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-gray-900">{formatCurrency(item.unit_price)} x {item.quantity}</p>
-                    <p className="text-sm font-black text-blue-600 mt-1">{formatCurrency(item.total_price)}</p>
+                  <div className="text-left sm:text-right flex-shrink-0 w-full sm:w-auto">
+                    <p className="text-sm font-bold text-gray-900">
+                      {formatCurrency(item.unit_price)} x {item.quantity}
+                    </p>
+                    <p className="text-sm font-black text-blue-600 mt-1">
+                      {formatCurrency(item.total_price)}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="bg-gray-50/50 p-6 border-t border-gray-100">
+            <div className="bg-gray-50/50 p-4 sm:p-6 border-t border-gray-100">
               <div className="w-full max-w-xs ml-auto space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Subtotal</span>
-                  <span className="text-gray-900 font-bold">{formatCurrency(order.totalAmount / 1.19)}</span>
+                  <span className="text-gray-900 font-bold">
+                    {formatCurrency(
+                      order.subtotal ??
+                        Math.max(0, (order.totalAmount || 0) - (order.vatAmount || 0)),
+                      order.currency,
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">TVA (19%)</span>
-                  <span className="text-gray-900 font-bold">{formatCurrency(order.totalAmount - (order.totalAmount / 1.19))}</span>
+                  <span className="text-gray-500">TVA</span>
+                  <span className="text-gray-900 font-bold">
+                    {formatCurrency(order.vatAmount ?? 0, order.currency)}
+                  </span>
                 </div>
                 <div className="pt-3 border-t border-gray-200 flex justify-between">
                   <span className="text-base font-bold text-gray-900">Total Comandă</span>
-                  <span className="text-xl font-black text-blue-600">{formatCurrency(order.totalAmount)}</span>
+                  <span className="text-xl font-black text-blue-600">
+                    {formatCurrency(order.totalAmount || 0, order.currency)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -291,20 +360,33 @@ export const B2BOrderDetailPage: React.FC = () => {
                   const isCompleted = idx < currentIdx || currentStatusLower === 'delivered';
                   const isCurrent = idx === currentIdx && currentStatusLower !== 'delivered';
                   const isLast = idx === steps.length - 1;
-                  
+
                   return (
                     <div key={step} className="flex gap-4 relative">
                       {!isLast && (
-                        <div className={`absolute left-4 top-8 w-0.5 h-12 ${isCompleted && (idx < currentIdx || currentStatusLower === 'delivered') ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                        <div
+                          className={`absolute left-4 top-8 w-0.5 h-12 ${isCompleted && (idx < currentIdx || currentStatusLower === 'delivered') ? 'bg-blue-600' : 'bg-gray-200'}`}
+                        />
                       )}
-                      <div className={`z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        isCompleted ? 'bg-blue-600 text-white' : 
-                        isCurrent ? 'bg-blue-100 text-blue-600 ring-4 ring-blue-50' : 'bg-gray-100 text-gray-400'
-                      }`}>
-                        {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <span className="text-xs font-bold">{idx + 1}</span>}
+                      <div
+                        className={`z-10 w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          isCompleted
+                            ? 'bg-blue-600 text-white'
+                            : isCurrent
+                              ? 'bg-blue-100 text-blue-600 ring-4 ring-blue-50'
+                              : 'bg-gray-100 text-gray-400'
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-5 h-5" />
+                        ) : (
+                          <span className="text-xs font-bold">{idx + 1}</span>
+                        )}
                       </div>
                       <div className="pb-8">
-                        <p className={`text-sm font-bold ${isCurrent ? 'text-blue-600' : 'text-gray-900'}`}>
+                        <p
+                          className={`text-sm font-bold ${isCurrent ? 'text-blue-600' : 'text-gray-900'}`}
+                        >
                           {statusConfig[step]?.label || step}
                         </p>
                         <p className="text-xs text-gray-500 mt-0.5">
@@ -328,7 +410,9 @@ export const B2BOrderDetailPage: React.FC = () => {
             </h2>
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Companie</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Companie
+                </p>
                 <p className="text-sm font-bold text-gray-900">{order.customer_name || 'N/A'}</p>
               </div>
               <div className="flex items-center gap-3">
@@ -337,7 +421,9 @@ export const B2BOrderDetailPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Email</p>
-                  <p className="text-sm font-medium text-gray-900">{order.customer_email || 'N/A'}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {order.customer_email || 'N/A'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -363,7 +449,9 @@ export const B2BOrderDetailPage: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <p className="text-xs font-bold text-gray-400 uppercase mb-1">Metodă Plată</p>
-                <p className="text-sm font-medium text-gray-900 capitalize">{order.payment_method?.replace('_', ' ') || 'N/A'}</p>
+                <p className="text-sm font-medium text-gray-900 capitalize">
+                  {order.payment_method?.replace('_', ' ') || 'N/A'}
+                </p>
               </div>
               <div>
                 <p className="text-xs font-bold text-gray-400 uppercase mb-1">Adresă Facturare</p>
@@ -387,8 +475,14 @@ export const B2BOrderDetailPage: React.FC = () => {
 
           <div className="bg-blue-600 rounded-xl p-6 text-white shadow-lg shadow-blue-200">
             <h3 className="font-bold mb-2">Aveți întrebări?</h3>
-            <p className="text-blue-100 text-sm mb-4">Echipa noastră de suport vă stă la dispoziție pentru orice detaliu legat de această comandă.</p>
-            <Link to="/b2b-portal/contact" className="inline-flex items-center text-sm font-bold hover:gap-2 transition-all">
+            <p className="text-blue-100 text-sm mb-4">
+              Echipa noastră de suport vă stă la dispoziție pentru orice detaliu legat de această
+              comandă.
+            </p>
+            <Link
+              to="/b2b-portal/contact"
+              className="inline-flex items-center text-sm font-bold hover:gap-2 transition-all"
+            >
               Contactează-ne <ArrowRight className="w-4 h-4 ml-1" />
             </Link>
           </div>
