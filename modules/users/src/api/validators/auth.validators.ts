@@ -19,6 +19,7 @@ export const loginSchema = Joi.object({
     'string.empty': 'Password is required',
     'any.required': 'Password is required',
   }),
+  rememberMe: Joi.boolean().optional(),
 });
 
 /**

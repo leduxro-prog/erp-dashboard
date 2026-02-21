@@ -153,6 +153,27 @@ describe('Auth Middleware Integration', () => {
 
       authenticate(req, res, next);
     });
+
+    it('should accept legacy access token payload with userId claim', (done) => {
+      const legacyToken = jwt.sign(
+        { userId: 'legacy-user-42', email: 'legacy@example.com', role: 'manager' },
+        TEST_ACCESS_SECRET,
+        { expiresIn: '15m' },
+      );
+      const req = mockRequest({ cookies: { access_token: legacyToken } });
+      const res = mockResponse();
+
+      const next: NextFunction = (err?: any) => {
+        expect(err).toBeUndefined();
+        expect((req as any).user).toBeDefined();
+        expect((req as any).user.id).toBe('legacy-user-42');
+        expect((req as any).user.email).toBe('legacy@example.com');
+        expect((req as any).user.role).toBe('manager');
+        done();
+      };
+
+      authenticate(req, res, next);
+    });
   });
 
   // ── Valid token in Authorization header ────────────────────────────────
@@ -265,6 +286,7 @@ describe('Auth Middleware Integration', () => {
         expect(cookieNames).toContain('access_token');
         expect(cookieNames).toContain('refresh_token');
         expect(cookieNames).toContain('auth_status');
+        expect(cookieNames).toContain('auth_persist');
         done();
       };
 
@@ -288,6 +310,40 @@ describe('Auth Middleware Integration', () => {
 
       expect(res._status).toBe(401);
       expect(next).not.toHaveBeenCalled();
+    });
+
+    it('should preserve non-persistent session preference on auto-refresh', (done) => {
+      const expiredAccess = jwt.sign(testUser, TEST_ACCESS_SECRET, { expiresIn: '0s' });
+      const validRefresh = service.generateRefreshToken(testUser);
+
+      const req = mockRequest({
+        cookies: {
+          access_token: expiredAccess,
+          refresh_token: validRefresh,
+          auth_persist: 'false',
+        },
+      });
+      const res = mockResponse();
+
+      const next: NextFunction = (err?: any) => {
+        expect(err).toBeUndefined();
+
+        const accessCookie = res._cookies.find((c) => c.name === 'access_token');
+        const refreshCookie = res._cookies.find((c) => c.name === 'refresh_token');
+        const persistCookie = res._cookies.find((c) => c.name === 'auth_persist');
+
+        expect(accessCookie).toBeDefined();
+        expect(refreshCookie).toBeDefined();
+        expect(persistCookie).toBeDefined();
+
+        // Session cookies should not carry maxAge when remember=false
+        expect(accessCookie!.options.maxAge).toBeUndefined();
+        expect(refreshCookie!.options.maxAge).toBeUndefined();
+        expect(persistCookie!.value).toBe('false');
+        done();
+      };
+
+      authenticate(req, res as any, next);
     });
   });
 
