@@ -67,6 +67,13 @@ function extractRefreshToken(req: Request): string | null {
   return cookies?.refresh_token || null;
 }
 
+function isPersistentSession(req: Request): boolean {
+  const cookies = (req as unknown as Record<string, unknown>).cookies as
+    | Record<string, string>
+    | undefined;
+  return cookies?.auth_persist !== 'false';
+}
+
 /**
  * Authentication Middleware
  * Verifies JWT token from HttpOnly cookies (primary) or Authorization header (fallback).
@@ -98,14 +105,21 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
 
     // Verify token signature and decode payload
     const decoded = jwt.verify(token, secret) as {
-      id: string;
-      email: string;
-      role: string;
+      id?: string;
+      userId?: string | number;
+      email?: string;
+      role?: string;
     };
+    const resolvedUserId = decoded.id || decoded.userId;
+
+    if (!resolvedUserId || !decoded.email) {
+      res.status(401).json({ error: 'Invalid token payload' });
+      return;
+    }
 
     // Attach user data to request
     authReq.user = {
-      id: decoded.id,
+      id: String(resolvedUserId),
       email: decoded.email,
       role: decoded.role || 'user',
     };
@@ -117,11 +131,20 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       const refreshToken = extractRefreshToken(req);
       if (refreshToken) {
         try {
-          const refreshPayload = jwtService.verifyRefreshToken(refreshToken);
+          const refreshPayload = jwtService.verifyRefreshToken(refreshToken) as TokenPayload & {
+            userId?: string;
+          };
+          const resolvedUserId = refreshPayload.id || refreshPayload.userId;
+
+          if (!resolvedUserId || !refreshPayload.email) {
+            res.status(401).json({ error: 'Invalid refresh token payload' });
+            return;
+          }
+
           const tokenPayload: TokenPayload = {
-            id: refreshPayload.id,
+            id: String(resolvedUserId),
             email: refreshPayload.email,
-            role: refreshPayload.role,
+            role: refreshPayload.role || 'user',
           };
 
           // Generate new token pair
@@ -129,17 +152,19 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
           const newRefreshToken = jwtService.generateRefreshToken(tokenPayload);
 
           // Set new cookies on the response
-          jwtService.setAuthCookies(res, newAccessToken, newRefreshToken);
+          jwtService.setAuthCookies(res, newAccessToken, newRefreshToken, {
+            persistent: isPersistentSession(req),
+          });
 
           // Attach user to request and continue
           authReq.user = {
-            id: refreshPayload.id,
+            id: String(resolvedUserId),
             email: refreshPayload.email,
             role: refreshPayload.role || 'user',
           };
 
           logger.debug('Access token auto-refreshed via refresh cookie', {
-            userId: refreshPayload.id,
+            userId: resolvedUserId,
           });
 
           next();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import {
   Truck,
   Package,
@@ -29,10 +29,13 @@ import {
   type Warehouse,
   type LowStockAlert,
 } from '@/services/wms.service';
+import { useGlobalLanguage } from '@/hooks/useLanguage';
 
 type ViewMode = 'dashboard' | 'stock' | 'movements' | 'alerts' | 'warehouses';
 
 export function WMSPage() {
+  const { language } = useGlobalLanguage();
+  const tr = (ro: string, en: string) => (language === 'ro' ? ro : en);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [alerts, setAlerts] = useState<LowStockAlert[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -58,14 +61,29 @@ export function WMSPage() {
     }
   };
 
+  const acknowledgeDashboardAlert = async (alertId: string) => {
+    try {
+      await wmsService.acknowledgeAlert(alertId);
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error acknowledging alert:', error);
+      alert(tr('Nu am putut confirma alerta', 'Failed to acknowledge alert'));
+    }
+  };
+
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-text-primary">Warehouse Management</h1>
+          <h1 className="text-3xl font-semibold text-text-primary">
+            {tr('Management depozit', 'Warehouse management')}
+          </h1>
           <p className="text-text-secondary mt-1">
-            Manage inventory, stock movements, and warehouse operations
+            {tr(
+              'Gestioneaza inventarul, miscarile de stoc si operatiunile de depozit.',
+              'Manage inventory, stock movements, and warehouse operations.',
+            )}
           </p>
         </div>
       </div>
@@ -80,7 +98,7 @@ export function WMSPage() {
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          Dashboard
+          {tr('Panou', 'Dashboard')}
         </button>
         <button
           onClick={() => setViewMode('stock')}
@@ -90,7 +108,7 @@ export function WMSPage() {
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          Stock Levels
+          {tr('Niveluri stoc', 'Stock levels')}
         </button>
         <button
           onClick={() => setViewMode('alerts')}
@@ -100,7 +118,7 @@ export function WMSPage() {
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          Alerts
+          {tr('Alerte', 'Alerts')}
           {alerts.filter((a) => !a.acknowledged).length > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
               {alerts.filter((a) => !a.acknowledged).length}
@@ -115,7 +133,7 @@ export function WMSPage() {
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          Movements
+          {tr('Miscari', 'Movements')}
         </button>
         <button
           onClick={() => setViewMode('warehouses')}
@@ -125,7 +143,7 @@ export function WMSPage() {
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          Warehouses
+          {tr('Depozite', 'Warehouses')}
         </button>
       </div>
 
@@ -136,6 +154,7 @@ export function WMSPage() {
           warehouses={warehouses}
           onRefresh={loadDashboardData}
           onViewAlerts={() => setViewMode('alerts')}
+          onAcknowledgeAlert={acknowledgeDashboardAlert}
         />
       )}
 
@@ -162,12 +181,16 @@ function DashboardView({
   warehouses,
   onRefresh,
   onViewAlerts,
+  onAcknowledgeAlert,
 }: {
   alerts: LowStockAlert[];
   warehouses: Warehouse[];
   onRefresh: () => void;
   onViewAlerts: () => void;
+  onAcknowledgeAlert: (alertId: string) => Promise<void>;
 }) {
+  const { language } = useGlobalLanguage();
+  const tr = (ro: string, en: string) => (language === 'ro' ? ro : en);
   const criticalAlerts = alerts.filter((a) => a.severity === 'high' && !a.acknowledged);
   const unacknowledgedAlerts = alerts.filter((a) => !a.acknowledged);
 
@@ -178,7 +201,7 @@ function DashboardView({
         <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-tertiary">Warehouses</p>
+              <p className="text-sm text-text-tertiary">{tr('Depozite', 'Warehouses')}</p>
               <p className="text-2xl font-bold text-text-primary">{warehouses.length}</p>
             </div>
             <WarehouseIcon size={24} className="text-blue-500" />
@@ -188,7 +211,7 @@ function DashboardView({
         <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-tertiary">Total Alerts</p>
+              <p className="text-sm text-text-tertiary">{tr('Total alerte', 'Total alerts')}</p>
               <p className="text-2xl font-bold text-text-primary">{unacknowledgedAlerts.length}</p>
             </div>
             <AlertTriangle size={24} className="text-yellow-500" />
@@ -198,7 +221,7 @@ function DashboardView({
         <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-tertiary">Critical</p>
+              <p className="text-sm text-text-tertiary">{tr('Critice', 'Critical')}</p>
               <p className="text-2xl font-bold text-red-600">{criticalAlerts.length}</p>
             </div>
             <XCircle size={24} className="text-red-500" />
@@ -208,7 +231,7 @@ function DashboardView({
         <div className="bg-surface-primary border border-border-primary rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-text-tertiary">Acknowledged</p>
+              <p className="text-sm text-text-tertiary">{tr('Confirmate', 'Acknowledged')}</p>
               <p className="text-2xl font-bold text-green-600">
                 {alerts.filter((a) => a.acknowledged).length}
               </p>
@@ -224,7 +247,7 @@ function DashboardView({
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-red-800 dark:text-red-400 flex items-center gap-2">
               <AlertTriangle size={20} />
-              Critical Stock Alerts
+              {tr('Alerte critice de stoc', 'Critical stock alerts')}
             </h3>
             <button
               onClick={onRefresh}
@@ -242,14 +265,12 @@ function DashboardView({
                 <div>
                   <p className="font-medium text-text-primary">{alert.productName}</p>
                   <p className="text-sm text-text-secondary">
-                    Current: {alert.currentStock} / Reorder: {alert.reorderPoint} (Shortage:{' '}
-                    {alert.shortage})
+                    {tr('Curent', 'Current')}: {alert.currentStock} / {tr('Prag', 'Reorder')}:{' '}
+                    {alert.reorderPoint} ({tr('Lipsa', 'Shortage')}: {alert.shortage})
                   </p>
                 </div>
                 <button
-                  onClick={() => {
-                    /* TODO: acknowledge alert */
-                  }}
+                  onClick={() => onAcknowledgeAlert(alert.id)}
                   className="p-2 hover:bg-red-100 dark:hover:bg-red-800 rounded-lg text-red-600"
                 >
                   <CheckCircle2 size={16} />
@@ -259,7 +280,8 @@ function DashboardView({
           </div>
           {criticalAlerts.length > 5 && (
             <button onClick={onViewAlerts} className="mt-4 text-sm text-red-600 hover:underline">
-              View all {criticalAlerts.length} critical alerts
+              {tr('Vezi toate', 'View all')} {criticalAlerts.length}{' '}
+              {tr('alerte critice', 'critical alerts')}
             </button>
           )}
         </div>
@@ -267,12 +289,17 @@ function DashboardView({
 
       {/* Recent Warehouses */}
       <div className="bg-surface-primary border border-border-primary rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">Warehouses</h3>
+        <h3 className="text-lg font-semibold text-text-primary mb-4">
+          {tr('Depozite', 'Warehouses')}
+        </h3>
         {warehouses.length === 0 ? (
           <EmptyState
             icon={<WarehouseIcon size={48} className="text-text-tertiary" />}
-            title="No Warehouses"
-            description="Add warehouses to manage your inventory across locations."
+            title={tr('Nu exista depozite', 'No warehouses')}
+            description={tr(
+              'Adauga depozite pentru a gestiona stocul pe mai multe locatii.',
+              'Add warehouses to manage inventory across locations.',
+            )}
             variant="compact"
           />
         ) : (
@@ -301,6 +328,8 @@ function DashboardView({
 
 // Stock Levels View Component
 function StockLevelsView() {
+  const { language } = useGlobalLanguage();
+  const tr = (ro: string, en: string) => (language === 'ro' ? ro : en);
   const [stockLevels, setStockLevels] = useState<StockLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -328,6 +357,7 @@ function StockLevelsView() {
         page,
         limit,
         search: searchTerm || undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
       });
       setStockLevels(data.items);
       setTotal(data.pagination?.total || 0);
@@ -343,17 +373,9 @@ function StockLevelsView() {
     loadStockLevels();
   };
 
-  const filteredStockLevels = stockLevels.filter((stock) => {
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'normal') return stock.status === 'Normal';
-    if (statusFilter === 'warning') return stock.status === 'Atentionare';
-    if (statusFilter === 'critical') return stock.status === 'Critic';
-    return true;
-  });
-
   const handleAdjustStock = () => {
     if (!selectedStock || adjustData.quantity === 0 || !adjustData.reason) {
-      alert('Please fill in all fields');
+      alert(tr('Completeaza toate campurile', 'Please fill in all fields'));
       return;
     }
     wmsService
@@ -364,27 +386,27 @@ function StockLevelsView() {
         reason: adjustData.reason,
       })
       .then(() => {
-        alert('Stock adjusted successfully');
+        alert(tr('Stocul a fost ajustat cu succes', 'Stock adjusted successfully'));
         setShowAdjustModal(false);
         setAdjustData({ quantity: 0, reason: '' });
         loadStockLevels();
       })
       .catch((error) => {
         console.error('Error adjusting stock:', error);
-        alert('Failed to adjust stock');
+        alert(tr('Nu am putut ajusta stocul', 'Failed to adjust stock'));
       });
   };
 
   const getStatusConfig = (status: string) => {
-    if (status === 'Critic') return { label: 'Critical', color: 'red' };
-    if (status === 'Atentionare') return { label: 'Low Stock', color: 'yellow' };
-    return { label: 'Normal', color: 'green' };
+    if (status === 'Critic') return { label: tr('Critic', 'Critical'), color: 'red' };
+    if (status === 'Atentionare') return { label: tr('Stoc scazut', 'Low stock'), color: 'yellow' };
+    return { label: tr('Normal', 'Normal'), color: 'green' };
   };
 
   const columns: Column<StockLevel>[] = [
     {
       key: 'name',
-      label: 'Product',
+      label: tr('Produs', 'Product'),
       render: (value, row) => (
         <div className="flex items-center gap-3">
           {row.imageUrl && (
@@ -399,32 +421,32 @@ function StockLevelsView() {
     },
     {
       key: 'warehouseName',
-      label: 'Warehouse',
-      render: (value) => value || 'Principal',
+      label: tr('Depozit', 'Warehouse'),
+      render: (value) => value || tr('Principal', 'Main'),
     },
     {
       key: 'current',
-      label: 'On Hand',
+      label: tr('In stoc', 'On hand'),
       render: (value) => <span className="font-mono">{value}</span>,
     },
     {
       key: 'reserved',
-      label: 'Reserved',
+      label: tr('Rezervat', 'Reserved'),
       render: (value) => <span className="font-mono text-text-secondary">{value}</span>,
     },
     {
       key: 'available',
-      label: 'Available',
+      label: tr('Disponibil', 'Available'),
       render: (value) => <span className="font-mono font-semibold text-primary-600">{value}</span>,
     },
     {
       key: 'reorderPoint',
-      label: 'Reorder Point',
+      label: tr('Prag reaprovizionare', 'Reorder point'),
       render: (value) => <span className="font-mono">{value}</span>,
     },
     {
       key: 'status',
-      label: 'Status',
+      label: tr('Status', 'Status'),
       render: (value) => {
         const config = getStatusConfig(value);
         return <StatusBadge status={config.color} label={config.label} />;
@@ -432,7 +454,7 @@ function StockLevelsView() {
     },
     {
       key: 'id',
-      label: 'Actions',
+      label: tr('Actiuni', 'Actions'),
       render: (_, row) => (
         <button
           onClick={() => {
@@ -440,7 +462,7 @@ function StockLevelsView() {
             setShowAdjustModal(true);
           }}
           className="p-2 hover:bg-surface-secondary rounded-lg transition-colors text-primary-600"
-          title="Adjust stock"
+          title={tr('Ajusteaza stoc', 'Adjust stock')}
         >
           <Edit2 size={16} />
         </button>
@@ -460,7 +482,7 @@ function StockLevelsView() {
             />
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder={tr('Cauta produse...', 'Search products...')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -472,14 +494,14 @@ function StockLevelsView() {
             onChange={(e) => setStatusFilter(e.target.value as any)}
             className="px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
           >
-            <option value="all">All Status</option>
-            <option value="normal">Normal</option>
-            <option value="warning">Low Stock</option>
-            <option value="critical">Critical</option>
+            <option value="all">{tr('Toate statusurile', 'All statuses')}</option>
+            <option value="normal">{tr('Normal', 'Normal')}</option>
+            <option value="warning">{tr('Stoc scazut', 'Low stock')}</option>
+            <option value="critical">{tr('Critic', 'Critical')}</option>
           </select>
           <button onClick={handleSearch} className="btn-secondary">
             <Filter size={18} className="mr-2" />
-            Filter
+            {tr('Filtreaza', 'Filter')}
           </button>
           <button onClick={loadStockLevels} className="btn-secondary">
             <RefreshCw size={18} />
@@ -492,21 +514,26 @@ function StockLevelsView() {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
-      ) : filteredStockLevels.length === 0 ? (
-        <EmptyState
-          icon={<Package size={48} className="text-text-tertiary" />}
-          title="No Stock Data Found"
-          description={searchTerm ? 'Try adjusting your search.' : 'No stock levels available.'}
-          variant="compact"
-        />
+      ) : stockLevels.length === 0 ? (
+          <EmptyState
+            icon={<Package size={48} className="text-text-tertiary" />}
+            title={tr('Nu exista date de stoc', 'No stock data found')}
+            description={
+              searchTerm
+                ? tr('Incearca sa ajustezi cautarea.', 'Try adjusting your search.')
+                : tr('Nu exista niveluri de stoc disponibile.', 'No stock levels available.')
+            }
+            variant="compact"
+          />
       ) : (
         <>
-          <DataTable columns={columns} data={filteredStockLevels} />
+          <DataTable columns={columns} data={stockLevels} />
           {/* Pagination */}
           {total > limit && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-text-secondary">
-                Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total} items
+                {tr('Afisez', 'Showing')} {(page - 1) * limit + 1} {tr('pana la', 'to')}{' '}
+                {Math.min(page * limit, total)} {tr('din', 'of')} {total} {tr('articole', 'items')}
               </p>
               <div className="flex gap-2">
                 <button
@@ -514,14 +541,14 @@ function StockLevelsView() {
                   disabled={page === 1}
                   className="px-4 py-2 btn-secondary disabled:opacity-50"
                 >
-                  Previous
+                  {tr('Anterior', 'Previous')}
                 </button>
                 <button
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page * limit >= total}
                   className="px-4 py-2 btn-secondary disabled:opacity-50"
                 >
-                  Next
+                  {tr('Urmator', 'Next')}
                 </button>
               </div>
             </div>
@@ -534,7 +561,9 @@ function StockLevelsView() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-primary rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-border-primary flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-text-primary">Adjust Stock</h3>
+              <h3 className="text-lg font-semibold text-text-primary">
+                {tr('Ajusteaza stoc', 'Adjust stock')}
+              </h3>
               <button
                 onClick={() => setShowAdjustModal(false)}
                 className="p-2 hover:bg-surface-secondary rounded-lg"
@@ -547,12 +576,12 @@ function StockLevelsView() {
                 <p className="font-medium text-text-primary">{selectedStock.name}</p>
                 <p className="text-sm text-text-secondary">SKU: {selectedStock.sku}</p>
                 <p className="text-sm text-text-secondary">
-                  Current Available: {selectedStock.available}
+                  {tr('Disponibil curent', 'Current available')}: {selectedStock.available}
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Adjustment Amount
+                  {tr('Cantitate ajustare', 'Adjustment amount')}
                 </label>
                 <div className="flex items-center gap-2">
                   <select
@@ -566,8 +595,8 @@ function StockLevelsView() {
                     }}
                     className="px-3 py-2 bg-surface-secondary border border-border-primary rounded-lg"
                   >
-                    <option value="add">Add</option>
-                    <option value="remove">Remove</option>
+                    <option value="add">{tr('Adauga', 'Add')}</option>
+                    <option value="remove">{tr('Scade', 'Remove')}</option>
                   </select>
                   <input
                     type="number"
@@ -585,23 +614,25 @@ function StockLevelsView() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">Reason</label>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  {tr('Motiv', 'Reason')}
+                </label>
                 <textarea
                   value={adjustData.reason}
                   onChange={(e) => setAdjustData({ ...adjustData, reason: e.target.value })}
                   className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
                   rows={3}
-                  placeholder="Enter reason for adjustment..."
+                  placeholder={tr('Introdu motivul ajustarii...', 'Enter reason for adjustment...')}
                   required
                 />
               </div>
             </div>
             <div className="p-6 border-t border-border-primary flex gap-3">
               <button onClick={() => setShowAdjustModal(false)} className="btn-secondary flex-1">
-                Cancel
+                {tr('Anuleaza', 'Cancel')}
               </button>
               <button onClick={handleAdjustStock} className="btn-primary flex-1">
-                Adjust Stock
+                {tr('Ajusteaza stoc', 'Adjust stock')}
               </button>
             </div>
           </div>
@@ -613,6 +644,9 @@ function StockLevelsView() {
 
 // Alerts View Component
 function AlertsView({ onRefresh }: { onRefresh: () => void }) {
+  const { language } = useGlobalLanguage();
+  const tr = (ro: string, en: string) => (language === 'ro' ? ro : en);
+  const locale = language === 'ro' ? 'ro-RO' : 'en-US';
   const [alerts, setAlerts] = useState<LowStockAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unacknowledged' | 'acknowledged'>('unacknowledged');
@@ -643,39 +677,39 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
       onRefresh();
     } catch (error) {
       console.error('Error acknowledging alert:', error);
-      alert('Failed to acknowledge alert');
+      alert(tr('Nu am putut confirma alerta', 'Failed to acknowledge alert'));
     }
   };
 
   const getSeverityConfig = (severity: string) => {
-    if (severity === 'high') return { label: 'High', color: 'red' };
-    if (severity === 'medium') return { label: 'Medium', color: 'yellow' };
-    return { label: 'Low', color: 'blue' };
+    if (severity === 'high') return { label: tr('Ridicata', 'High'), color: 'red' };
+    if (severity === 'medium') return { label: tr('Medie', 'Medium'), color: 'yellow' };
+    return { label: tr('Scazuta', 'Low'), color: 'blue' };
   };
 
   const columns: Column<LowStockAlert>[] = [
     {
       key: 'productName',
-      label: 'Product',
+      label: tr('Produs', 'Product'),
     },
     {
       key: 'currentStock',
-      label: 'Current',
+      label: tr('Curent', 'Current'),
       render: (value) => <span className="font-mono">{value}</span>,
     },
     {
       key: 'reorderPoint',
-      label: 'Reorder Point',
+      label: tr('Prag reaprovizionare', 'Reorder point'),
       render: (value) => <span className="font-mono">{value}</span>,
     },
     {
       key: 'shortage',
-      label: 'Shortage',
+      label: tr('Lipsa', 'Shortage'),
       render: (value) => <span className="font-mono font-semibold text-red-600">{value}</span>,
     },
     {
       key: 'severity',
-      label: 'Severity',
+      label: tr('Severitate', 'Severity'),
       render: (value) => {
         const config = getSeverityConfig(value);
         return <StatusBadge status={config.color} label={config.label} />;
@@ -683,27 +717,27 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
     },
     {
       key: 'acknowledged',
-      label: 'Status',
+      label: tr('Status', 'Status'),
       render: (value) => (
         <span className={value ? 'text-green-600' : 'text-yellow-600'}>
-          {value ? 'Acknowledged' : 'Pending'}
+          {value ? tr('Confirmata', 'Acknowledged') : tr('In asteptare', 'Pending')}
         </span>
       ),
     },
     {
       key: 'createdAt',
-      label: 'Created',
-      render: (value) => new Date(value).toLocaleDateString('ro-RO'),
+      label: tr('Creata la', 'Created'),
+      render: (value) => new Date(value).toLocaleDateString(locale),
     },
     {
       key: 'id',
-      label: 'Actions',
+      label: tr('Actiuni', 'Actions'),
       render: (_, row) =>
         !row.acknowledged && (
           <button
             onClick={() => handleAcknowledge(row.id)}
             className="p-2 hover:bg-green-500/10 text-green-600 rounded-lg"
-            title="Acknowledge"
+            title={tr('Confirma', 'Acknowledge')}
           >
             <CheckCircle2 size={16} />
           </button>
@@ -722,7 +756,7 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
               filter === 'all' ? 'bg-primary-600 text-white' : 'bg-surface-secondary'
             }`}
           >
-            All
+            {tr('Toate', 'All')}
           </button>
           <button
             onClick={() => setFilter('unacknowledged')}
@@ -730,7 +764,7 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
               filter === 'unacknowledged' ? 'bg-yellow-600 text-white' : 'bg-surface-secondary'
             }`}
           >
-            Unacknowledged
+            {tr('Neconfirmate', 'Unacknowledged')}
           </button>
           <button
             onClick={() => setFilter('acknowledged')}
@@ -738,7 +772,7 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
               filter === 'acknowledged' ? 'bg-green-600 text-white' : 'bg-surface-secondary'
             }`}
           >
-            Acknowledged
+            {tr('Confirmate', 'Acknowledged')}
           </button>
         </div>
         <button onClick={loadAlerts} className="btn-secondary">
@@ -752,12 +786,12 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
       ) : alerts.length === 0 ? (
-        <EmptyState
-          icon={<CheckCircle2 size={48} className="text-text-tertiary" />}
-          title="No Alerts"
-          description="All stock levels are healthy."
-          variant="compact"
-        />
+          <EmptyState
+            icon={<CheckCircle2 size={48} className="text-text-tertiary" />}
+            title={tr('Nu exista alerte', 'No alerts')}
+            description={tr('Toate nivelurile de stoc sunt bune.', 'All stock levels are healthy.')}
+            variant="compact"
+          />
       ) : (
         <DataTable columns={columns} data={alerts} />
       )}
@@ -767,36 +801,65 @@ function AlertsView({ onRefresh }: { onRefresh: () => void }) {
 
 // Movements View Component
 function MovementsView() {
+  const { language } = useGlobalLanguage();
+  const tr = (ro: string, en: string) => (language === 'ro' ? ro : en);
+  const locale = language === 'ro' ? 'ro-RO' : 'en-US';
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [productSku, setProductSku] = useState('');
+  const [lookupError, setLookupError] = useState('');
 
-  const loadMovements = async (productId: string) => {
+  const loadMovements = async (productReference: string) => {
+    const normalizedReference = productReference.trim();
+    if (!normalizedReference) {
+      setLookupError(tr('Introdu SKU sau ID produs.', 'Please enter a product SKU or ID.'));
+      return;
+    }
+
     try {
+      setLookupError('');
       setLoading(true);
-      const data = await wmsService.getMovementHistory(productId);
+      setMovements([]);
+      setSelectedProductId(null);
+      const data = await wmsService.getMovementHistory(normalizedReference);
       setMovements(data);
+      setSelectedProductId(normalizedReference);
     } catch (error) {
       console.error('Error loading movements:', error);
+      const rawMessage = error instanceof Error ? error.message.toLowerCase() : '';
+      if (rawMessage.includes('not found')) {
+        setLookupError(
+          tr(
+            'Nu am gasit niciun produs pentru SKU/ID-ul introdus.',
+            'No product found for the provided SKU/ID.',
+          ),
+        );
+      } else {
+        setLookupError(tr('Nu am putut incarca miscarile de stoc.', 'Failed to load stock movements.'));
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleViewMovements = () => {
+    void loadMovements(productSku);
+  };
+
   const getMovementTypeConfig = (type: string) => {
-    if (type === 'IN') return { label: 'Stock In', icon: TrendingUp, color: 'green' };
-    if (type === 'OUT') return { label: 'Stock Out', icon: TrendingDown, color: 'red' };
-    if (type === 'ADJUSTMENT') return { label: 'Adjustment', icon: Edit2, color: 'blue' };
-    if (type === 'RESERVATION') return { label: 'Reserved', icon: Package, color: 'yellow' };
-    if (type === 'RELEASE') return { label: 'Released', icon: CheckCircle2, color: 'purple' };
+    if (type === 'IN') return { label: tr('Intrare stoc', 'Stock in'), icon: TrendingUp, color: 'green' };
+    if (type === 'OUT') return { label: tr('Iesire stoc', 'Stock out'), icon: TrendingDown, color: 'red' };
+    if (type === 'ADJUSTMENT') return { label: tr('Ajustare', 'Adjustment'), icon: Edit2, color: 'blue' };
+    if (type === 'RESERVATION') return { label: tr('Rezervare', 'Reserved'), icon: Package, color: 'yellow' };
+    if (type === 'RELEASE') return { label: tr('Eliberare', 'Released'), icon: CheckCircle2, color: 'purple' };
     return { label: type, icon: History, color: 'gray' };
   };
 
   const columns: Column<StockMovement>[] = [
     {
       key: 'movementType',
-      label: 'Type',
+      label: tr('Tip', 'Type'),
       render: (value) => {
         const config = getMovementTypeConfig(value);
         const Icon = config.icon;
@@ -810,7 +873,7 @@ function MovementsView() {
     },
     {
       key: 'quantity',
-      label: 'Quantity',
+      label: tr('Cantitate', 'Quantity'),
       render: (value, row) => {
         const isNegative = row.movementType === 'OUT';
         return (
@@ -823,23 +886,23 @@ function MovementsView() {
     },
     {
       key: 'quantityAfter',
-      label: 'Balance After',
+      label: tr('Sold dupa', 'Balance after'),
       render: (value) => <span className="font-mono">{value}</span>,
     },
     {
       key: 'reason',
-      label: 'Reason',
+      label: tr('Motiv', 'Reason'),
       render: (value) => value || '-',
     },
     {
       key: 'referenceId',
-      label: 'Reference',
+      label: tr('Referinta', 'Reference'),
       render: (value) => <span className="font-mono text-xs">{value || '-'}</span>,
     },
     {
       key: 'createdAt',
-      label: 'Date',
-      render: (value) => new Date(value).toLocaleString('ro-RO'),
+      label: tr('Data', 'Date'),
+      render: (value) => new Date(value).toLocaleString(locale),
     },
   ];
 
@@ -855,20 +918,27 @@ function MovementsView() {
             />
             <input
               type="text"
-              placeholder="Enter Product SKU or ID..."
+              placeholder={tr('Introdu SKU sau ID produs...', 'Enter product SKU or ID...')}
               value={productSku}
-              onChange={(e) => setProductSku(e.target.value)}
+              onChange={(e) => {
+                setProductSku(e.target.value);
+                if (lookupError) {
+                  setLookupError('');
+                }
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleViewMovements()}
               className="w-full pl-10 pr-4 py-2 bg-surface-secondary border border-border-primary rounded-lg font-mono"
             />
           </div>
-          <button
-            onClick={() => productSku && loadMovements(productSku)}
-            disabled={!productSku}
-            className="btn-primary"
-          >
-            View Movements
+          <button onClick={handleViewMovements} disabled={!productSku.trim()} className="btn-primary">
+            {tr('Vezi miscari', 'View movements')}
           </button>
         </div>
+        {lookupError && (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {lookupError}
+          </div>
+        )}
       </div>
 
       {/* Movements Table */}
@@ -877,17 +947,23 @@ function MovementsView() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
       ) : !selectedProductId ? (
-        <EmptyState
-          icon={<History size={48} className="text-text-tertiary" />}
-          title="Enter Product SKU"
-          description="Search for a product to view its movement history."
-          variant="compact"
-        />
+          <EmptyState
+            icon={<History size={48} className="text-text-tertiary" />}
+            title={tr('Introdu SKU sau ID produs', 'Enter product SKU or ID')}
+            description={tr(
+              'Cauta un produs pentru a vedea istoricul miscarilor.',
+              'Search for a product to view its movement history.',
+            )}
+            variant="compact"
+          />
       ) : movements.length === 0 ? (
         <EmptyState
           icon={<History size={48} className="text-text-tertiary" />}
-          title="No Movements Found"
-          description="No stock movements recorded for this product."
+          title={tr('Nu exista miscari', 'No movements found')}
+          description={tr(
+            'Nu exista miscari de stoc inregistrate pentru acest produs.',
+            'No stock movements recorded for this product.',
+          )}
           variant="compact"
         />
       ) : (
@@ -905,23 +981,34 @@ function WarehousesView({
   warehouses: Warehouse[];
   onRefresh: () => void;
 }) {
+  const { language } = useGlobalLanguage();
+  const tr = (ro: string, en: string) => (language === 'ro' ? ro : en);
   const [showAddModal, setShowAddModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
   });
 
-  const handleAddWarehouse = async (e: React.FormEvent) => {
+  const handleAddWarehouse = async (e: FormEvent) => {
     e.preventDefault();
-    // TODO: Implement add warehouse API
-    alert('Add warehouse functionality coming soon');
-    setShowAddModal(false);
+    try {
+      await wmsService.createWarehouse({
+        name: formData.name,
+        address: formData.address,
+      });
+      setFormData({ name: '', address: '' });
+      setShowAddModal(false);
+      onRefresh();
+    } catch (error) {
+      console.error('Failed to create warehouse:', error);
+      alert(tr('Nu am putut crea depozitul. Incearca din nou.', 'Could not create warehouse. Try again.'));
+    }
   };
 
   const columns: Column<Warehouse>[] = [
     {
       key: 'name',
-      label: 'Name',
+      label: tr('Nume', 'Name'),
       render: (value, row) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -936,9 +1023,12 @@ function WarehousesView({
     },
     {
       key: 'isActive',
-      label: 'Status',
+      label: tr('Status', 'Status'),
       render: (value) => (
-        <StatusBadge status={value ? 'green' : 'gray'} label={value ? 'Active' : 'Inactive'} />
+        <StatusBadge
+          status={value ? 'green' : 'gray'}
+          label={value ? tr('Activ', 'Active') : tr('Inactiv', 'Inactive')}
+        />
       ),
     },
   ];
@@ -948,8 +1038,10 @@ function WarehousesView({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-text-primary">Warehouses</h2>
-          <p className="text-sm text-text-tertiary">{warehouses.length} locations</p>
+          <h2 className="text-xl font-semibold text-text-primary">{tr('Depozite', 'Warehouses')}</h2>
+          <p className="text-sm text-text-tertiary">
+            {warehouses.length} {tr('locatii', 'locations')}
+          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={onRefresh} className="btn-secondary">
@@ -960,20 +1052,23 @@ function WarehousesView({
             className="btn-primary flex items-center gap-2"
           >
             <Plus size={18} />
-            Add Warehouse
+            {tr('Adauga depozit', 'Add warehouse')}
           </button>
         </div>
       </div>
 
       {/* Warehouses Table */}
       {warehouses.length === 0 ? (
-        <EmptyState
-          icon={<WarehouseIcon size={48} className="text-text-tertiary" />}
-          title="No Warehouses"
-          description="Add warehouses to manage your inventory across locations."
-          actionLabel="Add Warehouse"
-          onAction={() => setShowAddModal(true)}
-        />
+          <EmptyState
+            icon={<WarehouseIcon size={48} className="text-text-tertiary" />}
+            title={tr('Nu exista depozite', 'No warehouses')}
+            description={tr(
+              'Adauga depozite pentru a gestiona inventarul in mai multe locatii.',
+              'Add warehouses to manage your inventory across locations.',
+            )}
+            actionLabel={tr('Adauga depozit', 'Add warehouse')}
+            onAction={() => setShowAddModal(true)}
+          />
       ) : (
         <DataTable columns={columns} data={warehouses} />
       )}
@@ -983,7 +1078,9 @@ function WarehousesView({
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface-primary rounded-xl max-w-md w-full">
             <div className="p-6 border-b border-border-primary flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-text-primary">Add Warehouse</h3>
+              <h3 className="text-lg font-semibold text-text-primary">
+                {tr('Adauga depozit', 'Add warehouse')}
+              </h3>
               <button
                 onClick={() => setShowAddModal(false)}
                 className="p-2 hover:bg-surface-secondary rounded-lg"
@@ -993,26 +1090,28 @@ function WarehousesView({
             </div>
             <form onSubmit={handleAddWarehouse} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">Name</label>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  {tr('Nume', 'Name')}
+                </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
-                  placeholder="e.g., Bucharest Main Warehouse"
+                  placeholder={tr('ex: Depozit principal Bucuresti', 'e.g., Bucharest Main Warehouse')}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Address
+                  {tr('Adresa', 'Address')}
                 </label>
                 <textarea
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
                   rows={3}
-                  placeholder="Enter warehouse address..."
+                  placeholder={tr('Introdu adresa depozitului...', 'Enter warehouse address...')}
                 />
               </div>
               <div className="flex gap-3 pt-4">
@@ -1021,10 +1120,10 @@ function WarehousesView({
                   onClick={() => setShowAddModal(false)}
                   className="btn-secondary flex-1"
                 >
-                  Cancel
+                  {tr('Anuleaza', 'Cancel')}
                 </button>
                 <button type="submit" className="btn-primary flex-1">
-                  Add Warehouse
+                  {tr('Adauga depozit', 'Add warehouse')}
                 </button>
               </div>
             </form>
