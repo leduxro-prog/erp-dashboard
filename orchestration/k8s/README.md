@@ -32,10 +32,25 @@ kubectl rollout status deployment/cypher-app -n cypher --timeout=180s
 kubectl rollout status deployment/cypher-frontend -n cypher --timeout=180s
 ```
 
+3. Run idempotent DB compatibility bootstrap:
+
+```bash
+bash orchestration/k8s/bootstrap-db-schema.sh
+```
+
+4. Seed/reset staging admin for smoke tests (optional):
+
+```bash
+ADMIN_EMAIL=admin@ledux.ro \
+ADMIN_PASSWORD='ChangeMeNow-Strong-Password' \
+bash orchestration/k8s/seed-admin-user.sh
+```
+
 ## Important
 
 - This package deploys stateless app/frontend only.
 - Data plane (`PostgreSQL`, `Redis`, `RabbitMQ`, `Meilisearch`) should be provided as managed services or dedicated HA stateful cluster.
+- For quick staging on-cluster data plane, use `overlays/staging/data-plane.yaml` and run the helper scripts above.
 - `DB_USERNAME` is explicitly set in ConfigMap to satisfy runtime validation.
 - Uploads are mounted on `cypher-uploads-pvc`; ensure your StorageClass supports `ReadWriteMany` or patch this for your environment.
 - Update image references before rollout:
