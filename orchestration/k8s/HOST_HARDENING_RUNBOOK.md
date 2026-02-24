@@ -63,6 +63,21 @@ systemctl list-timers --all | grep cypher-k8s-backup
 ls -lh /root/backups/cypher_k8s_*.sql.gz
 ```
 
+## Continuous Launch Readiness
+
+- Script: `orchestration/k8s/launch-readiness-check.sh`
+- Unit: `/etc/systemd/system/cypher-launch-readiness.service`
+- Timer: `/etc/systemd/system/cypher-launch-readiness.timer`
+- Schedule: every 15 minutes
+
+Verify:
+
+```bash
+systemctl is-enabled cypher-launch-readiness.timer
+systemctl is-active cypher-launch-readiness.timer
+systemctl list-timers --all | grep cypher-launch-readiness
+```
+
 ## Post-Change Health Checks
 
 ```bash
