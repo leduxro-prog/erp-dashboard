@@ -9,3 +9,8 @@ B2B_URL=https://b2b.ledux.ro
 # Optional authenticated smoke in periodic checks:
 # ADMIN_EMAIL=admin@ledux.ro
 # ADMIN_PASSWORD=ChangeMeNow-Strong-Password
+
+# Projection status guardrails used only when authenticated smoke is enabled.
+PROJECTION_STALE_THRESHOLD_SECONDS=300
+PROJECTION_QUEUE_MAX=5000
+PROJECTION_FAILED_MAX=0

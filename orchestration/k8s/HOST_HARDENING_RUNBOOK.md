@@ -89,6 +89,11 @@ systemctl list-timers --all | grep cypher-launch-readiness
 
 To enable authenticated smoke in periodic checks, set `ADMIN_EMAIL` and `ADMIN_PASSWORD`
 in `/etc/default/cypher-launch-readiness` (600 permissions).
+You can also tune projection queue guardrails with:
+
+- `PROJECTION_STALE_THRESHOLD_SECONDS`
+- `PROJECTION_QUEUE_MAX`
+- `PROJECTION_FAILED_MAX`
 
 ## Post-Change Health Checks
 
