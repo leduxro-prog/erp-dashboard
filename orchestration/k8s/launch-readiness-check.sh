@@ -6,6 +6,9 @@ APP_NS="${APP_NS:-cypher}"
 DATA_NS="${DATA_NS:-cypher-data}"
 BASE_URL="${BASE_URL:-https://erp.ledux.ro}"
 B2B_URL="${B2B_URL:-https://b2b.ledux.ro}"
+PROJECTION_STALE_THRESHOLD_SECONDS="${PROJECTION_STALE_THRESHOLD_SECONDS:-300}"
+PROJECTION_QUEUE_MAX="${PROJECTION_QUEUE_MAX:-5000}"
+PROJECTION_FAILED_MAX="${PROJECTION_FAILED_MAX:-0}"
 
 pass() {
   printf '[PASS] %s\n' "$1"
@@ -79,10 +82,60 @@ PY
   users_code="$(curl -s -o /tmp/launch-users.out -w '%{http_code}' "${BASE_URL}/api/v1/users" -H "Authorization: Bearer ${token}")"
   inventory_code="$(curl -s -o /tmp/launch-inventory.out -w '%{http_code}' "${BASE_URL}/api/v1/inventory/products?limit=3&offset=0" -H "Authorization: Bearer ${token}")"
   suppliers_code="$(curl -s -o /tmp/launch-suppliers.out -w '%{http_code}' "${BASE_URL}/api/v1/suppliers/suppliers?limit=3&offset=0" -H "Authorization: Bearer ${token}")"
+  projection_status_code="$(curl -s -o /tmp/launch-projection.out -w '%{http_code}' "${BASE_URL}/api/v1/inventory/products/projection/status?staleThresholdSeconds=${PROJECTION_STALE_THRESHOLD_SECONDS}" -H "Authorization: Bearer ${token}")"
 
   [[ "$users_code" == "200" ]] || fail "Authenticated /users returned ${users_code}"
   [[ "$inventory_code" == "200" ]] || fail "Authenticated /inventory returned ${inventory_code}"
   [[ "$suppliers_code" == "200" ]] || fail "Authenticated /suppliers returned ${suppliers_code}"
+
+  [[ "$projection_status_code" == "200" ]] || fail "Projection status returned ${projection_status_code}"
+
+  projection_eval="$(python3 - <<'PY'
+import json
+
+try:
+  data = json.load(open('/tmp/launch-projection.out'))
+except Exception:
+  print('parse_error')
+  raise SystemExit(0)
+
+payload = data.get('data') or {}
+queue = payload.get('queue') or {}
+projection = payload.get('projection') or {}
+
+pending = int(queue.get('pending') or 0)
+retry = int(queue.get('retry') or 0)
+failed = int(queue.get('failed') or 0)
+processing = int(queue.get('processing') or 0)
+queue_pressure = pending + retry + processing
+stale_rows = int(projection.get('staleRows') or 0)
+total_rows = int(projection.get('totalRows') or 0)
+
+print(f"{failed}|{queue_pressure}|{stale_rows}|{total_rows}")
+PY
+)"
+
+[[ "$projection_eval" != "parse_error" ]] || fail 'Failed to parse projection status response'
+projection_failed="${projection_eval%%|*}"
+projection_rest="${projection_eval#*|}"
+projection_queue_pressure="${projection_rest%%|*}"
+projection_rest2="${projection_rest#*|}"
+projection_stale_rows="${projection_rest2%%|*}"
+projection_total_rows="${projection_rest2#*|}"
+
+if (( projection_failed > PROJECTION_FAILED_MAX )); then
+  fail "Projection queue failed jobs ${projection_failed} exceeds ${PROJECTION_FAILED_MAX}"
+fi
+
+if (( projection_queue_pressure > PROJECTION_QUEUE_MAX )); then
+  fail "Projection queue pressure ${projection_queue_pressure} exceeds ${PROJECTION_QUEUE_MAX}"
+fi
+
+if (( projection_stale_rows > 0 && projection_queue_pressure > 0 )); then
+  printf '[WARN] Projection stale rows=%s (total=%s) with queue pressure=%s.\n' "$projection_stale_rows" "$projection_total_rows" "$projection_queue_pressure"
+fi
+
+  pass 'Projection status checks passed'
   pass 'Authenticated API smoke checks passed'
 else
   printf '[WARN] Skipping authenticated smoke (set ADMIN_EMAIL and ADMIN_PASSWORD).\n'
