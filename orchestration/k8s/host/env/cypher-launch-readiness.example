@@ -9,8 +9,14 @@ B2B_URL=https://b2b.ledux.ro
 # Optional authenticated smoke in periodic checks:
 # ADMIN_EMAIL=admin@ledux.ro
 # ADMIN_PASSWORD=ChangeMeNow-Strong-Password
+# AUTH_SMOKE_REQUIRED=false
+# AUTH_LOGIN_RETRIES=3
+# AUTH_LOGIN_RETRY_DELAY_SEC=2
 
 # Projection status guardrails used only when authenticated smoke is enabled.
 PROJECTION_STALE_THRESHOLD_SECONDS=300
 PROJECTION_QUEUE_MAX=5000
 PROJECTION_FAILED_MAX=0
+
+# Guardrail: readiness fails if any matching legacy containers are running.
+LEGACY_CONTAINER_REGEX=^(cypher-erp-app-1|cypher-erp-db|cypher-erp-redis|cypher-rabbitmq)$
