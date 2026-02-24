@@ -76,6 +76,7 @@ ls -lh /root/backups/cypher_k8s_*.sql.gz
 - Script: `orchestration/k8s/launch-readiness-check.sh`
 - Unit: `/etc/systemd/system/cypher-launch-readiness.service`
 - Timer: `/etc/systemd/system/cypher-launch-readiness.timer`
+- Optional env file: `/etc/default/cypher-launch-readiness`
 - Schedule: every 15 minutes
 
 Verify:
@@ -85,6 +86,9 @@ systemctl is-enabled cypher-launch-readiness.timer
 systemctl is-active cypher-launch-readiness.timer
 systemctl list-timers --all | grep cypher-launch-readiness
 ```
+
+To enable authenticated smoke in periodic checks, set `ADMIN_EMAIL` and `ADMIN_PASSWORD`
+in `/etc/default/cypher-launch-readiness` (600 permissions).
 
 ## Post-Change Health Checks
 

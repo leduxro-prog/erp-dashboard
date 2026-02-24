@@ -1,0 +1,11 @@
+# Optional environment for cypher-launch-readiness.service
+# Copy to /etc/default/cypher-launch-readiness and set values as needed.
+
+APP_NS=cypher
+DATA_NS=cypher-data
+BASE_URL=https://erp.ledux.ro
+B2B_URL=https://b2b.ledux.ro
+
+# Optional authenticated smoke in periodic checks:
+# ADMIN_EMAIL=admin@ledux.ro
+# ADMIN_PASSWORD=ChangeMeNow-Strong-Password

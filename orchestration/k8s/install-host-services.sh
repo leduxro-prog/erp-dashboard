@@ -14,6 +14,10 @@ install -m 0644 "$HOST_DIR/systemd/cypher-k8s-backup.timer" /etc/systemd/system/
 install -m 0644 "$HOST_DIR/systemd/cypher-launch-readiness.service" /etc/systemd/system/cypher-launch-readiness.service
 install -m 0644 "$HOST_DIR/systemd/cypher-launch-readiness.timer" /etc/systemd/system/cypher-launch-readiness.timer
 
+if [[ ! -f /etc/default/cypher-launch-readiness ]]; then
+  install -m 0600 "$HOST_DIR/env/cypher-launch-readiness.example" /etc/default/cypher-launch-readiness
+fi
+
 systemctl daemon-reload
 systemctl enable --now docker-port-hardening.service
 systemctl enable --now cypher-k8s-backup.timer
