@@ -33,6 +33,23 @@ BEGIN
   END IF;
 END $$;
 
+DO $$
+BEGIN
+  IF to_regclass('public.notifications') IS NOT NULL AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'notifications'
+      AND column_name = 'recipientId'
+  ) THEN
+    IF to_regclass('public.notifications_legacy') IS NULL THEN
+      ALTER TABLE notifications RENAME TO notifications_legacy;
+    ELSE
+      DROP TABLE notifications;
+    END IF;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY,
   type notifications_type_enum NOT NULL,
@@ -117,4 +134,23 @@ CREATE INDEX IF NOT EXISTS idx_notification_preferences_channel ON notification_
 CREATE INDEX IF NOT EXISTS idx_notification_preferences_is_enabled ON notification_preferences ("isEnabled");
 
 CREATE INDEX IF NOT EXISTS idx_notification_batches_status ON notification_batches (status);
-CREATE INDEX IF NOT EXISTS idx_notification_batches_created_at ON notification_batches ("createdAt");
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'notification_batches'
+      AND column_name = 'createdAt'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_notification_batches_created_at ON notification_batches ("createdAt");
+  ELSIF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'notification_batches'
+      AND column_name = 'created_at'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_notification_batches_created_at ON notification_batches (created_at);
+  END IF;
+END $$;
