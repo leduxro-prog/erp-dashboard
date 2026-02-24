@@ -95,6 +95,15 @@ You can also tune projection queue guardrails with:
 - `PROJECTION_QUEUE_MAX`
 - `PROJECTION_FAILED_MAX`
 
+Authentication behavior controls:
+
+- `AUTH_SMOKE_REQUIRED` (`false` by default)
+- `AUTH_LOGIN_RETRIES` (default `3`)
+- `AUTH_LOGIN_RETRY_DELAY_SEC` (default `2`)
+
+Readiness also fails if legacy ERP containers are running (configurable via
+`LEGACY_CONTAINER_REGEX`).
+
 ## Post-Change Health Checks
 
 ```bash
