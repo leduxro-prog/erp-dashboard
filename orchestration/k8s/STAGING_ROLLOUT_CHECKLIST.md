@@ -76,3 +76,11 @@ kubectl rollout status deployment/cypher-app -n cypher --timeout=90s || true
 kubectl rollout undo deployment/cypher-app -n cypher
 kubectl rollout status deployment/cypher-app -n cypher --timeout=180s
 ```
+
+## 10. One-Command Launch Readiness
+
+```bash
+ADMIN_EMAIL=admin@ledux.ro \
+ADMIN_PASSWORD='ChangeMeNow-Strong-Password' \
+bash orchestration/k8s/launch-readiness-check.sh
+```
