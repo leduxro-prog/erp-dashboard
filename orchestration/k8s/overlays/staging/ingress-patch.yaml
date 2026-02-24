@@ -11,7 +11,57 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - staging-erp.example.com
+        - staging-erp.local
       secretName: cypher-staging-tls
   rules:
-    - host: staging-erp.example.com
+    - host: staging-erp.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cypher-app
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cypher-frontend
+                port:
+                  number: 80
+    - host: erp.ledux.ro
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cypher-app
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cypher-frontend
+                port:
+                  number: 80
+    - host: b2b.ledux.ro
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cypher-app
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cypher-frontend
+                port:
+                  number: 80

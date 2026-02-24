@@ -24,7 +24,23 @@ kubectl kustomize orchestration/k8s/overlays/staging >/tmp/cypher-k8s-staging.ya
 kubectl apply -k orchestration/k8s/overlays/staging
 ```
 
-## 4. Rollout Gates
+## 4. Bootstrap DB Schema (Idempotent)
+
+```bash
+bash orchestration/k8s/bootstrap-db-schema.sh
+```
+
+## 5. Seed/Reset Staging Admin (Optional but Recommended)
+
+```bash
+ADMIN_EMAIL=admin@ledux.ro \
+ADMIN_PASSWORD='ChangeMeNow-Strong-Password' \
+bash orchestration/k8s/seed-admin-user.sh
+```
+
+Rotate the password immediately after smoke if this account is shared.
+
+## 6. Rollout Gates
 
 ```bash
 kubectl rollout status deployment/cypher-app -n cypher --timeout=180s
@@ -33,14 +49,14 @@ kubectl get pods -n cypher -o wide
 kubectl get ingress -n cypher
 ```
 
-## 5. Health Checks
+## 7. Health Checks
 
 ```bash
 curl -fsS https://staging-erp.example.com/health
 curl -fsS https://staging-erp.example.com/api/v1/health
 ```
 
-## 6. API Smoke
+## 8. API Smoke
 
 Use a valid bearer token for state-changing requests to pass CSRF checks.
 
@@ -52,7 +68,7 @@ curl -fsS -H "Authorization: Bearer <token>" "https://staging-erp.example.com/ap
 curl -fsS -H "Authorization: Bearer <token>" "https://staging-erp.example.com/api/v1/suppliers/suppliers?limit=5&offset=0"
 ```
 
-## 7. Rollback Drill
+## 9. Rollback Drill
 
 ```bash
 kubectl set image deployment/cypher-app app=ghcr.io/your-org/cypher-erp-app:does-not-exist -n cypher
