@@ -68,3 +68,4 @@ See `CANARY_CUTOVER_RUNBOOK.md` for phased promotion and rollback flow.
 See `HOST_HARDENING_RUNBOOK.md` for post-cutover host firewall/runtime hardening.
 Use `launch-readiness-check.sh` for one-command launch verification.
 Use `install-host-services.sh` to install/update host scripts and systemd units from repo.
+Use `host/env/cypher-launch-readiness.example` as template for periodic readiness env vars.
