@@ -12,6 +12,7 @@ BASE_SCHEMA_SQL="$ROOT_DIR/database/init-scripts/001-schema.sql"
 ENSURE_NOTIFICATIONS_SQL="$ROOT_DIR/orchestration/swarm/sql/ensure-notifications-schema.sql"
 ENSURE_USERS_SQL="$ROOT_DIR/orchestration/swarm/sql/ensure-users-schema.sql"
 ENSURE_ORDERS_SUPPLIERS_SQL="$ROOT_DIR/orchestration/swarm/sql/ensure-orders-suppliers-schema.sql"
+ENSURE_AUDIT_LOGS_SQL="$ROOT_DIR/orchestration/swarm/sql/ensure-audit-logs-schema.sql"
 
 require_file() {
   local path="$1"
@@ -25,6 +26,7 @@ require_file "$BASE_SCHEMA_SQL"
 require_file "$ENSURE_NOTIFICATIONS_SQL"
 require_file "$ENSURE_USERS_SQL"
 require_file "$ENSURE_ORDERS_SUPPLIERS_SQL"
+require_file "$ENSURE_AUDIT_LOGS_SQL"
 
 DB_CONTAINER="$(docker ps --format '{{.Names}}' | grep -E "^${DB_SERVICE}\." | head -n 1 || true)"
 
@@ -53,5 +55,8 @@ docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAM
 
 echo "[INFO] Applying orders/suppliers compatibility schema"
 docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" < "$ENSURE_ORDERS_SUPPLIERS_SQL"
+
+echo "[INFO] Applying audit logs compatibility schema"
+docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" < "$ENSURE_AUDIT_LOGS_SQL"
 
 echo "[INFO] Database schema bootstrap complete"
