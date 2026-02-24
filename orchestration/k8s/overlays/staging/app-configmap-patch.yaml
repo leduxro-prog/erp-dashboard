@@ -17,3 +17,4 @@ data:
   RABBITMQ_HOST: "rabbitmq-staging.cypher-data.svc.cluster.local"
 
   LOG_DIR: "/tmp/logs"
+  SUPPLIER_SYNC_AUTORUN: "false"
