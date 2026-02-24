@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Cypher launch readiness check every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=cypher-launch-readiness.service
+
+[Install]
+WantedBy=timers.target

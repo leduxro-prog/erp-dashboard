@@ -1,0 +1,10 @@
+[Unit]
+Description=Cypher launch readiness check
+After=network-online.target k3s.service nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/cypher-launch-readiness
+Environment=KUBECONFIG=/root/.kube/config
+ExecStart=/opt/cypher-erp/orchestration/k8s/launch-readiness-check.sh
