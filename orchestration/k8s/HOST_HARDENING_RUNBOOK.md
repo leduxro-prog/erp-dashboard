@@ -2,6 +2,14 @@
 
 Use this runbook after moving ERP traffic to Kubernetes ingress.
 
+## Apply From Repository
+
+```bash
+sudo bash orchestration/k8s/install-host-services.sh
+```
+
+This installs host scripts and systemd units from `orchestration/k8s/host/` and enables required timers/services.
+
 ## Goals
 
 - Keep only `80/443/22` publicly reachable for ERP host traffic.

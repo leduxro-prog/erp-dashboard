@@ -1,0 +1,14 @@
+[Unit]
+Description=Harden Docker published non-ERP ports
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/docker-port-hardening.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=docker.service

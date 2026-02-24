@@ -1,0 +1,8 @@
+[Unit]
+Description=Cypher K8s PostgreSQL backup
+After=k3s.service
+Requires=k3s.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cypher-k8s-backup.sh

@@ -67,3 +67,4 @@ See `STAGING_ROLLOUT_CHECKLIST.md` for end-to-end staging apply/smoke/rollback.
 See `CANARY_CUTOVER_RUNBOOK.md` for phased promotion and rollback flow.
 See `HOST_HARDENING_RUNBOOK.md` for post-cutover host firewall/runtime hardening.
 Use `launch-readiness-check.sh` for one-command launch verification.
+Use `install-host-services.sh` to install/update host scripts and systemd units from repo.
