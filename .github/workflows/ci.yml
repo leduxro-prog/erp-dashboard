@@ -52,6 +52,10 @@ jobs:
         run: npx prettier --check 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'
         continue-on-error: false
 
+      - name: Run VAT literal guard
+        run: node scripts/check-vat-literals.cjs
+        continue-on-error: false
+
   # Testing job
   test:
     runs-on: ubuntu-latest
@@ -214,9 +218,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
+      - name: Security Audit
+        run: npm audit --audit-level=critical
+        continue-on-error: false
 
       - name: Check for vulnerable dependencies
         run: npm audit --json > audit.json 2>&1 || true
@@ -229,11 +233,59 @@ jobs:
           path: audit.json
           retention-days: 30
 
+  # Lighthouse performance budgets (mobile)
+  performance:
+    runs-on: ubuntu-latest
+    name: Lighthouse Mobile Budgets
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Build frontend
+        run: npm --prefix frontend run build
+
+      - name: Ensure Chrome/Chromium is available
+        run: |
+          if command -v google-chrome-stable >/dev/null 2>&1 || \
+             command -v google-chrome >/dev/null 2>&1 || \
+             command -v chromium >/dev/null 2>&1 || \
+             command -v chromium-browser >/dev/null 2>&1; then
+            echo "Chrome/Chromium already installed"
+            exit 0
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
+
+      - name: Run Lighthouse CI assertions
+        run: npm --prefix frontend run perf:lighthouse:ci
+
+      - name: Archive Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: lighthouseci-reports
+          path: frontend/.lighthouseci/
+          retention-days: 14
+
   # Docker build job (on main and develop branches)
   docker:
     runs-on: ubuntu-latest
     name: Build Docker Image
-    needs: [lint, test, build, security]
+    needs: [lint, test, build, security, performance]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     strategy:
       matrix:
@@ -269,7 +321,7 @@ jobs:
   status:
     runs-on: ubuntu-latest
     name: CI Pipeline Status
-    needs: [lint, test, build, security, docker]
+    needs: [lint, test, build, security, performance, docker]
     if: always()
 
     steps:
@@ -277,7 +329,8 @@ jobs:
         run: |
           if [ "${{ needs.lint.result }}" = "failure" ] || \
              [ "${{ needs.test.result }}" = "failure" ] || \
-             [ "${{ needs.build.result }}" = "failure" ]; then
+             [ "${{ needs.build.result }}" = "failure" ] || \
+             [ "${{ needs.performance.result }}" = "failure" ]; then
             echo "CI Pipeline failed"
             exit 1
           fi
