@@ -15,6 +15,12 @@ cp orchestration/k8s/overlays/staging/app-secret.staging.example.yaml \
   orchestration/k8s/overlays/staging/app-secret.staging.yaml
 # fill real values, then apply
 kubectl apply -f orchestration/k8s/overlays/staging/app-secret.staging.yaml
+
+# if using on-cluster data plane, also create cypher-data-secrets
+cp orchestration/k8s/overlays/staging/cypher-data-secrets.example.yaml \
+  orchestration/k8s/overlays/staging/cypher-data-secrets.yaml
+# fill real values, then apply
+kubectl apply -f orchestration/k8s/overlays/staging/cypher-data-secrets.yaml
 ```
 
 ## 3. Render and Apply
@@ -62,7 +68,7 @@ Use a valid bearer token for state-changing requests to pass CSRF checks.
 
 ```bash
 curl -fsS -H "Authorization: Bearer <token>" https://staging-erp.example.com/api/v1/users
-curl -fsS https://staging-erp.example.com/api/v1/settings
+curl -fsS -H "Authorization: Bearer <token>" https://staging-erp.example.com/api/v1/settings
 curl -fsS -H "Authorization: Bearer <token>" "https://staging-erp.example.com/api/v1/orders?page=1&limit=5"
 curl -fsS -H "Authorization: Bearer <token>" "https://staging-erp.example.com/api/v1/inventory/products?page=1&limit=5"
 curl -fsS -H "Authorization: Bearer <token>" "https://staging-erp.example.com/api/v1/suppliers/suppliers?limit=5&offset=0"
@@ -82,5 +88,11 @@ kubectl rollout status deployment/cypher-app -n cypher --timeout=180s
 ```bash
 ADMIN_EMAIL=admin@ledux.ro \
 ADMIN_PASSWORD='ChangeMeNow-Strong-Password' \
+AUTH_SMOKE_REQUIRED=true \
+VAT_GUARD_REQUIRED=true \
+DATA_NS=cypher-data \
+DB_DEPLOYMENT=postgres-staging \
+DB_USER=cypher_user \
+DB_NAME=cypher_erp \
 bash orchestration/k8s/launch-readiness-check.sh
 ```
