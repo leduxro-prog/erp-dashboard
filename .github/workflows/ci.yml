@@ -93,6 +93,10 @@ jobs:
         run: npx prettier --check 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'
         continue-on-error: false
 
+      - name: Run VAT literal guard
+        run: node scripts/check-vat-literals.cjs
+        continue-on-error: false
+
   # Testing job
   test:
     runs-on: ubuntu-latest
@@ -255,9 +259,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
+      - name: Security Audit
+        run: npm audit --audit-level=critical
+        continue-on-error: false
 
       - name: Check for vulnerable dependencies
         run: npm audit --json > audit.json 2>&1 || true
@@ -323,7 +327,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     name: Build Docker Image
-    needs: [lint, test, build, security]
+    needs: [lint, test, build, security, performance]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     strategy:
       matrix:
@@ -359,7 +363,7 @@ jobs:
   status:
     runs-on: ubuntu-latest
     name: CI Pipeline Status
-    needs: [lint, test, build, security, docker]
+    needs: [lint, test, build, security, performance, docker]
     if: always()
 
     steps:
@@ -367,7 +371,8 @@ jobs:
         run: |
           if [ "${{ needs.lint.result }}" = "failure" ] || \
              [ "${{ needs.test.result }}" = "failure" ] || \
-             [ "${{ needs.build.result }}" = "failure" ]; then
+             [ "${{ needs.build.result }}" = "failure" ] || \
+             [ "${{ needs.performance.result }}" = "failure" ]; then
             echo "CI Pipeline failed"
             exit 1
           fi
