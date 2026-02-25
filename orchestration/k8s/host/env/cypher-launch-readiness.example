@@ -3,13 +3,20 @@
 
 APP_NS=cypher
 DATA_NS=cypher-data
+DB_DEPLOYMENT=postgres-staging
+DB_USER=cypher_user
+DB_NAME=cypher_erp
 BASE_URL=https://erp.ledux.ro
 B2B_URL=https://b2b.ledux.ro
+BACKUP_MAX_AGE_HOURS=30
+TLS_MIN_VALID_DAYS=14
+RESTORE_DRILL_MAX_AGE_DAYS=45
+VAT_GUARD_REQUIRED=true
 
 # Optional authenticated smoke in periodic checks:
 # ADMIN_EMAIL=admin@ledux.ro
 # ADMIN_PASSWORD=ChangeMeNow-Strong-Password
-# AUTH_SMOKE_REQUIRED=false
+# AUTH_SMOKE_REQUIRED=true
 # AUTH_LOGIN_RETRIES=3
 # AUTH_LOGIN_RETRY_DELAY_SEC=2
 
@@ -20,3 +27,7 @@ PROJECTION_FAILED_MAX=0
 
 # Guardrail: readiness fails if any matching legacy containers are running.
 LEGACY_CONTAINER_REGEX=^(cypher-erp-app-1|cypher-erp-db|cypher-erp-redis|cypher-rabbitmq)$
+
+REQUIRE_APP_SECRET=true
+REQUIRE_DATA_SECRET=true
+REQUIRE_RESTORE_DRILL_SUCCESS=false
