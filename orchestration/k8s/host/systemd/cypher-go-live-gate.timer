@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Cypher ERP go-live gate every 30 minutes
+
+[Timer]
+OnCalendar=*:0/30
+Persistent=true
+Unit=cypher-go-live-gate.service
+
+[Install]
+WantedBy=timers.target

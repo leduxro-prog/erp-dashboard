@@ -1,8 +1,12 @@
 import { Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
-import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
-import { getEventBus } from '@shared/utils/event-bus';
 import { DataSource } from 'typeorm';
+
+import { invalidateInventoryReadCacheNamespace } from '@shared/cache/inventory-read-cache';
+import { getReadDataSource } from '@shared/database/read-replica-manager';
+import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { InventoryProductProjectionService } from '@shared/read-model/InventoryProductProjectionService';
+import { getEventBus } from '@shared/utils/event-bus';
 
 import { RegisterB2B, RegisterB2BInput } from '../../application/use-cases/RegisterB2B';
 import {
@@ -41,6 +45,286 @@ export class B2BController {
     private readonly dataSource: DataSource,
   ) {
     this.anafValidationService = new AnafValidationService();
+  }
+
+  private async listProductsFromProjection(options: {
+    page: number;
+    limit: number;
+    sort?: string;
+    search?: string;
+    category?: string;
+    stock?: string;
+    kelvin?: string[];
+    ip?: string[];
+    brand?: string[];
+    mountingType?: string[];
+    stripType?: string[];
+    ledVoltage?: string[];
+    lightColor?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+  }): Promise<{ products: any[]; total: number } | null> {
+    const projectionService = new InventoryProductProjectionService(this.dataSource);
+    const projectionExists = await projectionService.projectionTableExists();
+
+    if (!projectionExists) {
+      return null;
+    }
+
+    const readDataSource = getReadDataSource(this.dataSource);
+    const offset = (options.page - 1) * options.limit;
+
+    const where: string[] = ['ip.is_active = true'];
+    const params: any[] = [];
+    const addParam = (value: any): string => {
+      params.push(value);
+      return `$${params.length}`;
+    };
+
+    const normalizedValues = (values?: string[]): string[] =>
+      (Array.isArray(values) ? values : [])
+        .map((value) => String(value || '').trim())
+        .filter((value) => value.length > 0);
+
+    const normalizedSearch = String(options.search || '').trim().toLowerCase();
+
+    if (options.search) {
+      const param = addParam(`%${options.search}%`);
+      where.push(
+        `(ip.sku ILIKE ${param} OR ip.name ILIKE ${param} OR COALESCE(ip.search_blob, '') ILIKE ${param})`,
+      );
+    }
+
+    if (options.category) {
+      const param = addParam(`%${options.category}%`);
+      where.push(`(ip.category_root ILIKE ${param} OR ip.category_name ILIKE ${param})`);
+    }
+
+    if (options.stock === 'supplier') {
+      where.push('ip.supplier_stock > 0');
+    }
+
+    if (options.stock === 'local') {
+      where.push('ip.local_stock > 0');
+    }
+
+    if (typeof options.minPrice === 'number' && Number.isFinite(options.minPrice)) {
+      where.push(`ip.base_price >= ${addParam(options.minPrice)}`);
+    }
+
+    if (typeof options.maxPrice === 'number' && Number.isFinite(options.maxPrice)) {
+      where.push(`ip.base_price <= ${addParam(options.maxPrice)}`);
+    }
+
+    const selectedKelvin = normalizedValues(options.kelvin);
+    if (selectedKelvin.length > 0) {
+      const kelvinParam = addParam(selectedKelvin);
+      where.push(
+        `(COALESCE(ip.color_temperature::text, '') = ANY(${kelvinParam}) OR EXISTS (
+          SELECT 1
+          FROM unnest(${kelvinParam}::text[]) AS k(value)
+          WHERE COALESCE(ip.search_blob, '') ~* ('(^|[^0-9])' || regexp_replace(k.value, '[^0-9]', '', 'g') || '\\s*k([^0-9]|$)')
+        ))`,
+      );
+    }
+
+    const selectedIp = normalizedValues(options.ip).map((value) => value.toUpperCase());
+    if (selectedIp.length > 0) {
+      const ipParam = addParam(selectedIp);
+      where.push(
+        `(UPPER(COALESCE(ip.ip_rating, '')) = ANY(${ipParam}) OR EXISTS (
+          SELECT 1
+          FROM unnest(${ipParam}::text[]) AS i(value)
+          WHERE COALESCE(ip.search_blob, '') ILIKE ('%' || LOWER(i.value) || '%')
+        ))`,
+      );
+    }
+
+    const selectedBrands = normalizedValues(options.brand).map((value) => value.toLowerCase());
+    if (selectedBrands.length > 0) {
+      const brandParam = addParam(selectedBrands);
+      where.push(`LOWER(COALESCE(ip.brand, ip.supplier_name, '')) = ANY(${brandParam})`);
+    }
+
+    const selectedMountingTypes = normalizedValues(options.mountingType).map((value) =>
+      value.toLowerCase(),
+    );
+    if (selectedMountingTypes.length > 0) {
+      const mountingParam = addParam(selectedMountingTypes);
+      where.push(`LOWER(COALESCE(ip.mounting_type, '')) = ANY(${mountingParam})`);
+    }
+
+    const selectedStripTypes = normalizedValues(options.stripType).map((value) =>
+      value.toLowerCase(),
+    );
+    if (selectedStripTypes.length > 0) {
+      const stripConditions = selectedStripTypes.map((value) => {
+        const text = value.replace(/[^a-z0-9]/g, '');
+        const stripParam = addParam(`(^|[^a-z0-9])${text}(?:\\s*\\d{3,4})?([^a-z0-9]|$)`);
+        return `(LOWER(COALESCE(ip.led_type, '')) ~* ${stripParam} OR COALESCE(ip.search_blob, '') ~* ${stripParam})`;
+      });
+      where.push(`(${stripConditions.join(' OR ')})`);
+    }
+
+    const selectedVoltages = normalizedValues(options.ledVoltage)
+      .map((value) => value.replace(/[^0-9]/g, ''))
+      .filter((value) => value.length > 0);
+    if (selectedVoltages.length > 0) {
+      const voltageConditions = selectedVoltages.map((value) => {
+        const numericParam = addParam(Number(value));
+        const regexParam = addParam(`(^|[^0-9])${value}\\s*v([^0-9]|$)`);
+        return `(ip.led_voltage = ${numericParam} OR COALESCE(ip.search_blob, '') ~* ${regexParam})`;
+      });
+      where.push(`(${voltageConditions.join(' OR ')})`);
+    }
+
+    const selectedLightColors = normalizedValues(options.lightColor).map((value) =>
+      value.toLowerCase(),
+    );
+    if (selectedLightColors.length > 0) {
+      const colorConditions = selectedLightColors.map((value) => {
+        if (value === 'rgb' || value === 'rgbw') {
+          const rgbParam = addParam(`%${value}%`);
+          return `(LOWER(COALESCE(ip.led_color, '')) ILIKE ${rgbParam} OR COALESCE(ip.search_blob, '') ILIKE ${rgbParam})`;
+        }
+
+        const numeric = value.replace(/[^0-9]/g, '');
+        if (numeric.length > 0) {
+          const tempParam = addParam(numeric);
+          const regexParam = addParam(`(^|[^0-9])${numeric}\\s*k([^0-9]|$)`);
+          const colorParam = addParam(`%${numeric}%`);
+          return `(COALESCE(ip.color_temperature::text, '') = ${tempParam} OR LOWER(COALESCE(ip.led_color, '')) ILIKE ${colorParam} OR COALESCE(ip.search_blob, '') ~* ${regexParam})`;
+        }
+
+        const genericParam = addParam(`%${value}%`);
+        return `(LOWER(COALESCE(ip.led_color, '')) ILIKE ${genericParam} OR COALESCE(ip.search_blob, '') ILIKE ${genericParam})`;
+      });
+      where.push(`(${colorConditions.join(' OR ')})`);
+    }
+
+    const whereSql = `WHERE ${where.join(' AND ')}`;
+
+    const countRows = await readDataSource.query(
+      `SELECT COUNT(*)::int AS total FROM inventory_product_projection ip ${whereSql}`,
+      params,
+    );
+    const total = Number(countRows[0]?.total || 0);
+
+    const sort = String(options.sort || 'newest');
+    let orderBySql = `COALESCE(ip.source_updated_at, NOW()) DESC, ip.name ASC, ip.product_id ASC`;
+
+    if (sort === 'price_asc') {
+      orderBySql = `ip.base_price ASC NULLS LAST, ip.name ASC, ip.product_id ASC`;
+    } else if (sort === 'price_desc') {
+      orderBySql = `ip.base_price DESC NULLS LAST, ip.name ASC, ip.product_id ASC`;
+    } else if (sort === 'name_asc') {
+      orderBySql = `ip.name ASC, ip.product_id ASC`;
+    } else if (sort === 'popularity') {
+      orderBySql = `ip.total_stock DESC NULLS LAST, ip.name ASC, ip.product_id ASC`;
+    } else if (normalizedSearch) {
+      const searchExactParam = addParam(normalizedSearch);
+      const searchPrefixParam = addParam(`${normalizedSearch}%`);
+      const searchContainsParam = addParam(`%${normalizedSearch}%`);
+      orderBySql = `
+        CASE
+          WHEN LOWER(ip.sku) = ${searchExactParam} THEN 0
+          WHEN LOWER(ip.sku) LIKE ${searchPrefixParam} THEN 1
+          WHEN LOWER(ip.name) LIKE ${searchPrefixParam} THEN 2
+          WHEN LOWER(ip.name) LIKE ${searchContainsParam} THEN 3
+          ELSE 4
+        END ASC,
+        COALESCE(ip.source_updated_at, NOW()) DESC,
+        ip.name ASC,
+        ip.product_id ASC
+      `;
+    }
+
+    const queryParams = [...params, options.limit, offset];
+    const limitParam = `$${params.length + 1}`;
+    const offsetParam = `$${params.length + 2}`;
+
+    const rows = await readDataSource.query(
+      `
+        SELECT
+          ip.product_id AS id,
+          ip.sku,
+          ip.name,
+          ip.description,
+          ip.base_price AS price,
+          ip.currency_code AS currency,
+          ip.primary_image_url,
+          ip.category_name AS category_raw,
+          ip.category_root,
+          ip.brand,
+          ip.mounting_type,
+          ip.ip_rating,
+          ip.color_temperature,
+          ip.local_stock,
+          ip.supplier_stock,
+          ip.total_stock,
+          ip.supplier_lead_time,
+          ip.supplier_name,
+          ip.source_updated_at
+        FROM inventory_product_projection ip
+        ${whereSql}
+        ORDER BY ${orderBySql}
+        LIMIT ${limitParam} OFFSET ${offsetParam}
+      `,
+      queryParams,
+    );
+
+    return {
+      products: rows,
+      total,
+    };
+  }
+
+  private async getProductDetailsFromProjection(productId: string): Promise<any | null> {
+    const projectionService = new InventoryProductProjectionService(this.dataSource);
+    const projectionExists = await projectionService.projectionTableExists();
+
+    if (!projectionExists) {
+      return null;
+    }
+
+    const readDataSource = getReadDataSource(this.dataSource);
+    const rows = await readDataSource.query(
+      `
+        SELECT
+          ip.product_id AS id,
+          ip.sku,
+          ip.name,
+          ip.description,
+          ip.base_price AS price,
+          ip.currency_code AS currency,
+          ip.primary_image_url,
+          ip.category_name AS category_raw,
+          ip.category_root,
+          ip.brand,
+          ip.mounting_type,
+          ip.ip_rating,
+          ip.color_temperature,
+          ps.wattage,
+          ps.lumens,
+          ps.cri,
+          ps.beam_angle,
+          ps.voltage_input,
+          ps.custom_specs,
+          ip.local_stock,
+          ip.supplier_stock,
+          ip.total_stock,
+          ip.supplier_lead_time,
+          ip.supplier_name
+        FROM inventory_product_projection ip
+        LEFT JOIN product_specifications ps ON ps.product_id = ip.product_id
+        WHERE ip.product_id = $1
+          AND ip.is_active = true
+        LIMIT 1
+      `,
+      [productId],
+    );
+
+    return rows.length > 0 ? rows[0] : null;
   }
 
   private getB2BCustomerId(req: AuthenticatedRequest): string | number | undefined {
@@ -1414,6 +1698,8 @@ export class B2BController {
         );
       }
 
+      await invalidateInventoryReadCacheNamespace();
+
       // Update customer used credit
       const newUsedCredit = (customer.usedCredit || 0) + totalAmount;
       await this.dataSource.query(
@@ -1643,15 +1929,121 @@ export class B2BController {
    */
   async listProducts(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { page = 1, limit = 100, search, category } = req.query as Record<string, any>;
+      const requestQuery = this.getRequestQuery(req);
+      const { page = 1, limit = 100, sort = 'newest', search, category, stock } = requestQuery;
+      const compactMode =
+        requestQuery.compact === true ||
+        requestQuery.compact === 'true' ||
+        requestQuery.compact === '1';
+
+      const serializeCatalogDescription = (value: unknown): string => {
+        const normalized = String(value || '').trim();
+        if (!compactMode || normalized.length <= 220) {
+          return normalized;
+        }
+
+        return `${normalized.slice(0, 217).trimEnd()}...`;
+      };
+
+      const toArray = (value: unknown): string[] => {
+        if (Array.isArray(value)) {
+          return value.map((item) => String(item || '').trim()).filter((item) => item.length > 0);
+        }
+
+        const normalized = String(value || '').trim();
+        if (!normalized) {
+          return [];
+        }
+
+        return normalized
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0);
+      };
+
+      const selectedKelvin = toArray(requestQuery.kelvin);
+      const selectedIp = toArray(requestQuery.ip);
+      const selectedBrands = toArray(requestQuery.brand);
+      const selectedMountingTypes = toArray(
+        requestQuery.mountingType ?? requestQuery.mounting_type,
+      );
+      const selectedStripTypes = toArray(requestQuery.stripType ?? requestQuery.strip_type);
+      const selectedLedVoltages = toArray(requestQuery.ledVoltage ?? requestQuery.led_voltage);
+      const selectedLightColors = toArray(requestQuery.lightColor ?? requestQuery.light_color);
+
+      const minPrice =
+        requestQuery.min_price !== undefined ? Number(requestQuery.min_price) : undefined;
+      const maxPrice =
+        requestQuery.max_price !== undefined ? Number(requestQuery.max_price) : undefined;
+
       const categorySql = this.getCatalogCategorySqlExpression();
 
-      const pageNum = Number(page);
-      const limitNum = Number(limit);
+      const pageNum = Math.max(1, Number(page) || 1);
+      const limitNum = Math.min(120, Math.max(1, Number(limit) || 100));
       const offset = (pageNum - 1) * limitNum;
 
+      const projectionResult = await this.listProductsFromProjection({
+        page: pageNum,
+        limit: limitNum,
+        sort,
+        search,
+        category,
+        stock,
+        kelvin: selectedKelvin,
+        ip: selectedIp,
+        brand: selectedBrands,
+        mountingType: selectedMountingTypes,
+        stripType: selectedStripTypes,
+        ledVoltage: selectedLedVoltages,
+        lightColor: selectedLightColors,
+        minPrice,
+        maxPrice,
+      });
+
+      if (projectionResult) {
+        res.status(200).json({
+          success: true,
+          data: {
+            products: projectionResult.products.map((p: any) => {
+              const stockLocal = parseInt(p.local_stock) || 0;
+              const stockSupplier = parseInt(p.supplier_stock) || 0;
+
+              return {
+                id: p.id,
+                sku: p.sku,
+                name: p.name,
+                description: serializeCatalogDescription(p.description),
+                price: parseFloat(p.price) || 0,
+                currency: p.currency || 'RON',
+                image_url: p.primary_image_url || '',
+                category: p.category_root || p.category_raw || 'Diverse',
+                subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
+                brand: p.brand || null,
+                mounting_type: p.mounting_type || null,
+                ip_rating: p.ip_rating || null,
+                color_temperature: p.color_temperature ? Number(p.color_temperature) : null,
+                supplier_name: p.supplier_name || null,
+                stock_local: stockLocal,
+                stock_supplier: stockSupplier,
+                stock_total: stockLocal + stockSupplier,
+                supplier_lead_time: parseInt(p.supplier_lead_time) || 3,
+              };
+            }),
+            pagination: {
+              page: pageNum,
+              limit: limitNum,
+              total: projectionResult.total,
+              total_pages: Math.ceil(projectionResult.total / limitNum),
+            },
+          },
+        });
+        return;
+      }
+
+      const readDataSource = getReadDataSource(this.dataSource);
+
       // Build WHERE clause
-      let whereClause = 'WHERE p.is_active = true AND p.deleted_at IS NULL AND p.base_price > 0';
+      let whereClause = 'WHERE p.is_active = true AND p.deleted_at IS NULL';
       const params: any[] = [limitNum, offset];
       const countParams: any[] = [];
 
@@ -1668,19 +2060,189 @@ export class B2BController {
         countParams.push(`%${category}%`);
       }
 
+      if (stock === 'supplier') {
+        whereClause += `
+          AND EXISTS (
+            SELECT 1
+            FROM supplier_stock_cache sc2
+            WHERE sc2.product_id = p.id
+              AND sc2.is_available = true
+              AND sc2.quantity_available > 0
+          )
+        `;
+      }
+
+      if (stock === 'local') {
+        whereClause += `
+          AND EXISTS (
+            SELECT 1
+            FROM stock_levels sl2
+            JOIN warehouses sw2 ON sw2.id = sl2.warehouse_id
+            WHERE sl2.product_id = p.id
+              AND sw2.is_active = true
+              AND (sw2.code ILIKE 'SB-%' OR sw2.name ILIKE 'magazin')
+              AND sl2.quantity_available > 0
+          )
+        `;
+      }
+
+      if (typeof minPrice === 'number' && Number.isFinite(minPrice)) {
+        const minPriceIndex = params.length + 1;
+        whereClause += ` AND p.base_price >= $${minPriceIndex}`;
+        params.push(minPrice);
+        countParams.push(minPrice);
+      }
+
+      if (typeof maxPrice === 'number' && Number.isFinite(maxPrice)) {
+        const maxPriceIndex = params.length + 1;
+        whereClause += ` AND p.base_price <= $${maxPriceIndex}`;
+        params.push(maxPrice);
+        countParams.push(maxPrice);
+      }
+
+      if (selectedKelvin.length > 0) {
+        const kelvinStart = params.length + 1;
+        const kelvinConditions = selectedKelvin.map((value, index) => {
+          const param = `$${kelvinStart + index}`;
+          return `(COALESCE(ps.color_temperature::text, '') = ${param} OR LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ~* ('(^|[^0-9])' || regexp_replace(${param}, '[^0-9]', '', 'g') || '\\s*k([^0-9]|$)'))`;
+        });
+        whereClause += ` AND (${kelvinConditions.join(' OR ')})`;
+        params.push(...selectedKelvin);
+        countParams.push(...selectedKelvin);
+      }
+
+      if (selectedIp.length > 0) {
+        const normalizedIpValues = selectedIp.map((value) => value.toUpperCase());
+        const ipStart = params.length + 1;
+        const ipConditions = normalizedIpValues.map((_, index) => {
+          const param = `$${ipStart + index}`;
+          return `(UPPER(COALESCE(ps.ip_rating, '')) = ${param} OR LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ILIKE ('%' || LOWER(${param}) || '%'))`;
+        });
+        whereClause += ` AND (${ipConditions.join(' OR ')})`;
+        params.push(...normalizedIpValues);
+        countParams.push(...normalizedIpValues);
+      }
+
+      if (selectedBrands.length > 0) {
+        const normalizedBrands = selectedBrands.map((value) => value.toLowerCase());
+        const brandStart = params.length + 1;
+        const brandConditions = normalizedBrands.map((_, index) => {
+          const param = `$${brandStart + index}`;
+          return `LOWER(COALESCE(ps.brand, s.name, '')) = ${param}`;
+        });
+        whereClause += ` AND (${brandConditions.join(' OR ')})`;
+        params.push(...normalizedBrands);
+        countParams.push(...normalizedBrands);
+      }
+
+      if (selectedMountingTypes.length > 0) {
+        const normalizedMounting = selectedMountingTypes.map((value) => value.toLowerCase());
+        const mountingStart = params.length + 1;
+        const mountingConditions = normalizedMounting.map((_, index) => {
+          const param = `$${mountingStart + index}`;
+          return `LOWER(COALESCE(ps.mounting_type, '')) = ${param}`;
+        });
+        whereClause += ` AND (${mountingConditions.join(' OR ')})`;
+        params.push(...normalizedMounting);
+        countParams.push(...normalizedMounting);
+      }
+
+      if (selectedStripTypes.length > 0) {
+        const normalizedStripTypes = selectedStripTypes.map((value) => value.toLowerCase());
+        const stripStart = params.length + 1;
+        const stripConditions = normalizedStripTypes.map((_, index) => {
+          const param = `$${stripStart + index}`;
+          return `LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ~* ('(^|[^a-z0-9])' || regexp_replace(${param}, '[^a-z0-9]', '', 'g') || '(?:\\s*\\d{3,4})?([^a-z0-9]|$)')`;
+        });
+        whereClause += ` AND (${stripConditions.join(' OR ')})`;
+        params.push(...normalizedStripTypes);
+        countParams.push(...normalizedStripTypes);
+      }
+
+      if (selectedLedVoltages.length > 0) {
+        const normalizedVoltages = selectedLedVoltages
+          .map((value) => value.replace(/[^0-9]/g, ''))
+          .filter((value) => value.length > 0);
+
+        if (normalizedVoltages.length > 0) {
+          const voltageStart = params.length + 1;
+          const voltageConditions = normalizedVoltages.map((_, index) => {
+            const param = `$${voltageStart + index}`;
+            return `LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ~* ('(^|[^0-9])' || ${param} || '\\s*v([^0-9]|$)')`;
+          });
+          whereClause += ` AND (${voltageConditions.join(' OR ')})`;
+          params.push(...normalizedVoltages);
+          countParams.push(...normalizedVoltages);
+        }
+      }
+
+      if (selectedLightColors.length > 0) {
+        const normalizedLightColors = selectedLightColors.map((value) => value.toLowerCase());
+        const colorStart = params.length + 1;
+        const colorConditions = normalizedLightColors.map((_, index) => {
+          const param = `$${colorStart + index}`;
+          return `(
+            LOWER(COALESCE(ps.led_color, '')) ILIKE ('%' || ${param} || '%')
+            OR LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ILIKE ('%' || ${param} || '%')
+            OR LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ~* ('(^|[^0-9])' || regexp_replace(${param}, '[^0-9]', '', 'g') || '\\s*k([^0-9]|$)')
+          )`;
+        });
+        whereClause += ` AND (${colorConditions.join(' OR ')})`;
+        params.push(...normalizedLightColors);
+        countParams.push(...normalizedLightColors);
+      }
+
       // Count total products
-      const countWhereClause = whereClause.replace(/\$3/g, '$1').replace(/\$4/g, '$2');
+      const countWhereClause = whereClause.replace(/\$(\d+)/g, (_match, index) => {
+        return `$${Number(index) - 2}`;
+      });
       const countQuery = `
         SELECT COUNT(*) as total
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN suppliers s ON s.id = p.supplier_id
+        LEFT JOIN LATERAL (
+          SELECT
+            ps.brand,
+            ps.mounting_type,
+            ps.ip_rating,
+            ps.color_temperature,
+            ps.led_color
+          FROM product_specifications ps
+          WHERE ps.product_id = p.id
+          ORDER BY ps.updated_at DESC NULLS LAST, ps.id DESC
+          LIMIT 1
+        ) ps ON true
         ${countWhereClause}
       `;
-      const countResult = await this.dataSource.query(countQuery, countParams);
+      const countResult = await readDataSource.query(countQuery, countParams);
       const total = parseInt(countResult[0]?.total || '0', 10);
 
+      let orderClause = 'p.updated_at DESC, p.name ASC';
+      if (sort === 'price_asc') {
+        orderClause = 'p.base_price ASC NULLS LAST, p.name ASC';
+      } else if (sort === 'price_desc') {
+        orderClause = 'p.base_price DESC NULLS LAST, p.name ASC';
+      } else if (sort === 'name_asc') {
+        orderClause = 'p.name ASC';
+      } else if (sort === 'popularity') {
+        orderClause = '(COALESCE(stock_total.quantity, 0) + COALESCE(ssc.supplier_stock, 0)) DESC, p.name ASC';
+      } else if (search) {
+        orderClause = `
+          CASE
+            WHEN LOWER(p.sku) = LOWER(REPLACE($3, '%', '')) THEN 0
+            WHEN LOWER(p.sku) LIKE LOWER(REPLACE($3, '%', '')) || '%' THEN 1
+            WHEN LOWER(p.name) LIKE LOWER(REPLACE($3, '%', '')) || '%' THEN 2
+            WHEN LOWER(p.name) LIKE LOWER($3) THEN 3
+            ELSE 4
+          END ASC,
+          p.updated_at DESC,
+          p.name ASC
+        `;
+      }
+
       // Fetch products with stock information
-      const query = `
+      const productsQuery = `
         SELECT
           p.id,
           p.sku,
@@ -1689,12 +2251,29 @@ export class B2BController {
           p.base_price as price,
           p.currency_code as currency,
           c.name as category_raw,
+          s.name as supplier_name,
           ${categorySql} as category_root,
+          ps.brand,
+          ps.mounting_type,
+          ps.ip_rating,
+          ps.color_temperature,
           COALESCE(stock_total.quantity, 0) as stock_local,
           COALESCE(ssc.supplier_stock, 0) as stock_supplier,
           COALESCE(ssc.supplier_lead_time, 3) as supplier_lead_time
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN suppliers s ON s.id = p.supplier_id
+        LEFT JOIN LATERAL (
+          SELECT
+            ps.brand,
+            ps.mounting_type,
+            ps.ip_rating,
+            ps.color_temperature
+          FROM product_specifications ps
+          WHERE ps.product_id = p.id
+          ORDER BY ps.updated_at DESC NULLS LAST, ps.id DESC
+          LIMIT 1
+        ) ps ON true
         LEFT JOIN (
           SELECT sl.product_id, SUM(sl.quantity_available) as quantity
           FROM stock_levels sl
@@ -1713,11 +2292,11 @@ export class B2BController {
           GROUP BY sc.product_id
         ) ssc ON p.id = ssc.product_id
         ${whereClause}
-        ORDER BY p.updated_at DESC, p.name ASC
+        ORDER BY ${orderClause}
         LIMIT $1 OFFSET $2
       `;
 
-      const products = await this.dataSource.query(query, params);
+      const products = await readDataSource.query(productsQuery, params);
 
       res.status(200).json({
         success: true,
@@ -1730,12 +2309,17 @@ export class B2BController {
               id: p.id,
               sku: p.sku,
               name: p.name,
-              description: p.description || '',
+              description: serializeCatalogDescription(p.description),
               price: parseFloat(p.price) || 0,
               currency: p.currency || 'RON',
               image_url: '',
               category: p.category_root || p.category_raw || 'Diverse',
               subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
+              brand: p.brand || null,
+              mounting_type: p.mounting_type || null,
+              ip_rating: p.ip_rating || null,
+              color_temperature: p.color_temperature ? Number(p.color_temperature) : null,
+              supplier_name: p.supplier_name || null,
               stock_local: stockLocal,
               stock_supplier: stockSupplier,
               stock_total: stockLocal + stockSupplier,
@@ -1769,6 +2353,56 @@ export class B2BController {
   ): Promise<void> {
     try {
       const { id } = req.params;
+
+      const projectionProduct = await this.getProductDetailsFromProjection(id);
+      if (projectionProduct) {
+        const stockLocal = parseInt(projectionProduct.local_stock) || 0;
+        const stockSupplier = parseInt(projectionProduct.supplier_stock) || 0;
+
+        res.status(200).json({
+          success: true,
+          data: {
+            id: projectionProduct.id,
+            sku: projectionProduct.sku,
+            name: projectionProduct.name,
+            description: projectionProduct.description || '',
+            price: parseFloat(projectionProduct.price) || 0,
+            currency: projectionProduct.currency || 'RON',
+            image_url: projectionProduct.primary_image_url || '',
+            category:
+              projectionProduct.category_root || projectionProduct.category_raw || 'Diverse',
+            subcategory: this.normalizeCatalogSubcategory(
+              projectionProduct.category_raw,
+              projectionProduct.category_root,
+            ),
+            supplier_name: projectionProduct.supplier_name || null,
+            specifications: {
+              brand: projectionProduct.brand || projectionProduct.supplier_name || null,
+              mounting_type: projectionProduct.mounting_type || null,
+              ip_rating: projectionProduct.ip_rating || null,
+              color_temperature: projectionProduct.color_temperature || null,
+              wattage: projectionProduct.wattage || null,
+              lumens: projectionProduct.lumens || null,
+              cri: projectionProduct.cri || null,
+              beam_angle: projectionProduct.beam_angle || null,
+              voltage_input: projectionProduct.voltage_input || null,
+              custom_specs:
+                projectionProduct.custom_specs &&
+                typeof projectionProduct.custom_specs === 'object' &&
+                Object.keys(projectionProduct.custom_specs).length > 0
+                  ? projectionProduct.custom_specs
+                  : null,
+            },
+            stock_local: stockLocal,
+            stock_supplier: stockSupplier,
+            stock_total: stockLocal + stockSupplier,
+            supplier_lead_time: parseInt(projectionProduct.supplier_lead_time) || 3,
+          },
+        });
+        return;
+      }
+
+      const readDataSource = getReadDataSource(this.dataSource);
       const categorySql = this.getCatalogCategorySqlExpression();
 
       const query = `
@@ -1779,13 +2413,27 @@ export class B2BController {
           p.description,
           p.base_price as price,
           p.currency_code as currency,
+          p.image_url,
           c.name as category_raw,
+          s.name as supplier_name,
+          COALESCE(NULLIF(ps.brand, ''), NULLIF(s.name, '')) as brand_effective,
+          ps.mounting_type,
+          ps.ip_rating,
+          ps.color_temperature,
+          ps.wattage,
+          ps.lumens,
+          ps.cri,
+          ps.beam_angle,
+          ps.voltage_input,
+          ps.custom_specs,
           ${categorySql} as category_root,
           COALESCE(stock_total.quantity, 0) as stock_local,
           COALESCE(ssc.supplier_stock, 0) as stock_supplier,
           COALESCE(ssc.supplier_lead_time, 3) as supplier_lead_time
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN suppliers s ON s.id = p.supplier_id
+        LEFT JOIN product_specifications ps ON ps.product_id = p.id
         LEFT JOIN (
           SELECT sl.product_id, SUM(sl.quantity_available) as quantity
           FROM stock_levels sl
@@ -1803,10 +2451,10 @@ export class B2BController {
           WHERE sc.is_available = true
           GROUP BY sc.product_id
         ) ssc ON p.id = ssc.product_id
-        WHERE p.id = $1 AND p.is_active = true AND p.deleted_at IS NULL AND p.base_price > 0
+        WHERE p.id = $1 AND p.is_active = true AND p.deleted_at IS NULL
       `;
 
-      const products = await this.dataSource.query(query, [id]);
+      const products = await readDataSource.query(query, [id]);
 
       if (products.length === 0) {
         res.status(404).json({
@@ -1832,6 +2480,24 @@ export class B2BController {
           image_url: p.image_url || '',
           category: p.category_root || p.category_raw || 'Diverse',
           subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
+          supplier_name: p.supplier_name || null,
+          specifications: {
+            brand: p.brand_effective || null,
+            mounting_type: p.mounting_type || null,
+            ip_rating: p.ip_rating || null,
+            color_temperature: p.color_temperature || null,
+            wattage: p.wattage || null,
+            lumens: p.lumens || null,
+            cri: p.cri || null,
+            beam_angle: p.beam_angle || null,
+            voltage_input: p.voltage_input || null,
+            custom_specs:
+              p.custom_specs &&
+              typeof p.custom_specs === 'object' &&
+              Object.keys(p.custom_specs).length > 0
+                ? p.custom_specs
+                : null,
+          },
           stock_local: stockLocal,
           stock_supplier: stockSupplier,
           stock_total: stockLocal + stockSupplier,
@@ -1856,115 +2522,468 @@ export class B2BController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const { category_id } = req.query as Record<string, any>;
-      const rawCategoryId = Array.isArray(category_id) ? category_id[0] : category_id;
+      const query = this.getRequestQuery(req);
+      const rawCategory = Array.isArray(query.category) ? query.category[0] : query.category;
+      const category = String(rawCategory || '').trim();
+
+      const rawCategoryId = Array.isArray(query.category_id)
+        ? query.category_id[0]
+        : query.category_id;
       const parsedCategoryId =
         rawCategoryId !== undefined && rawCategoryId !== null ? Number(rawCategoryId) : null;
-      const hasCategoryFilter = Number.isFinite(parsedCategoryId);
+      const hasCategoryIdFilter = Number.isFinite(parsedCategoryId);
 
-      let catCondition = '';
-      const params: number[] = [];
+      const normalizeRows = (rows: any[], valueKey: string, labelKey = valueKey, minCount = 1) =>
+        rows
+          .map((row) => ({
+            value: String(row[valueKey] || '').trim(),
+            label: String(row[labelKey] || row[valueKey] || '').trim(),
+            count: Number(row.count || 0),
+          }))
+          .filter((row) => row.value.length > 0 && row.label.length > 0 && row.count >= minCount);
 
-      if (hasCategoryFilter && parsedCategoryId !== null) {
-        catCondition = 'AND (p.category_id = $1 OR c.parent_id = $1)';
-        params.push(parsedCategoryId);
+      const preferredFacetsByCategory: Record<string, string[]> = {
+        'Benzi LED': ['stripType', 'ledVoltage', 'lightColor', 'ip', 'brand'],
+        'Surse si Drivere': ['ledVoltage', 'ip', 'brand'],
+        'Profile LED': ['mountingType', 'brand', 'ip'],
+        'Iluminat Interior': ['kelvin', 'ip', 'mountingType', 'brand'],
+        'Iluminat Exterior': ['ip', 'kelvin', 'brand'],
+        'Iluminat Industrial': ['ip', 'kelvin', 'brand'],
+        'Becuri si Tuburi LED': ['kelvin', 'ledVoltage', 'brand'],
+        'Automatizari si Smart': ['protocol', 'ledVoltage', 'brand'],
+        'Materiale Electrice': ['brand', 'ip'],
+        'Securitate CCTV': ['resolution', 'ip', 'brand'],
+        Fotovoltaice: ['ledVoltage', 'brand'],
+        'Accesorii Iluminat': ['brand'],
+        Diverse: ['brand', 'ip'],
+      };
+
+      const buildResponse = (
+        stripTypeRows: any[],
+        ledVoltageRows: any[],
+        lightColorRows: any[],
+        kelvinRows: any[],
+        ipRatings: any[],
+        brands: any[],
+        mountingTypes: any[],
+        protocolRows: any[],
+        resolutionRows: any[],
+        priceRange: any[],
+      ) => {
+        const normalizedStripType = normalizeRows(stripTypeRows, 'value', 'label');
+        const normalizedLedVoltage = normalizeRows(ledVoltageRows, 'value', 'label');
+        const normalizedLightColor = normalizeRows(lightColorRows, 'value', 'label');
+        const normalizedKelvin = normalizeRows(kelvinRows, 'value', 'label');
+        const normalizedIp = normalizeRows(ipRatings, 'value', 'label');
+        const normalizedBrands = normalizeRows(brands, 'value', 'label');
+        const normalizedMounting = normalizeRows(mountingTypes, 'value', 'label', 2);
+        const normalizedProtocol = normalizeRows(protocolRows, 'value', 'label');
+        const normalizedResolution = normalizeRows(resolutionRows, 'value', 'label');
+
+        const facetMap: Record<string, { label: string; options: Array<any> }> = {
+          stripType: { label: 'Tip LED', options: normalizedStripType },
+          ledVoltage: { label: 'Voltaj', options: normalizedLedVoltage },
+          lightColor: { label: 'Temperatura / Culoare', options: normalizedLightColor },
+          kelvin: { label: 'Temperatura culoare', options: normalizedKelvin },
+          ip: { label: 'Protectie IP', options: normalizedIp },
+          brand: { label: 'Brand', options: normalizedBrands },
+          mountingType: { label: 'Montaj', options: normalizedMounting },
+          protocol: { label: 'Protocol', options: normalizedProtocol },
+          resolution: { label: 'Rezolutie', options: normalizedResolution },
+        };
+
+        const preferredKeys = preferredFacetsByCategory[category] || [
+          'kelvin',
+          'ip',
+          'brand',
+          'mountingType',
+        ];
+        const facets = preferredKeys
+          .map((key) => ({
+            key,
+            label: facetMap[key]?.label,
+            options: facetMap[key]?.options || [],
+          }))
+          .filter((facet) => facet.label && facet.options.length > 0);
+
+        return {
+          category: category || null,
+          facets,
+          strip_types: normalizedStripType,
+          led_voltages: normalizedLedVoltage,
+          light_colors: normalizedLightColor,
+          brands: normalizedBrands,
+          ip_ratings: normalizedIp,
+          color_temperatures: normalizedKelvin,
+          mounting_types: normalizedMounting,
+          protocols: normalizedProtocol,
+          resolutions: normalizedResolution,
+          price_range: {
+            min: parseFloat(priceRange[0]?.min_price || '0'),
+            max: parseFloat(priceRange[0]?.max_price || '0'),
+          },
+          wattage_range: { min: 3, max: 200 },
+        };
+      };
+
+      const projectionService = new InventoryProductProjectionService(this.dataSource);
+      const projectionExists = await projectionService.projectionTableExists();
+
+      if (projectionExists) {
+        const readDataSource = getReadDataSource(this.dataSource);
+        const where: string[] = ['ip.is_active = true'];
+        const params: any[] = [];
+        const addParam = (value: any): string => {
+          params.push(value);
+          return `$${params.length}`;
+        };
+
+        if (hasCategoryIdFilter && parsedCategoryId !== null) {
+          where.push(`ip.category_id = ${addParam(parsedCategoryId)}`);
+        }
+
+        if (category) {
+          const categoryParam = addParam(`%${category}%`);
+          where.push(
+            `(ip.category_root ILIKE ${categoryParam} OR COALESCE(ip.category_name, '') ILIKE ${categoryParam})`,
+          );
+        }
+
+        const whereSql = `WHERE ${where.join(' AND ')}`;
+        const baseFrom = `FROM inventory_product_projection ip ${whereSql}`;
+        const searchBlobSql = "COALESCE(ip.search_blob, '')";
+
+        const [
+          stripTypeRows,
+          ledVoltageRows,
+          lightColorRows,
+          kelvinRows,
+          ipRatings,
+          brands,
+          mountingTypes,
+          priceRange,
+        ] = await Promise.all([
+          readDataSource.query(
+            `
+              SELECT *
+              FROM (
+                SELECT 'smd' AS value, 'SMD' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (LOWER(COALESCE(ip.led_type, '')) ~* '(^|[^a-z0-9])smd(?:\\s*\\d{3,4})?([^a-z0-9]|$)' OR ${searchBlobSql} ~* '(^|[^a-z0-9])smd(?:\\s*\\d{3,4})?([^a-z0-9]|$)')
+                UNION ALL
+                SELECT 'cob' AS value, 'COB' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (LOWER(COALESCE(ip.led_type, '')) ~* '(^|[^a-z0-9])cob([^a-z0-9]|$)' OR ${searchBlobSql} ~* '(^|[^a-z0-9])cob([^a-z0-9]|$)')
+              ) x
+              WHERE x.count > 0
+              ORDER BY x.count DESC
+            `,
+            params,
+          ),
+          readDataSource.query(
+            `
+              SELECT *
+              FROM (
+                SELECT '5' AS value, '5V' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (ip.led_voltage = 5 OR ${searchBlobSql} ~* '(^|[^0-9])5\\s*v([^0-9]|$)')
+                UNION ALL
+                SELECT '12' AS value, '12V' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (ip.led_voltage = 12 OR ${searchBlobSql} ~* '(^|[^0-9])12\\s*v([^0-9]|$)')
+                UNION ALL
+                SELECT '24' AS value, '24V' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (ip.led_voltage = 24 OR ${searchBlobSql} ~* '(^|[^0-9])24\\s*v([^0-9]|$)')
+                UNION ALL
+                SELECT '48' AS value, '48V' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (ip.led_voltage = 48 OR ${searchBlobSql} ~* '(^|[^0-9])48\\s*v([^0-9]|$)')
+              ) x
+              WHERE x.count > 0
+              ORDER BY CASE x.value WHEN '5' THEN 1 WHEN '12' THEN 2 WHEN '24' THEN 3 WHEN '48' THEN 4 ELSE 99 END
+            `,
+            params,
+          ),
+          readDataSource.query(
+            `
+              SELECT *
+              FROM (
+                SELECT 'rgb' AS value, 'RGB' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (LOWER(COALESCE(ip.led_color, '')) ILIKE '%rgb%' OR ${searchBlobSql} ILIKE '%rgb%')
+                UNION ALL
+                SELECT 'rgbw' AS value, 'RGBW' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (LOWER(COALESCE(ip.led_color, '')) ILIKE '%rgbw%' OR ${searchBlobSql} ILIKE '%rgbw%')
+                UNION ALL
+                SELECT '3000' AS value, '3000K' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (COALESCE(ip.color_temperature::text, '') = '3000' OR LOWER(COALESCE(ip.led_color, '')) ILIKE '%3000%' OR ${searchBlobSql} ~* '(^|[^0-9])3000\\s*k([^0-9]|$)')
+                UNION ALL
+                SELECT '4000' AS value, '4000K' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (COALESCE(ip.color_temperature::text, '') = '4000' OR LOWER(COALESCE(ip.led_color, '')) ILIKE '%4000%' OR ${searchBlobSql} ~* '(^|[^0-9])4000\\s*k([^0-9]|$)')
+                UNION ALL
+                SELECT '6500' AS value, '6500K' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (COALESCE(ip.color_temperature::text, '') = '6500' OR LOWER(COALESCE(ip.led_color, '')) ILIKE '%6500%' OR ${searchBlobSql} ~* '(^|[^0-9])6500\\s*k([^0-9]|$)')
+              ) x
+              WHERE x.count > 0
+              ORDER BY x.count DESC
+            `,
+            params,
+          ),
+          readDataSource.query(
+            `
+              SELECT *
+              FROM (
+                SELECT '3000' AS value, '3000K' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (COALESCE(ip.color_temperature::text, '') = '3000' OR ${searchBlobSql} ~* '(^|[^0-9])3000\\s*k([^0-9]|$)')
+                UNION ALL
+                SELECT '4000' AS value, '4000K' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (COALESCE(ip.color_temperature::text, '') = '4000' OR ${searchBlobSql} ~* '(^|[^0-9])4000\\s*k([^0-9]|$)')
+                UNION ALL
+                SELECT '6500' AS value, '6500K' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (COALESCE(ip.color_temperature::text, '') = '6500' OR ${searchBlobSql} ~* '(^|[^0-9])6500\\s*k([^0-9]|$)')
+              ) x
+              WHERE x.count > 0
+              ORDER BY x.count DESC
+            `,
+            params,
+          ),
+          readDataSource.query(
+            `
+              SELECT *
+              FROM (
+                SELECT 'IP20' AS value, 'IP20' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (UPPER(COALESCE(ip.ip_rating, '')) = 'IP20' OR ${searchBlobSql} ILIKE '%ip20%')
+                UNION ALL
+                SELECT 'IP44' AS value, 'IP44' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (UPPER(COALESCE(ip.ip_rating, '')) = 'IP44' OR ${searchBlobSql} ILIKE '%ip44%')
+                UNION ALL
+                SELECT 'IP54' AS value, 'IP54' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (UPPER(COALESCE(ip.ip_rating, '')) = 'IP54' OR ${searchBlobSql} ILIKE '%ip54%')
+                UNION ALL
+                SELECT 'IP65' AS value, 'IP65' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (UPPER(COALESCE(ip.ip_rating, '')) = 'IP65' OR ${searchBlobSql} ILIKE '%ip65%')
+                UNION ALL
+                SELECT 'IP66' AS value, 'IP66' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (UPPER(COALESCE(ip.ip_rating, '')) = 'IP66' OR ${searchBlobSql} ILIKE '%ip66%')
+                UNION ALL
+                SELECT 'IP67' AS value, 'IP67' AS label, COUNT(*)::int AS count
+                ${baseFrom}
+                AND (UPPER(COALESCE(ip.ip_rating, '')) = 'IP67' OR ${searchBlobSql} ILIKE '%ip67%')
+              ) x
+              WHERE x.count > 0
+              ORDER BY x.count DESC
+            `,
+            params,
+          ),
+          readDataSource.query(
+            `
+              SELECT value, label, count
+              FROM (
+                SELECT LOWER(COALESCE(ip.brand, ip.supplier_name, '')) AS value,
+                       INITCAP(LOWER(COALESCE(ip.brand, ip.supplier_name, ''))) AS label,
+                       COUNT(*)::int AS count
+                ${baseFrom}
+                GROUP BY LOWER(COALESCE(ip.brand, ip.supplier_name, ''))
+              ) x
+              WHERE x.value <> ''
+                AND x.count > 0
+              ORDER BY x.count DESC, x.value ASC
+              LIMIT 40
+            `,
+            params,
+          ),
+          readDataSource.query(
+            `
+              SELECT LOWER(COALESCE(ip.mounting_type, '')) AS value,
+                     INITCAP(LOWER(COALESCE(ip.mounting_type, ''))) AS label,
+                     COUNT(*)::int AS count
+              ${baseFrom}
+              AND COALESCE(ip.mounting_type, '') <> ''
+              GROUP BY LOWER(COALESCE(ip.mounting_type, ''))
+              HAVING COUNT(*) > 1
+              ORDER BY count DESC
+              LIMIT 20
+            `,
+            params,
+          ),
+          readDataSource.query(
+            `
+              SELECT
+                MIN(ip.base_price) AS min_price,
+                MAX(ip.base_price) AS max_price
+              ${baseFrom}
+            `,
+            params,
+          ),
+        ]);
+
+        res.status(200).json({
+          success: true,
+          data: buildResponse(
+            stripTypeRows,
+            ledVoltageRows,
+            lightColorRows,
+            kelvinRows,
+            ipRatings,
+            brands,
+            mountingTypes,
+            [],
+            [],
+            priceRange,
+          ),
+        });
+        return;
       }
+
+      const categorySql = this.getCatalogCategorySqlExpression();
+      const where: string[] = ['p.is_active = true', 'p.deleted_at IS NULL'];
+      const params: any[] = [];
+      const addParam = (value: any): string => {
+        params.push(value);
+        return `$${params.length}`;
+      };
+
+      if (hasCategoryIdFilter && parsedCategoryId !== null) {
+        const categoryIdParam = addParam(parsedCategoryId);
+        where.push(`(p.category_id = ${categoryIdParam} OR c.parent_id = ${categoryIdParam})`);
+      }
+
+      if (category) {
+        const categoryParam = addParam(`%${category}%`);
+        where.push(
+          `(${categorySql} ILIKE ${categoryParam} OR COALESCE(c.name, '') ILIKE ${categoryParam})`,
+        );
+      }
+
+      const whereSql = `WHERE ${where.join(' AND ')}`;
 
       const [brands, ipRatings, colorTemps, mountingTypes, priceRange] = await Promise.all([
         this.dataSource.query(
           `
-          SELECT DISTINCT ps.brand, COUNT(*) as count
-          FROM product_specifications ps
-          JOIN products p ON p.id = ps.product_id
-          LEFT JOIN categories c ON c.id = p.category_id
-          WHERE ps.brand IS NOT NULL
-            AND p.is_active = true
-            AND p.deleted_at IS NULL
-            AND p.base_price > 0
-            ${catCondition}
-          GROUP BY ps.brand ORDER BY count DESC
-        `,
+            SELECT COALESCE(NULLIF(ps.brand, ''), NULLIF(s.name, '')) AS value,
+                   COALESCE(NULLIF(ps.brand, ''), NULLIF(s.name, '')) AS label,
+                   COUNT(*)::int AS count
+            FROM products p
+            LEFT JOIN categories c ON c.id = p.category_id
+            LEFT JOIN suppliers s ON s.id = p.supplier_id
+            LEFT JOIN product_specifications ps ON ps.product_id = p.id
+            ${whereSql}
+              AND COALESCE(NULLIF(ps.brand, ''), NULLIF(s.name, '')) IS NOT NULL
+            GROUP BY COALESCE(NULLIF(ps.brand, ''), NULLIF(s.name, ''))
+            ORDER BY count DESC, label ASC
+            LIMIT 25
+          `,
           params,
         ),
         this.dataSource.query(
           `
-          SELECT DISTINCT ps.ip_rating, COUNT(*) as count
-          FROM product_specifications ps
-          JOIN products p ON p.id = ps.product_id
-          LEFT JOIN categories c ON c.id = p.category_id
-          WHERE ps.ip_rating IS NOT NULL
-            AND p.is_active = true
-            AND p.deleted_at IS NULL
-            AND p.base_price > 0
-            ${catCondition}
-          GROUP BY ps.ip_rating ORDER BY ps.ip_rating
-        `,
+            SELECT UPPER(ps.ip_rating) AS value,
+                   UPPER(ps.ip_rating) AS label,
+                   COUNT(*)::int AS count
+            FROM products p
+            LEFT JOIN categories c ON c.id = p.category_id
+            LEFT JOIN product_specifications ps ON ps.product_id = p.id
+            ${whereSql}
+              AND COALESCE(ps.ip_rating, '') <> ''
+            GROUP BY UPPER(ps.ip_rating)
+            ORDER BY count DESC, label ASC
+            LIMIT 25
+          `,
           params,
         ),
         this.dataSource.query(
           `
-          SELECT DISTINCT ps.color_temperature, COUNT(*) as count
-          FROM product_specifications ps
-          JOIN products p ON p.id = ps.product_id
-          LEFT JOIN categories c ON c.id = p.category_id
-          WHERE ps.color_temperature IS NOT NULL
-            AND p.is_active = true
-            AND p.deleted_at IS NULL
-            AND p.base_price > 0
-            ${catCondition}
-          GROUP BY ps.color_temperature ORDER BY ps.color_temperature
-        `,
+            SELECT *
+            FROM (
+              SELECT '3000' AS value, '3000K' AS label, COUNT(*)::int AS count
+              FROM products p
+              LEFT JOIN categories c ON c.id = p.category_id
+              LEFT JOIN product_specifications ps ON ps.product_id = p.id
+              ${whereSql}
+                AND (
+                  COALESCE(ps.color_temperature::text, '') = '3000'
+                  OR LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ~* '(^|[^0-9])3000\\s*k([^0-9]|$)'
+                )
+              UNION ALL
+              SELECT '4000' AS value, '4000K' AS label, COUNT(*)::int AS count
+              FROM products p
+              LEFT JOIN categories c ON c.id = p.category_id
+              LEFT JOIN product_specifications ps ON ps.product_id = p.id
+              ${whereSql}
+                AND (
+                  COALESCE(ps.color_temperature::text, '') = '4000'
+                  OR LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ~* '(^|[^0-9])4000\\s*k([^0-9]|$)'
+                )
+              UNION ALL
+              SELECT '6500' AS value, '6500K' AS label, COUNT(*)::int AS count
+              FROM products p
+              LEFT JOIN categories c ON c.id = p.category_id
+              LEFT JOIN product_specifications ps ON ps.product_id = p.id
+              ${whereSql}
+                AND (
+                  COALESCE(ps.color_temperature::text, '') = '6500'
+                  OR LOWER(COALESCE(p.name, '') || ' ' || COALESCE(p.description, '')) ~* '(^|[^0-9])6500\\s*k([^0-9]|$)'
+                )
+            ) x
+            WHERE x.count > 0
+            ORDER BY x.count DESC
+          `,
           params,
         ),
         this.dataSource.query(
           `
-          SELECT DISTINCT ps.mounting_type, COUNT(*) as count
-          FROM product_specifications ps
-          JOIN products p ON p.id = ps.product_id
-          LEFT JOIN categories c ON c.id = p.category_id
-          WHERE ps.mounting_type IS NOT NULL
-            AND p.is_active = true
-            AND p.deleted_at IS NULL
-            AND p.base_price > 0
-            ${catCondition}
-          GROUP BY ps.mounting_type ORDER BY count DESC
-        `,
+            SELECT ps.mounting_type AS value,
+                   ps.mounting_type AS label,
+                   COUNT(*)::int AS count
+            FROM products p
+            LEFT JOIN categories c ON c.id = p.category_id
+            LEFT JOIN product_specifications ps ON ps.product_id = p.id
+            ${whereSql}
+              AND COALESCE(ps.mounting_type, '') <> ''
+            GROUP BY ps.mounting_type
+            ORDER BY count DESC, label ASC
+            LIMIT 25
+          `,
           params,
         ),
         this.dataSource.query(
           `
-          SELECT MIN(p.base_price) as min_price, MAX(p.base_price) as max_price
-          FROM products p
-          LEFT JOIN categories c ON c.id = p.category_id
-          WHERE p.is_active = true
-            AND p.deleted_at IS NULL
-            AND p.base_price > 0
-            ${catCondition}
-        `,
+            SELECT MIN(p.base_price) as min_price, MAX(p.base_price) as max_price
+            FROM products p
+            LEFT JOIN categories c ON c.id = p.category_id
+            ${whereSql}
+          `,
           params,
         ),
       ]);
 
       res.status(200).json({
         success: true,
-        data: {
-          brands: brands.map((b: any) => ({ value: b.brand, count: parseInt(b.count) })),
-          ip_ratings: ipRatings.map((r: any) => ({ value: r.ip_rating, count: parseInt(r.count) })),
-          color_temperatures: colorTemps.map((t: any) => ({
-            value: t.color_temperature,
-            count: parseInt(t.count),
-            label: `${t.color_temperature}K`,
-          })),
-          mounting_types: mountingTypes.map((m: any) => ({
-            value: m.mounting_type,
-            count: parseInt(m.count),
-          })),
-          price_range: {
-            min: parseFloat(priceRange[0]?.min_price || '0'),
-            max: parseFloat(priceRange[0]?.max_price || '0'),
-          },
-          wattage_range: { min: 3, max: 200 },
-        },
+        data: buildResponse(
+          [],
+          [],
+          [],
+          colorTemps,
+          ipRatings,
+          brands,
+          mountingTypes,
+          [],
+          [],
+          priceRange,
+        ),
       });
     } catch (error) {
       next(error);
@@ -1994,7 +3013,6 @@ export class B2BController {
         LEFT JOIN categories c ON c.id = p.category_id
         WHERE p.is_active = true
           AND p.deleted_at IS NULL
-          AND p.base_price > 0
         GROUP BY root_category, raw_category
         ORDER BY root_category ASC, product_count DESC, raw_category ASC
       `);
