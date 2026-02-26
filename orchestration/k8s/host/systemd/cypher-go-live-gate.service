@@ -1,0 +1,11 @@
+[Unit]
+Description=Cypher ERP go-live operational gate
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/cypher-go-live-gate
+WorkingDirectory=/opt/cypher-erp
+ExecStart=/usr/bin/flock -n /var/lock/cypher-go-live-gate.lock /opt/cypher-erp/scripts/go-live-gate.sh
+RuntimeMaxSec=45m

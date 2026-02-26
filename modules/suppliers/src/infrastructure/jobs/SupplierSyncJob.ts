@@ -45,6 +45,9 @@ interface SupplierSyncReportPayload {
   productsUpdated: number;
   priceChanges: number;
   significantPriceChanges: number;
+  specificationsDetected?: number;
+  specificationsUpdated?: number;
+  specificationCoveragePct?: number;
   durationMs: number;
   errorMessage?: string;
 }
@@ -71,6 +74,7 @@ export class SupplierSyncJob {
   private readonly monitorFailureWindow: number;
   private readonly monitorConsecutiveFailuresThreshold: number;
   private readonly monitorTimeoutFailuresThreshold: number;
+  private readonly minSpecificationCoveragePct: number;
   private readonly monitorAlertCooldownMs: number;
   private readonly lastMonitorAlertByKey = new Map<string, number>();
 
@@ -101,6 +105,10 @@ export class SupplierSyncJob {
     this.monitorTimeoutFailuresThreshold = this.parsePositiveIntEnv(
       'SUPPLIER_MONITOR_TIMEOUT_FAILURES',
       2,
+    );
+    this.minSpecificationCoveragePct = this.parsePositiveIntEnv(
+      'SUPPLIER_MONITOR_MIN_SPEC_COVERAGE_PCT',
+      45,
     );
     this.monitorAlertCooldownMs = this.parsePositiveIntEnv(
       'SUPPLIER_MONITOR_ALERT_COOLDOWN_MS',
@@ -222,6 +230,12 @@ export class SupplierSyncJob {
         supplierStockCache: number;
         lastCacheUpdateAt: Date | null;
       }>;
+      getSupplierSpecificationCoverageStats?: (supplierId: number) => Promise<{
+        supplierProducts: number;
+        productsWithSpecs: number;
+        missingSpecs: number;
+        coveragePct: number;
+      }>;
     };
 
     try {
@@ -239,6 +253,26 @@ export class SupplierSyncJob {
               supplierStockCache: stats.supplierStockCache,
               minExpectedSupplierProducts: this.minExpectedSupplierProducts,
               lastCacheUpdateAt: stats.lastCacheUpdateAt?.toISOString() || null,
+            });
+          }
+        }
+      }
+
+      if (typeof repositoryWithMonitoring.getSupplierSpecificationCoverageStats === 'function') {
+        const specStats = await repositoryWithMonitoring.getSupplierSpecificationCoverageStats(supplier.id);
+
+        if (specStats.coveragePct < this.minSpecificationCoveragePct) {
+          const alertKey = `spec-coverage:${supplier.id}`;
+          if (this.shouldEmitMonitorAlert(alertKey)) {
+            this.logger.error('SUPPLIER_SYNC_ALERT: specification coverage below expected threshold', {
+              supplierId: supplier.id,
+              supplierName: supplier.name,
+              supplierCode: supplier.code,
+              supplierProducts: specStats.supplierProducts,
+              productsWithSpecs: specStats.productsWithSpecs,
+              missingSpecs: specStats.missingSpecs,
+              coveragePct: specStats.coveragePct,
+              minSpecificationCoveragePct: this.minSpecificationCoveragePct,
             });
           }
         }
@@ -345,7 +379,7 @@ export class SupplierSyncJob {
       { syncAll: true },
       {
         repeat: {
-          pattern: '0 */4 6-21 * * *', // Every 4 hours from 06:00-22:00
+          pattern: '0 0 6-21/4 * * *', // Every 4 hours from 06:00-22:00
         },
         jobId: 'supplier-sync-recurring',
         removeOnComplete: {
@@ -467,6 +501,8 @@ export class SupplierSyncJob {
               productsUpdated: scrapeResult.productsUpdated,
               priceChanges: scrapeResult.priceChanges.length,
               significantPriceChanges: scrapeResult.significantPriceChanges.length,
+              specificationsDetected: scrapeResult.specificationsDetected,
+              specificationsUpdated: scrapeResult.specificationsUpdated,
               durationMs: scrapeResult.duration,
             });
 
@@ -581,6 +617,8 @@ export class SupplierSyncJob {
             productsUpdated: scrapeResult.productsUpdated,
             priceChanges: scrapeResult.priceChanges.length,
             significantPriceChanges: scrapeResult.significantPriceChanges.length,
+            specificationsDetected: scrapeResult.specificationsDetected,
+            specificationsUpdated: scrapeResult.specificationsUpdated,
             durationMs: scrapeResult.duration,
           });
 
@@ -670,10 +708,31 @@ export class SupplierSyncJob {
 
   private async recordSupplierSyncReport(payload: SupplierSyncReportPayload): Promise<number> {
     const smartbillOverlap = await this.getSmartBillOverlapCount(payload.supplierId);
+    const repositoryWithMetrics = this.repository as ISupplierRepository & {
+      getSupplierSpecificationCoverageStats?: (supplierId: number) => Promise<{
+        supplierProducts: number;
+        productsWithSpecs: number;
+        missingSpecs: number;
+        coveragePct: number;
+      }>;
+    };
+
+    let specificationCoveragePct = payload.specificationCoveragePct;
+    if (typeof repositoryWithMetrics.getSupplierSpecificationCoverageStats === 'function') {
+      try {
+        const coverage = await repositoryWithMetrics.getSupplierSpecificationCoverageStats(
+          payload.supplierId,
+        );
+        specificationCoveragePct = coverage.coveragePct;
+      } catch {
+        // best effort metrics enrichment
+      }
+    }
 
     const report = {
       ...payload,
       smartbillOverlap,
+      specificationCoveragePct,
       recordedAt: new Date().toISOString(),
     };
 
@@ -687,6 +746,7 @@ export class SupplierSyncJob {
       await repositoryWithReport.saveSyncReport({
         ...payload,
         smartbillOverlap,
+        specificationCoveragePct,
       });
     }
 
