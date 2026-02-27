@@ -2,7 +2,6 @@ import { EventEmitter } from 'events';
 
 import {
   ensureManufacturerInProductName,
-  isAzzardoSupplier,
 } from '@shared/utils/product-name-manufacturer';
 import { translateSupplierProductName } from '@shared/utils/product-name-translator';
 import { createModuleLogger } from '@shared/utils/logger';
@@ -334,6 +333,33 @@ export class ScrapeSupplierStock {
     };
   }
 
+  private pickBestImageUrl(scrapedProduct: ScrapedProduct): string | null {
+    const directImage = this.parseOptionalText(scrapedProduct.imageUrl);
+    if (directImage) {
+      return directImage;
+    }
+
+    if (Array.isArray(scrapedProduct.images)) {
+      for (const image of scrapedProduct.images) {
+        const normalized = this.parseOptionalText(image);
+        if (normalized) {
+          return normalized;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private getManufacturerForName(scrapedProduct: ScrapedProduct, supplierName: string): string {
+    return (
+      this.parseOptionalText(scrapedProduct.manufacturer) ||
+      this.parseOptionalText(scrapedProduct.brand) ||
+      this.parseOptionalText(supplierName) ||
+      ''
+    );
+  }
+
   private buildProductSpecification(
     supplierId: number,
     scrapedProduct: ScrapedProduct,
@@ -437,8 +463,6 @@ export class ScrapeSupplierStock {
         throw new SupplierNotActiveError(supplier.name);
       }
 
-      const shouldPrefixManufacturer = isAzzardoSupplier(supplier.name, String(supplier.code));
-
       const result: ScrapeResult = {
         supplierId: supplier.id,
         supplierName: supplier.name,
@@ -537,9 +561,11 @@ export class ScrapeSupplierStock {
           const priceCurrency = sourceCurrency !== 'RON' && conversionRate ? 'RON' : sourceCurrency;
 
           const translatedName = translateSupplierProductName(scrapedProduct.name);
-          const normalizedName = shouldPrefixManufacturer
-            ? ensureManufacturerInProductName(translatedName, supplier.name)
-            : translatedName;
+          const normalizedName = ensureManufacturerInProductName(
+            translatedName,
+            this.getManufacturerForName(scrapedProduct, supplier.name),
+          );
+          const preferredImageUrl = this.pickBestImageUrl(scrapedProduct);
           const existingProduct = existingMap.get(scrapedProduct.supplierSku);
 
           let productEntity: SupplierProductEntity;
@@ -575,8 +601,8 @@ export class ScrapeSupplierStock {
             productEntity.price = nextPrice;
             productEntity.currency = priceCurrency;
             productEntity.stockQuantity = scrapedProduct.stockQuantity;
-            if (typeof scrapedProduct.imageUrl === 'string' && scrapedProduct.imageUrl.trim().length > 0) {
-              productEntity.imageUrl = scrapedProduct.imageUrl.trim();
+            if (preferredImageUrl) {
+              productEntity.imageUrl = preferredImageUrl;
             }
             productEntity.lastScraped = new Date();
             result.productsUpdated++;
@@ -593,11 +619,7 @@ export class ScrapeSupplierStock {
               lastScraped: new Date(),
               markupPercentage: null,
               sellingPrice: null,
-              imageUrl:
-                typeof scrapedProduct.imageUrl === 'string' &&
-                scrapedProduct.imageUrl.trim().length > 0
-                  ? scrapedProduct.imageUrl.trim()
-                  : null,
+              imageUrl: preferredImageUrl,
               priceHistory: [
                 {
                   price: convertedPrice,

@@ -17,6 +17,8 @@ import {
   Plus,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { ResponsiveImage } from '../../components/ui/ResponsiveImage';
+import { trackViewItem } from '../../services/retargeting';
 
 interface Product {
   id: number;
@@ -28,23 +30,97 @@ interface Product {
   image_url: string;
   stock_local: number;
   stock_supplier: number;
+  stock_total?: number;
   supplier_lead_time: number;
+  supplier_name?: string | null;
   rating?: number;
   category?: string;
+  specifications?: Record<string, any> | null;
 }
 
+const getSupplierStockDetail = (
+  product: Product,
+): { available: boolean; quantityText: string; color: string } | null => {
+  const supplierName = String(product.supplier_name || '').toLowerCase();
+  const isMplSupplier = supplierName.includes('mpl power');
+
+  if (isMplSupplier) {
+    const available = product.stock_supplier > 0;
+    return {
+      available,
+      quantityText: available ? 'Disponibil' : 'Indisponibil',
+      color: available ? '#4f8eff' : '#ef4444',
+    };
+  }
+
+  if (product.stock_supplier <= 0) {
+    return null;
+  }
+
+  return {
+    available: true,
+    quantityText: `${product.stock_supplier} buc`,
+    color: '#4f8eff',
+  };
+};
+
 const parseSpecs = (product: Product) => {
+  const apiSpecs = (product.specifications || {}) as Record<string, any>;
   const text = `${product.name} ${product.description}`.toLowerCase();
   const wattMatch = text.match(/(\d+)\s*w(?:att)?/i);
   const kelvinMatch = text.match(/(\d{4})\s*k/i);
   const ipMatch = text.match(/ip\s*(\d{2})/i);
   const lumenMatch = text.match(/(\d+)\s*(?:lm|lumen)/i);
+
+  const watt = apiSpecs.wattage || (wattMatch ? wattMatch[1] : '—');
+  const kelvin = apiSpecs.color_temperature || (kelvinMatch ? kelvinMatch[1] : '—');
+  const ip = apiSpecs.ip_rating || (ipMatch ? `IP${ipMatch[1]}` : '—');
+  const lumen = apiSpecs.lumens || (lumenMatch ? lumenMatch[1] : '—');
+
   return {
-    watt: wattMatch ? wattMatch[1] : '—',
-    kelvin: kelvinMatch ? kelvinMatch[1] : '—',
-    ip: ipMatch ? `IP${ipMatch[1]}` : '—',
-    lumen: lumenMatch ? lumenMatch[1] : '—',
+    watt,
+    kelvin,
+    ip,
+    lumen,
+    cri: apiSpecs.cri || '—',
+    beamAngle: apiSpecs.beam_angle || '—',
+    voltageInput: apiSpecs.voltage_input || '—',
+    mountingType: apiSpecs.mounting_type || '—',
+    brand: apiSpecs.brand || '—',
   };
+};
+
+const parseMaytoniResources = (product: Product) => {
+  const specs = (product.specifications || {}) as Record<string, any>;
+  const customSpecs = (specs.custom_specs || {}) as Record<string, any>;
+  const resources = (customSpecs.resurse_maytoni || {}) as Record<string, any>;
+
+  const entries: Array<{ label: string; url: string }> = [];
+  const add = (label: string, value: any) => {
+    if (typeof value === 'string' && value.trim().startsWith('http')) {
+      entries.push({ label, url: value.trim() });
+    }
+  };
+
+  add('Instructiune PDF', resources.instructiune_pdf);
+  add('Instructiune', resources.instructiune_link);
+  add('Instructiune Engleza PDF', resources.instructiune_engleza_pdf);
+  add('Instructiune Germana PDF', resources.instructiune_germana_pdf);
+  add('Instructiune Spaniola PDF', resources.instructiune_spaniola_pdf);
+  add('Instructiune Franceza PDF', resources.instructiune_franceza_pdf);
+  add('Instructiune Italiana PDF', resources.instructiune_italiana_pdf);
+  add('Instructiune Poloneza PDF', resources.instructiune_poloneza_pdf);
+  add('Model 3D / 360', resources.model_3d_360);
+  add('Eticheta energetica UE (PDF)', resources.eticheta_energetica_pdf);
+  add('Eticheta energetica (imagine)', resources.eticheta_energetica_imagine);
+  add('Schema web', resources.schema_web);
+  add('Plan tehnic (Blueprint)', resources.plan_tehnic_blueprint);
+  add('Randare principala', resources.randare_principala);
+  add('Randare fundal alb', resources.randare_fundal_alb);
+  add('Randare caracteristica tehnica', resources.randare_caracteristica_tehnica);
+  add('Cum lumineaza', resources.cum_lumineaza);
+
+  return entries;
 };
 
 export const B2BProductDetailPage: React.FC = () => {
@@ -55,14 +131,36 @@ export const B2BProductDetailPage: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<'specs' | 'pricing' | 'delivery'>('specs');
 
   useEffect(() => {
-    fetchProduct();
+    const abortController = new AbortController();
+    fetchProduct(abortController.signal);
+
+    return () => {
+      abortController.abort();
+    };
   }, [id]);
 
-  const fetchProduct = async () => {
+  useEffect(() => {
+    if (!product) {
+      return;
+    }
+
+    trackViewItem({
+      id: product.id,
+      sku: product.sku,
+      name: product.name,
+      category: product.category,
+      price: product.price,
+      currency: product.currency || 'RON',
+      quantity: 1,
+    });
+  }, [product]);
+
+  const fetchProduct = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       const response = await fetch(`/api/v1/b2b/products/${id}`, {
         credentials: 'include',
+        signal,
       });
 
       if (!response.ok) {
@@ -78,11 +176,26 @@ export const B2BProductDetailPage: React.FC = () => {
         setProduct(data);
       }
     } catch (err) {
+      const maybeError = err as { name?: string; code?: string; message?: string };
+      if (
+        maybeError?.name === 'AbortError' ||
+        maybeError?.code === 'ERR_CANCELED' ||
+        maybeError?.message === 'canceled'
+      ) {
+        return;
+      }
+
       console.error('Failed to fetch product:', err);
       // Fallback: try from products list
       try {
-        const listResponse = await fetch('/api/v1/b2b/products', {
+        const fallbackQuery = new URLSearchParams({
+          page: '1',
+          limit: '24',
+          search: String(id || ''),
+        });
+        const listResponse = await fetch(`/api/v1/b2b/products?${fallbackQuery.toString()}`, {
           credentials: 'include',
+          signal,
         });
 
         if (!listResponse.ok) {
@@ -99,11 +212,22 @@ export const B2BProductDetailPage: React.FC = () => {
           const found = listData.products.find((p: Product) => p.id === Number(id));
           if (found) setProduct(found);
         }
-      } catch {
+      } catch (fallbackErr) {
+        const fallbackMaybeError = fallbackErr as { name?: string; code?: string; message?: string };
+        if (
+          fallbackMaybeError?.name === 'AbortError' ||
+          fallbackMaybeError?.code === 'ERR_CANCELED' ||
+          fallbackMaybeError?.message === 'canceled'
+        ) {
+          return;
+        }
+
         // ignore
       }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
@@ -138,6 +262,9 @@ export const B2BProductDetailPage: React.FC = () => {
   }
 
   const specs = parseSpecs(product);
+  const maytoniResources = parseMaytoniResources(product);
+  const totalStock =
+    Number(product.stock_total ?? 0) || product.stock_local + product.stock_supplier;
 
   const tieredPricing = [
     { range: '1 — 9 buc', price: product.price, discount: '—' },
@@ -158,11 +285,11 @@ export const B2BProductDetailPage: React.FC = () => {
     { label: 'Temperatură Culoare', value: `${specs.kelvin}K`, icon: '🌡' },
     { label: 'Flux Luminos', value: `${specs.lumen} lm`, icon: '💡' },
     { label: 'Grad Protecție', value: specs.ip, icon: '💧' },
-    { label: 'CRI', value: '>80', icon: '🎨' },
-    { label: 'Durată Viață', value: '30,000h', icon: '⏱' },
-    { label: 'Tensiune', value: '220-240V AC', icon: '🔌' },
-    { label: 'Material Corp', value: 'Aluminiu', icon: '🔧' },
-    { label: 'Garanție', value: '3 ani', icon: '🛡' },
+    { label: 'CRI', value: String(specs.cri), icon: '🎨' },
+    { label: 'Unghi fascicul', value: `${specs.beamAngle}°`, icon: '📐' },
+    { label: 'Tensiune', value: String(specs.voltageInput), icon: '🔌' },
+    { label: 'Montaj', value: String(specs.mountingType), icon: '🔧' },
+    { label: 'Brand', value: String(specs.brand), icon: '🏷' },
     { label: 'Certificări', value: 'CE, RoHS', icon: '✅' },
   ];
 
@@ -208,9 +335,14 @@ export const B2BProductDetailPage: React.FC = () => {
               }}
             >
               {product.image_url ? (
-                <img
+                <ResponsiveImage
                   src={product.image_url}
                   alt={product.name}
+                  loading="eager"
+                  fetchPriority="high"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  width={1200}
+                  height={1200}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -375,21 +507,33 @@ export const B2BProductDetailPage: React.FC = () => {
                     </span>
                   </div>
                 )}
-                {product.stock_supplier > 0 && (
+                {getSupplierStockDetail(product) && (
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm" style={{ color: '#4f8eff' }}>
+                    <span
+                      className="flex items-center gap-2 text-sm"
+                      style={{ color: getSupplierStockDetail(product)!.color }}
+                    >
                       <span
                         className="w-2.5 h-2.5 rounded-full"
-                        style={{ background: '#4f8eff' }}
+                        style={{ background: getSupplierStockDetail(product)!.color }}
                       />
                       Stoc Furnizor
                     </span>
                     <span className="text-sm font-semibold text-white">
-                      {product.stock_supplier} buc —{' '}
-                      <span style={{ color: '#4f8eff' }}>{product.supplier_lead_time} zile</span>
+                      {getSupplierStockDetail(product)!.quantityText} —{' '}
+                      <span style={{ color: getSupplierStockDetail(product)!.color }}>
+                        {product.supplier_lead_time} zile
+                      </span>
                     </span>
                   </div>
                 )}
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-sm" style={{ color: '#6b7280' }}>
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#6b7280' }} />
+                    Stoc Total
+                  </span>
+                  <span className="text-sm font-semibold text-white">{totalStock} buc</span>
+                </div>
               </div>
             </div>
 
@@ -529,30 +673,68 @@ export const B2BProductDetailPage: React.FC = () => {
 
           {/* Specs Tab */}
           {selectedTab === 'specs' && (
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              {specRows.map((row, idx) => (
+            <div className="space-y-4">
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                {specRows.map((row, idx) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between px-6 py-4"
+                    style={{
+                      borderBottom:
+                        idx < specRows.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                    }}
+                  >
+                    <span className="flex items-center gap-3 text-sm" style={{ color: '#888' }}>
+                      <span>{row.icon}</span>
+                      {row.label}
+                    </span>
+                    <span className="text-sm font-semibold text-white">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {maytoniResources.length > 0 && (
                 <div
-                  key={row.label}
-                  className="flex items-center justify-between px-6 py-4"
+                  className="rounded-2xl overflow-hidden"
                   style={{
-                    borderBottom:
-                      idx < specRows.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.06)',
                   }}
                 >
-                  <span className="flex items-center gap-3 text-sm" style={{ color: '#888' }}>
-                    <span>{row.icon}</span>
-                    {row.label}
-                  </span>
-                  <span className="text-sm font-semibold text-white">{row.value}</span>
+                  <div
+                    className="px-6 py-4 text-sm font-semibold"
+                    style={{ color: '#daa520', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    Documente si resurse
+                  </div>
+                  {maytoniResources.map((item, idx) => (
+                    <a
+                      key={`${item.label}-${idx}`}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between px-6 py-3 text-sm hover:bg-white/5 transition-colors"
+                      style={{
+                        borderBottom:
+                          idx < maytoniResources.length - 1
+                            ? '1px solid rgba(255,255,255,0.04)'
+                            : 'none',
+                        color: '#ddd',
+                      }}
+                    >
+                      <span>{item.label}</span>
+                      <Download size={14} style={{ color: '#9ca3af' }} />
+                    </a>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 

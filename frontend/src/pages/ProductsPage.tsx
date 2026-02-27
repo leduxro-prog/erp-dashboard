@@ -7,7 +7,6 @@ import {
   Filter,
   X,
   Upload,
-  Trash2,
   Image,
   Download,
   CheckCircle,
@@ -18,6 +17,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { apiClient } from '@/services/api';
 import { inventoryService } from '@/services/inventory.service';
+import { useGlobalLanguage } from '@/hooks/useLanguage';
 
 interface Product {
   id: number;
@@ -40,6 +40,20 @@ interface Product {
   reorderPoint: number;
   status: 'Normal' | 'Atentionare' | 'Critic';
   updatedAt: string;
+  specifications?: Record<string, unknown> | null;
+  wattage?: number | string | null;
+  lumens?: number | string | null;
+  color_temperature?: number | string | null;
+  colorTemperature?: number | string | null;
+  ip_rating?: string | null;
+  ipRating?: string | null;
+  cri?: number | string | null;
+  beam_angle?: number | string | null;
+  beamAngle?: number | string | null;
+  voltage_input?: string | null;
+  voltageInput?: string | null;
+  mounting_type?: string | null;
+  mountingType?: string | null;
 }
 
 interface Category {
@@ -68,13 +82,13 @@ type SortOption =
   | 'stock-asc'
   | 'stock-desc';
 
-const SORT_LABELS: Record<SortOption, string> = {
-  'name-asc': 'Nume A-Z',
-  'name-desc': 'Nume Z-A',
-  'price-asc': 'Pret crescator',
-  'price-desc': 'Pret descrescator',
-  'stock-asc': 'Stoc crescator',
-  'stock-desc': 'Stoc descrescator',
+const SORT_LABELS: Record<SortOption, { ro: string; en: string }> = {
+  'name-asc': { ro: 'Nume A-Z', en: 'Name A-Z' },
+  'name-desc': { ro: 'Nume Z-A', en: 'Name Z-A' },
+  'price-asc': { ro: 'Preț crescător', en: 'Price ascending' },
+  'price-desc': { ro: 'Preț descrescător', en: 'Price descending' },
+  'stock-asc': { ro: 'Stoc crescător', en: 'Stock ascending' },
+  'stock-desc': { ro: 'Stoc descrescător', en: 'Stock descending' },
 };
 
 const STATUS_OPTIONS = ['Toate', 'Normal', 'Atentionare', 'Critic'] as const;
@@ -97,6 +111,8 @@ interface SearchCandidate {
 }
 
 function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProps) {
+  const { language } = useGlobalLanguage();
+  const tr = (ro: string, en: string) => (language === 'ro' ? ro : en);
   const [tab, setTab] = useState<ModalTab>('search');
   // Upload tab state
   const [dragOver, setDragOver] = useState(false);
@@ -118,11 +134,11 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
   const handleFile = (file: File) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
     if (!allowed.includes(file.type)) {
-      setError('Format invalid. Doar JPG, PNG, WebP, GIF, SVG.');
+      setError(tr('Format invalid. Doar JPG, PNG, WebP, GIF, SVG.', 'Invalid format. Only JPG, PNG, WebP, GIF, SVG.'));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setError('Fisierul depaseste 5 MB.');
+      setError(tr('Fișierul depășește 5 MB.', 'File exceeds 5 MB.'));
       return;
     }
     setError(null);
@@ -150,7 +166,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
       onUploaded(product.productId, result.image_url);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Eroare la upload');
+      setError(err.message || tr('Eroare la upload', 'Upload failed'));
     } finally {
       setUploading(false);
     }
@@ -171,10 +187,15 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
       setCandidates(result.candidates || []);
       setSearchDone(true);
       if (result.candidates.length === 0) {
-        setError('Nu s-au gasit imagini. Incercati un termen de cautare diferit.');
+        setError(
+          tr(
+            'Nu s-au găsit imagini. Încearcă un termen de căutare diferit.',
+            'No images found. Try a different search term.',
+          ),
+        );
       }
     } catch (err: any) {
-      setError(err.message || 'Eroare la cautare');
+      setError(err.message || tr('Eroare la căutare', 'Search failed'));
       setSearchDone(true);
     } finally {
       setSearching(false);
@@ -190,7 +211,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
       onUploaded(product.productId, result.image_url);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Eroare la salvarea imaginii');
+      setError(err.message || tr('Eroare la salvarea imaginii', 'Failed to save image'));
     } finally {
       setSelecting(null);
     }
@@ -209,7 +230,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
           <div className="min-w-0">
             <h3 className="text-lg font-semibold text-white flex items-center gap-2">
               <Image size={20} />
-              Imagine Produs
+              {tr('Imagine produs', 'Product image')}
             </h3>
             <p className="text-sm text-gray-400 mt-0.5 truncate">{product.name}</p>
             <p className="text-xs text-gray-500">SKU: {product.sku}</p>
@@ -234,7 +255,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
               }}
             />
             <div className="min-w-0">
-              <p className="text-sm text-gray-300">Imagine curenta</p>
+              <p className="text-sm text-gray-300">{tr('Imagine curentă', 'Current image')}</p>
               <p className="text-xs text-gray-500 truncate">{product.imageUrl}</p>
             </div>
           </div>
@@ -252,7 +273,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
           >
             <div className="flex items-center gap-2">
               <Search size={14} />
-              Cautare Automata
+              {tr('Căutare automată', 'Automatic search')}
             </div>
           </button>
           <button
@@ -265,7 +286,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
           >
             <div className="flex items-center gap-2">
               <Upload size={14} />
-              Upload Manual
+              {tr('Upload manual', 'Manual upload')}
             </div>
           </button>
         </div>
@@ -277,7 +298,10 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Cauta dupa SKU, denumire, cod produs..."
+                placeholder={tr(
+                  'Caută după SKU, denumire, cod produs...',
+                  'Search by SKU, name, product code...',
+                )}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -293,27 +317,30 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
                 {searching ? (
                   <>
                     <RefreshCw size={14} className="animate-spin" />
-                    Se cauta...
+                    {tr('Se caută...', 'Searching...')}
                   </>
                 ) : (
                   <>
                     <Search size={14} />
-                    Cauta
+                    {tr('Caută', 'Search')}
                   </>
                 )}
               </button>
             </div>
 
             <p className="text-xs text-gray-500">
-              Lasa campul gol pentru cautare automata pe baza SKU-ului si denumirii produsului, sau
-              introdu un termen personalizat.
+              {tr(
+                'Lasă câmpul gol pentru căutare automată pe baza SKU-ului și denumirii produsului, sau introdu un termen personalizat.',
+                'Leave the field empty for automatic search based on SKU and product name, or enter a custom term.',
+              )}
             </p>
 
             {/* Candidates grid */}
             {candidates.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm text-gray-300">
-                  {candidates.length} imagini gasite — click pentru a selecta:
+                  {candidates.length}{' '}
+                  {tr('imagini găsite - click pentru a selecta:', 'images found - click to select:')}
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {candidates.map((c, idx) => (
@@ -348,10 +375,10 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
                         }`}
                       >
                         {c.confidence === 'high'
-                          ? 'Buna'
+                          ? tr('Bună', 'Good')
                           : c.confidence === 'medium'
-                            ? 'Medie'
-                            : 'Slaba'}
+                            ? tr('Medie', 'Medium')
+                            : tr('Slabă', 'Low')}
                       </span>
                       {/* Loading overlay */}
                       {selecting === c.url && (
@@ -363,7 +390,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
                       {selecting !== c.url && (
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <span className="text-white text-xs font-medium bg-blue-600 px-2 py-1 rounded">
-                            Selecteaza
+                            {tr('Selectează', 'Select')}
                           </span>
                         </div>
                       )}
@@ -377,8 +404,10 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
             {searchDone && candidates.length === 0 && !error && (
               <div className="text-center py-8 text-gray-500">
                 <Search size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nu s-au gasit imagini</p>
-                <p className="text-xs mt-1">Incercati un alt termen de cautare</p>
+                <p className="text-sm">{tr('Nu s-au găsit imagini', 'No images found')}</p>
+                <p className="text-xs mt-1">
+                  {tr('Încearcă un alt termen de căutare', 'Try a different search term')}
+                </p>
               </div>
             )}
 
@@ -386,9 +415,15 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
             {!searchDone && !searching && candidates.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <Search size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Apasati "Cauta" pentru a gasi imagini automat</p>
+                <p className="text-sm">
+                  {tr(
+                    'Apasă "Caută" pentru a găsi imagini automat',
+                    'Press "Search" to find images automatically',
+                  )}
+                </p>
                 <p className="text-xs mt-1">
-                  Se va cauta pe baza SKU: <span className="text-gray-400">{product.sku}</span>
+                  {tr('Se va căuta pe baza SKU:', 'Search will use SKU:')}{' '}
+                  <span className="text-gray-400">{product.sku}</span>
                 </p>
               </div>
             )}
@@ -435,18 +470,24 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
                   <p className="text-sm text-green-400">
                     {selectedFile?.name} ({((selectedFile?.size || 0) / 1024).toFixed(0)} KB)
                   </p>
-                  <p className="text-xs text-gray-500">Click pentru a schimba fisierul</p>
+                  <p className="text-xs text-gray-500">
+                    {tr('Click pentru a schimba fișierul', 'Click to change file')}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <Upload size={40} className="mx-auto text-gray-500" />
                   <div>
-                    <p className="text-sm text-gray-300">Trage si plaseaza o imagine aici</p>
+                    <p className="text-sm text-gray-300">
+                      {tr('Trage și plasează o imagine aici', 'Drag and drop an image here')}
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">
-                      sau click pentru a selecta un fisier
+                      {tr('sau click pentru a selecta un fișier', 'or click to select a file')}
                     </p>
                   </div>
-                  <p className="text-xs text-gray-600">JPG, PNG, WebP, GIF, SVG — max 5 MB</p>
+                  <p className="text-xs text-gray-600">
+                    {tr('JPG, PNG, WebP, GIF, SVG - max 5 MB', 'JPG, PNG, WebP, GIF, SVG - max 5 MB')}
+                  </p>
                 </div>
               )}
             </div>
@@ -462,12 +503,12 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
                   {uploading ? (
                     <>
                       <RefreshCw size={14} className="animate-spin" />
-                      Se incarca...
+                      {tr('Se încarcă...', 'Uploading...')}
                     </>
                   ) : (
                     <>
                       <Upload size={14} />
-                      Salveaza Imaginea
+                      {tr('Salvează imaginea', 'Save image')}
                     </>
                   )}
                 </button>
@@ -489,7 +530,7 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
             onClick={onClose}
             className="px-4 py-2 text-sm text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
           >
-            Inchide
+            {tr('Închide', 'Close')}
           </button>
         </div>
       </div>
@@ -504,15 +545,25 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function ProductsPage() {
+  const { language } = useGlobalLanguage();
+  const tr = (ro: string, en: string) => (language === 'ro' ? ro : en);
+  const locale = language === 'ro' ? 'ro-RO' : 'en-US';
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [cursorDirection, setCursorDirection] = useState<'next' | 'prev'>('next');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [prevCursor, setPrevCursor] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
   const [uploadProduct, setUploadProduct] = useState<Product | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
+  const [, setSelectedIds] = useState<Set<string | number>>(new Set());
 
   // Bulk image download state
   const [bulkDownloading, setBulkDownloading] = useState(false);
@@ -534,6 +585,45 @@ export function ProductsPage() {
   const [categoryFacets, setCategoryFacets] = useState<CategoryFacet[]>([]);
   const [specificFilters, setSpecificFilters] = useState<Record<string, string[]>>({});
   const [sortBy, setSortBy] = useState<SortOption>('name-asc');
+  const [maytoniOnly, setMaytoniOnly] = useState(false);
+
+  const extractSpecs = useCallback((product: Product) => {
+    const specs = (product.specifications || {}) as Record<string, unknown>;
+    const pick = (...values: unknown[]) =>
+      values.find((value) => value !== undefined && value !== null && String(value).trim() !== '');
+
+    return {
+      wattage: pick(product.wattage, specs.wattage),
+      ipRating: pick(product.ip_rating, product.ipRating, specs.ip_rating, specs.ipRating),
+      kelvin: pick(product.color_temperature, product.colorTemperature, specs.color_temperature, specs.colorTemperature),
+      lumens: pick(product.lumens, specs.lumens),
+      cri: pick(product.cri, specs.cri),
+      beamAngle: pick(product.beam_angle, product.beamAngle, specs.beam_angle, specs.beamAngle),
+      voltageInput: pick(product.voltage_input, product.voltageInput, specs.voltage_input, specs.voltageInput),
+      mountingType: pick(product.mounting_type, product.mountingType, specs.mounting_type, specs.mountingType),
+    };
+  }, []);
+
+  const extractMaytoniResources = useCallback((product: Product) => {
+    const specs = (product.specifications || {}) as Record<string, any>;
+    const custom = (specs.custom_specs || {}) as Record<string, any>;
+    const resources = (custom.resurse_maytoni || {}) as Record<string, any>;
+
+    const links: Array<{ label: string; url: string }> = [];
+    const add = (label: string, value: unknown) => {
+      const normalized = String(value || '').trim();
+      if (normalized.startsWith('http')) {
+        links.push({ label, url: normalized });
+      }
+    };
+
+    add('Instructiune', resources.instructiune_pdf || resources.instructiune_link || specs.instructiune_pdf);
+    add('Eticheta energetica', resources.eticheta_energetica_pdf || resources.eticheta_energetica_imagine);
+    add('Model 3D/360', resources.model_3d_360);
+    add('Plan tehnic', resources.plan_tehnic_blueprint || resources.schema_web || specs.fisa_tehnica);
+
+    return links;
+  }, []);
 
   const selectedCategoryName = useMemo(() => {
     if (!categoryId) {
@@ -548,12 +638,25 @@ export function ProductsPage() {
     [specificFilters],
   );
 
+  const getStatusLabel = useCallback(
+    (status: string) => {
+      const labels: Record<string, { ro: string; en: string }> = {
+        Toate: { ro: 'Toate', en: 'All' },
+        Normal: { ro: 'Normal', en: 'Normal' },
+        Atentionare: { ro: 'Atenționare', en: 'Warning' },
+        Critic: { ro: 'Critic', en: 'Critical' },
+      };
+      return labels[status]?.[language] || status;
+    },
+    [language],
+  );
+
   // Table columns — defined here to access setUploadProduct
   const columns: Column<Product>[] = useMemo(
     () => [
       {
         key: 'imageUrl',
-        label: 'Imagine',
+        label: tr('Imagine', 'Image'),
         width: '80px',
         render: (value, row) => (
           <div
@@ -562,7 +665,7 @@ export function ProductsPage() {
               e.stopPropagation();
               setUploadProduct(row);
             }}
-            title="Click pentru a schimba imaginea"
+            title={tr('Click pentru a schimba imaginea', 'Click to change image')}
           >
             {value ? (
               <div className="relative">
@@ -594,15 +697,15 @@ export function ProductsPage() {
           </div>
         ),
       },
-      { key: 'name', label: 'Nume Produs', sortable: true },
+      { key: 'name', label: tr('Nume produs', 'Product name'), sortable: true },
       { key: 'sku', label: 'SKU', sortable: true },
       {
         key: 'price',
-        label: 'Pret',
+        label: tr('Preț', 'Price'),
         sortable: true,
         render: (v) => (
           <span className="font-medium text-blue-400">
-            {Number(v).toLocaleString('ro-RO', {
+            {Number(v).toLocaleString(locale, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}{' '}
@@ -610,33 +713,102 @@ export function ProductsPage() {
           </span>
         ),
       },
-      { key: 'categoryName', label: 'Categorie', sortable: true },
+      { key: 'categoryName', label: tr('Categorie', 'Category'), sortable: true },
+      {
+        key: 'specifications',
+        label: tr('Specificații tehnice', 'Technical specs'),
+        render: (_value, row) => {
+          const specs = extractSpecs(row);
+          const chips: string[] = [];
+
+          if (specs.wattage) chips.push(`${specs.wattage}W`);
+          if (specs.ipRating) chips.push(String(specs.ipRating).toUpperCase());
+          if (specs.kelvin) chips.push(`${specs.kelvin}K`);
+          if (specs.lumens) chips.push(`${specs.lumens}lm`);
+          if (specs.cri) chips.push(`CRI ${specs.cri}`);
+          if (specs.beamAngle) chips.push(`${specs.beamAngle}°`);
+          if (specs.voltageInput) chips.push(String(specs.voltageInput));
+          if (specs.mountingType) chips.push(String(specs.mountingType));
+
+          if (chips.length === 0) {
+            return <span className="text-xs text-gray-500">{tr('Fără date', 'No data')}</span>;
+          }
+
+          return (
+            <div className="flex flex-wrap gap-1">
+              {chips.slice(0, 4).map((chip) => (
+                <span
+                  key={chip}
+                  className="inline-flex items-center rounded-full border border-gray-600 bg-gray-800 px-2 py-0.5 text-[11px] text-gray-200"
+                >
+                  {chip}
+                </span>
+              ))}
+              {chips.length > 4 && (
+                <span className="inline-flex items-center rounded-full border border-blue-700 bg-blue-900/30 px-2 py-0.5 text-[11px] text-blue-300">
+                  +{chips.length - 4}
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        key: 'resources',
+        label: tr('Resurse Maytoni', 'Maytoni resources'),
+        render: (_value, row) => {
+          const resources = extractMaytoniResources(row);
+          if (resources.length === 0) {
+            return <span className="text-xs text-gray-500">{tr('Fără resurse', 'No resources')}</span>;
+          }
+
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              {resources.map((resource) => (
+                <a
+                  key={`${row.id}-${resource.label}`}
+                  href={resource.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center rounded-full border border-blue-700 bg-blue-900/30 px-2 py-0.5 text-[11px] text-blue-300 hover:bg-blue-900/50"
+                >
+                  {resource.label}
+                </a>
+              ))}
+            </div>
+          );
+        },
+      },
       {
         key: 'available',
-        label: 'Stoc Local (SmartBill)',
+        label: tr('Stoc local (SmartBill)', 'Local stock (SmartBill)'),
         sortable: true,
-        render: (v) => <span className="font-medium">{Number(v).toLocaleString()}</span>,
+        render: (v) => <span className="font-medium">{Number(v).toLocaleString(locale)}</span>,
       },
       {
         key: 'supplierStock',
-        label: 'Stoc Furnizor',
+        label: tr('Stoc furnizor', 'Supplier stock'),
         sortable: true,
         render: (v, row) => (
           <span className="font-medium text-blue-400">
-            {Number(v).toLocaleString()}
-            {Number(v) > 0 && row.supplierLeadTime ? ` (${row.supplierLeadTime} zile)` : ''}
+            {Number(v).toLocaleString(locale)}
+            {Number(v) > 0 && row.supplierLeadTime
+              ? language === 'ro'
+                ? ` (${row.supplierLeadTime} zile)`
+                : ` (${row.supplierLeadTime} days)`
+              : ''}
           </span>
         ),
       },
       {
         key: 'totalStock',
-        label: 'Stoc Total',
+        label: tr('Stoc total', 'Total stock'),
         sortable: true,
-        render: (v) => Number(v).toLocaleString(),
+        render: (v) => Number(v).toLocaleString(locale),
       },
       {
         key: 'status',
-        label: 'Status',
+        label: tr('Status', 'Status'),
         render: (v) => {
           const status = v as string;
           const statusMap: Record<string, 'pending' | 'processing' | 'completed'> = {
@@ -644,11 +816,11 @@ export function ProductsPage() {
             Atentionare: 'processing',
             Critic: 'pending',
           };
-          return <StatusBadge status={statusMap[status] || 'pending'} label={status} />;
+          return <StatusBadge status={statusMap[status] || 'pending'} label={getStatusLabel(status)} />;
         },
       },
     ],
-    [],
+    [extractMaytoniResources, extractSpecs, getStatusLabel, language, locale, tr],
   );
 
   // Fetch categories on mount
@@ -684,9 +856,13 @@ export function ProductsPage() {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '500',
+        limit: '100',
       });
-      if (search) params.set('search', search);
+      if (cursor) {
+        params.set('cursor', cursor);
+        params.set('direction', cursorDirection);
+      }
+      if (debouncedSearch) params.set('search', debouncedSearch);
       if (selectedCategoryName) {
         params.set('category', selectedCategoryName);
       }
@@ -697,17 +873,40 @@ export function ProductsPage() {
 
       const response = await apiClient.get(`/inventory/products?${params.toString()}`);
       const data = (response as any)?.data || response;
+      const pagination = data.pagination || {};
 
       setProducts(data.items || []);
-      setTotalPages(data.pagination?.totalPages || 1);
-      setTotal(data.pagination?.total || 0);
+      setTotalPages(pagination.totalPages || 1);
+      setTotal(pagination.total || 0);
+      setNextCursor(pagination.nextCursor || null);
+      setPrevCursor(pagination.prevCursor || null);
+      setHasNextPage(
+        typeof pagination.hasNextPage === 'boolean'
+          ? pagination.hasNextPage
+          : page < (pagination.totalPages || 1),
+      );
+      setHasPrevPage(
+        typeof pagination.hasPrevPage === 'boolean' ? pagination.hasPrevPage : page > 1,
+      );
     } catch (err: any) {
-      setError(err.message || 'Eroare la incarcarea produselor');
+      setError(err.message || tr('Eroare la încărcarea produselor', 'Failed to load products'));
       setProducts([]);
+      setNextCursor(null);
+      setPrevCursor(null);
+      setHasNextPage(false);
+      setHasPrevPage(page > 1);
     } finally {
       setLoading(false);
     }
-  }, [page, search, selectedCategoryName, specificFilters]);
+  }, [page, debouncedSearch, selectedCategoryName, specificFilters, cursor, cursorDirection]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     fetchProducts();
@@ -768,6 +967,8 @@ export function ProductsPage() {
 
   const toggleSpecificFilter = (key: string, value: string) => {
     setPage(1);
+    setCursor(null);
+    setCursorDirection('next');
     setSpecificFilters((prev) => {
       const existing = prev[key] || [];
       const nextValues = existing.includes(value)
@@ -787,6 +988,7 @@ export function ProductsPage() {
     if (categoryId) count++;
     if (statusFilter !== 'Toate') count++;
     if (appliedPriceMin !== null || appliedPriceMax !== null) count++;
+    if (maytoniOnly) count++;
     if (activeSpecificFilterCount > 0) count += activeSpecificFilterCount;
     if (sortBy !== 'name-asc') count++;
     return count;
@@ -795,6 +997,7 @@ export function ProductsPage() {
     statusFilter,
     appliedPriceMin,
     appliedPriceMax,
+    maytoniOnly,
     activeSpecificFilterCount,
     sortBy,
   ]);
@@ -806,13 +1009,18 @@ export function ProductsPage() {
     setPriceMax('');
     setAppliedPriceMin(null);
     setAppliedPriceMax(null);
+    setMaytoniOnly(false);
     setSpecificFilters({});
     setSortBy('name-asc');
     setPage(1);
+    setCursor(null);
+    setCursorDirection('next');
   };
 
   const applyPriceFilter = () => {
     setPage(1);
+    setCursor(null);
+    setCursorDirection('next');
     setAppliedPriceMin(priceMin ? Number(priceMin) : null);
     setAppliedPriceMax(priceMax ? Number(priceMax) : null);
   };
@@ -838,7 +1046,7 @@ export function ProductsPage() {
         searched: 0,
         imported: 0,
         notFound: 0,
-        errors: [err.message || 'Eroare la descarcarea automata a pozelor'],
+        errors: [err.message || tr('Eroare la descărcarea automată a pozelor', 'Automatic image download failed')],
       });
     } finally {
       setBulkDownloading(false);
@@ -862,6 +1070,10 @@ export function ProductsPage() {
       result = result.filter((p) => Number(p.price) <= appliedPriceMax);
     }
 
+    if (maytoniOnly) {
+      result = result.filter((p) => extractMaytoniResources(p).length > 0);
+    }
+
     // Sort
     result.sort((a, b) => {
       switch (sortBy) {
@@ -883,27 +1095,99 @@ export function ProductsPage() {
     });
 
     return result;
-  }, [products, statusFilter, appliedPriceMin, appliedPriceMax, sortBy]);
+  }, [products, statusFilter, appliedPriceMin, appliedPriceMax, maytoniOnly, extractMaytoniResources, sortBy]);
+
+  const exportMaytoniResourcesCsv = useCallback(() => {
+    const rows = filteredProducts
+      .map((product) => {
+        const resources = extractMaytoniResources(product);
+        if (resources.length === 0) return null;
+
+        const specs = extractSpecs(product);
+        const byLabel = new Map(resources.map((entry) => [entry.label, entry.url]));
+
+        return {
+          id: product.id,
+          sku: product.sku,
+          nume: product.name,
+          stoc_local: product.localStock,
+          stoc_furnizor: product.supplierStock,
+          stoc_total: product.totalStock,
+          putere_w: String(specs.wattage || ''),
+          ip: String(specs.ipRating || ''),
+          kelvin: String(specs.kelvin || ''),
+          instructiune: byLabel.get('Instructiune') || '',
+          eticheta_energetica: byLabel.get('Eticheta energetica') || '',
+          model_3d_360: byLabel.get('Model 3D/360') || '',
+          plan_tehnic: byLabel.get('Plan tehnic') || '',
+        };
+      })
+      .filter(Boolean) as Array<Record<string, any>>;
+
+    if (rows.length === 0) {
+      setError(
+        tr(
+          'Nu exista produse Maytoni de exportat in filtrul curent.',
+          'No Maytoni products to export in current filter.',
+        ),
+      );
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const escapeCsv = (value: unknown) => {
+      const text = String(value ?? '');
+      if (text.includes('"') || text.includes(',') || text.includes('\n')) {
+        return `"${text.replace(/"/g, '""')}"`;
+      }
+      return text;
+    };
+
+    const csv = [
+      headers.join(','),
+      ...rows.map((row) => headers.map((header) => escapeCsv(row[header])).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `maytoni-resurse-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [extractMaytoniResources, extractSpecs, filteredProducts, tr]);
 
   return (
     <div className="p-3 sm:p-4 lg:p-8 space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-white">Produse</h1>
-          <p className="text-gray-300 mt-1">Catalog produse — {total.toLocaleString()} produse</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-white">{tr('Produse', 'Products')}</h1>
+          <p className="text-gray-300 mt-1">
+            {tr('Catalog produse', 'Product catalog')} - {total.toLocaleString(locale)}{' '}
+            {tr('produse', 'products')}
+          </p>
         </div>
         <div className="flex w-full lg:w-auto flex-col sm:flex-row gap-3">
+          <button
+            className="btn-secondary flex items-center justify-center gap-2"
+            onClick={exportMaytoniResourcesCsv}
+          >
+            <Download size={18} />
+            {tr('Export resurse Maytoni', 'Export Maytoni resources')}
+          </button>
           <button
             className="btn-primary flex items-center justify-center gap-2"
             onClick={fetchProducts}
             disabled={loading}
           >
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-            Actualizeaza
+            {tr('Actualizează', 'Refresh')}
           </button>
           <button className="btn-primary flex items-center justify-center gap-2">
             <Plus size={18} />
-            Adauga Produs
+            {tr('Adaugă produs', 'Add product')}
           </button>
         </div>
       </div>
@@ -912,11 +1196,13 @@ export function ProductsPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Cauta dupa SKU sau nume produs..."
+          placeholder={tr('Caută după SKU sau nume produs...', 'Search by SKU or product name...')}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
+            setCursor(null);
+            setCursorDirection('next');
           }}
           className="w-full pl-10 pr-4 py-2 border border-gray-600 bg-gray-800 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
@@ -933,10 +1219,12 @@ export function ProductsPage() {
             setCategoryId(e.target.value);
             setSpecificFilters({});
             setPage(1);
+            setCursor(null);
+            setCursorDirection('next');
           }}
           className="w-full sm:w-auto bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
-          <option value="">Toate categoriile</option>
+          <option value="">{tr('Toate categoriile', 'All categories')}</option>
           {categories.map((cat) => (
             <option key={cat.id} value={String(cat.id)}>
               {cat.name}
@@ -956,17 +1244,17 @@ export function ProductsPage() {
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
-              {s}
+              {getStatusLabel(s)}
             </button>
           ))}
         </div>
 
         {/* Price range */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-gray-400">Pret:</span>
+          <span className="text-sm text-gray-400">{tr('Preț:', 'Price:')}</span>
           <input
             type="number"
-            placeholder="Min"
+            placeholder={tr('Min', 'Min')}
             value={priceMin}
             onChange={(e) => setPriceMin(e.target.value)}
             className="w-24 sm:w-28 bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -974,7 +1262,7 @@ export function ProductsPage() {
           <span className="text-gray-500">-</span>
           <input
             type="number"
-            placeholder="Max"
+            placeholder={tr('Max', 'Max')}
             value={priceMax}
             onChange={(e) => setPriceMax(e.target.value)}
             className="w-24 sm:w-28 bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -984,9 +1272,20 @@ export function ProductsPage() {
             onClick={applyPriceFilter}
             className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Aplica
+            {tr('Aplică', 'Apply')}
           </button>
         </div>
+
+        <button
+          onClick={() => setMaytoniOnly((prev) => !prev)}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+            maytoniOnly
+              ? 'bg-emerald-600 text-white'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          }`}
+        >
+          {tr('Doar cu resurse Maytoni', 'Only with Maytoni resources')}
+        </button>
 
         {/* Sort dropdown */}
         <select
@@ -994,25 +1293,30 @@ export function ProductsPage() {
           onChange={(e) => setSortBy(e.target.value as SortOption)}
           className="w-full sm:w-auto bg-gray-800 text-white border border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
-          {(Object.entries(SORT_LABELS) as [SortOption, string][]).map(([key, label]) => (
+          {(Object.entries(SORT_LABELS) as [SortOption, { ro: string; en: string }][]).map(
+            ([key, label]) => (
             <option key={key} value={key}>
-              {label}
+              {label[language]}
             </option>
-          ))}
+            ),
+          )}
         </select>
 
         {/* Active filter count + reset */}
         {activeFilterCount > 0 && (
           <div className="flex items-center gap-2 xl:ml-auto">
             <span className="text-sm text-blue-400 font-medium">
-              {activeFilterCount} {activeFilterCount === 1 ? 'filtru activ' : 'filtre active'}
+              {activeFilterCount}{' '}
+              {activeFilterCount === 1
+                ? tr('filtru activ', 'active filter')
+                : tr('filtre active', 'active filters')}
             </span>
             <button
               onClick={resetFilters}
               className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-400 hover:text-red-300 bg-gray-800 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
             >
               <X size={14} />
-              Reset Filtre
+              {tr('Resetează filtre', 'Reset filters')}
             </button>
           </div>
         )}
@@ -1021,7 +1325,7 @@ export function ProductsPage() {
       {selectedCategoryName && categoryFacets.length > 0 && (
         <div className="rounded-lg border border-blue-800/50 bg-blue-950/20 p-3 space-y-3">
           <p className="text-sm font-medium text-blue-300">
-            Filtre specifice — {selectedCategoryName}
+            {tr('Filtre specifice', 'Specific filters')} - {selectedCategoryName}
           </p>
 
           {categoryFacets.map((facet) => {
@@ -1056,7 +1360,7 @@ export function ProductsPage() {
       {/* Filtered count info */}
       {activeFilterCount > 0 && !loading && (
         <p className="text-sm text-gray-400">
-          {filteredProducts.length} din {products.length} produse afisate
+          {filteredProducts.length} {tr('din', 'of')} {products.length} {tr('produse afișate', 'products shown')}
         </p>
       )}
 
@@ -1075,11 +1379,15 @@ export function ProductsPage() {
               <Package size={40} />
             </div>
           }
-          title={search || activeFilterCount > 0 ? 'Nu s-au gasit produse' : 'Niciun Produs'}
+          title={
+            search || activeFilterCount > 0
+              ? tr('Nu s-au găsit produse', 'No products found')
+              : tr('Niciun produs', 'No products')
+          }
           description={
             search || activeFilterCount > 0
-              ? 'Incearca sa modifici filtrele sau termenul de cautare'
-              : 'Datele de produs vor aparea aici dupa sincronizare'
+              ? tr('Încearcă să modifici filtrele sau termenul de căutare', 'Try adjusting filters or search term')
+              : tr('Datele de produs vor apărea aici după sincronizare', 'Product data will appear here after sync')
           }
         />
       ) : (
@@ -1098,12 +1406,12 @@ export function ProductsPage() {
                 {bulkDownloading ? (
                   <>
                     <RefreshCw size={14} className="animate-spin" />
-                    Se descarca pozele...
+                    {tr('Se descarcă pozele...', 'Downloading images...')}
                   </>
                 ) : (
                   <>
                     <Download size={14} />
-                    Descarca Poze Automat
+                    {tr('Descarcă poze automat', 'Auto-download images')}
                   </>
                 )}
               </button>
@@ -1113,22 +1421,39 @@ export function ProductsPage() {
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4 pt-4 border-t border-gray-700">
               <p className="text-sm text-gray-300">
-                Pagina {page} din {totalPages} ({total.toLocaleString()} produse)
+                {tr('Pagina', 'Page')} {page} {tr('din', 'of')} {totalPages} ({total.toLocaleString(locale)}{' '}
+                {tr('produse', 'products')})
               </p>
               <div className="flex gap-2">
                 <button
                   className="btn-secondary"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  disabled={!hasPrevPage}
+                  onClick={() => {
+                    if (prevCursor) {
+                      setCursor(prevCursor);
+                      setCursorDirection('prev');
+                    } else {
+                      setCursor(null);
+                    }
+                    setPage((p) => Math.max(1, p - 1));
+                  }}
                 >
-                  Anterior
+                  {tr('Anterior', 'Previous')}
                 </button>
                 <button
                   className="btn-secondary"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
+                  disabled={!hasNextPage}
+                  onClick={() => {
+                    if (nextCursor) {
+                      setCursor(nextCursor);
+                      setCursorDirection('next');
+                    } else {
+                      setCursor(null);
+                    }
+                    setPage((p) => p + 1);
+                  }}
                 >
-                  Urmator
+                  {tr('Următor', 'Next')}
                 </button>
               </div>
             </div>
@@ -1160,7 +1485,7 @@ export function ProductsPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <Image size={20} />
-                Rezultat Descărcare Poze
+                {tr('Rezultat descărcare poze', 'Image download result')}
               </h3>
               <button
                 onClick={() => setBulkResult(null)}
@@ -1174,22 +1499,26 @@ export function ProductsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-blue-400">{bulkResult.searched}</p>
-                  <p className="text-xs text-gray-400 mt-1">Cautate</p>
+                  <p className="text-xs text-gray-400 mt-1">{tr('Căutate', 'Searched')}</p>
                 </div>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-green-400">{bulkResult.imported}</p>
-                  <p className="text-xs text-gray-400 mt-1">Importate</p>
+                  <p className="text-xs text-gray-400 mt-1">{tr('Importate', 'Imported')}</p>
                 </div>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-yellow-400">{bulkResult.notFound}</p>
-                  <p className="text-xs text-gray-400 mt-1">Negasite</p>
+                  <p className="text-xs text-gray-400 mt-1">{tr('Negăsite', 'Not found')}</p>
                 </div>
               </div>
 
               {bulkResult.imported > 0 && (
                 <div className="flex items-center gap-2 p-3 bg-green-900/30 border border-green-700 rounded-lg text-sm text-green-400">
                   <CheckCircle size={16} />
-                  {bulkResult.imported} imagini au fost descarcate si salvate cu succes.
+                  {bulkResult.imported}{' '}
+                  {tr(
+                    'imagini au fost descărcate și salvate cu succes.',
+                    'images were downloaded and saved successfully.',
+                  )}
                 </div>
               )}
 
@@ -1197,7 +1526,7 @@ export function ProductsPage() {
                 <div className="p-3 bg-red-900/30 border border-red-700 rounded-lg space-y-1">
                   <p className="text-sm text-red-400 flex items-center gap-2">
                     <AlertCircle size={14} />
-                    {bulkResult.errors.length} erori:
+                    {bulkResult.errors.length} {tr('erori:', 'errors:')}
                   </p>
                   <ul className="text-xs text-red-400/80 list-disc pl-5 max-h-32 overflow-y-auto">
                     {bulkResult.errors.map((err, i) => (
@@ -1213,7 +1542,7 @@ export function ProductsPage() {
                 onClick={() => setBulkResult(null)}
                 className="px-4 py-2 text-sm text-gray-300 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors"
               >
-                Inchide
+                {tr('Închide', 'Close')}
               </button>
             </div>
           </div>

@@ -6,6 +6,10 @@ import { BraytronScraper } from './BraytronScraper';
 import { FslScraper } from './FslScraper';
 import { MplPowerScraper } from './MplPowerScraper';
 import { AzzardoXmlScraper } from './AzzardoXmlScraper';
+import { LedProfilesScraper } from './LedProfilesScraper';
+import { VipelectroScraper } from './VipelectroScraper';
+import { BusinessCentralScraper } from './BusinessCentralScraper';
+import { SampleSupplierApiScraper } from './SampleSupplierApiScraper';
 import { SupplierCode } from '../../domain';
 
 export class ScraperFactory {
@@ -37,6 +41,18 @@ export class ScraperFactory {
 
       case SupplierCode.AZZARDO:
         return new AzzardoXmlScraper(this.browser);
+
+      case SupplierCode.LED_PROFILES:
+        return new LedProfilesScraper(this.browser);
+
+      case SupplierCode.VIPELECTRO:
+        return new VipelectroScraper(this.browser);
+
+      case SupplierCode.BUSINESS_CENTRAL:
+        return new BusinessCentralScraper(this.browser);
+
+      case SupplierCode.EXAMPLE_API:
+        return new SampleSupplierApiScraper(this.browser);
 
       default:
         throw new Error(`Unknown supplier code: ${supplierCode}`);
