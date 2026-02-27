@@ -136,7 +136,7 @@ jobs:
 
       - name: Archive test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: coverage/
@@ -187,7 +187,7 @@ jobs:
           find dist -type f -name "*.js" | head -10
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-dist
           path: dist/
@@ -223,11 +223,59 @@ jobs:
         continue-on-error: true
 
       - name: Archive audit report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-audit
           path: audit.json
           retention-days: 30
+
+  # Lighthouse performance budgets (mobile)
+  performance:
+    runs-on: ubuntu-latest
+    name: Lighthouse Mobile Budgets
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Build frontend
+        run: npm --prefix frontend run build
+
+      - name: Ensure Chrome/Chromium is available
+        run: |
+          if command -v google-chrome-stable >/dev/null 2>&1 || \
+             command -v google-chrome >/dev/null 2>&1 || \
+             command -v chromium >/dev/null 2>&1 || \
+             command -v chromium-browser >/dev/null 2>&1; then
+            echo "Chrome/Chromium already installed"
+            exit 0
+          fi
+
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium
+
+      - name: Run Lighthouse CI assertions
+        run: npm --prefix frontend run perf:lighthouse:ci
+
+      - name: Archive Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouseci-reports
+          path: frontend/.lighthouseci/
+          retention-days: 14
 
   # Docker build job (on main and develop branches)
   docker:
