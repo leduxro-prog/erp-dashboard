@@ -184,7 +184,7 @@ jobs:
             cypher-erp:gate-test || echo "Security issues found in Docker image"
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-reports-${{ github.sha }}
@@ -284,7 +284,7 @@ jobs:
           echo "Backend bundle size: $BACKEND_SIZE"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-${{ github.sha }}
           path: |
@@ -369,7 +369,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-${{ github.sha }}
@@ -555,7 +555,7 @@ jobs:
           fi
 
       - name: Upload smoke test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: smoke-test-results-${{ github.sha }}
@@ -768,7 +768,7 @@ jobs:
           cat gate-summary.md
 
       - name: Upload summary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gate-summary-${{ github.sha }}
           path: gate-summary.md
