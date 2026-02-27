@@ -7,9 +7,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "perf:lighthouse:ci": "CHROME_PATH=${CHROME_PATH:-$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || command -v chromium-browser)} lhci collect --config=./lighthouserc.json --chromeFlags='--no-sandbox --disable-dev-shm-usage' && lhci assert --config=./lighthouserc.json"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.4",
     "@tanstack/react-query": "^5.0.0",
     "axios": "^1.6.0",
     "class-variance-authority": "^0.7.0",
@@ -26,6 +28,7 @@
     "zustand": "^4.4.0"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "@types/node": "^20.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
