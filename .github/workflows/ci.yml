@@ -136,7 +136,7 @@ jobs:
 
       - name: Archive test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: coverage/
@@ -187,7 +187,7 @@ jobs:
           find dist -type f -name "*.js" | head -10
 
       - name: Archive build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-dist
           path: dist/
@@ -223,7 +223,7 @@ jobs:
         continue-on-error: true
 
       - name: Archive audit report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-audit
           path: audit.json

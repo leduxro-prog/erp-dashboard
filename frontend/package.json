@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "perf:lighthouse:ci": "CHROME_PATH=${CHROME_PATH:-$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || command -v chromium-browser)} npx -y @lhci/cli@0.15.1 collect --config=./lighthouserc.json --chromeFlags='--no-sandbox --disable-dev-shm-usage' && npx -y @lhci/cli@0.15.1 assert --config=./lighthouserc.json"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.0.0",
