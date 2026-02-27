@@ -562,6 +562,68 @@ export class B2BController {
     return 'Diverse';
   }
 
+  private normalizeProductCode(value: unknown): string {
+    return String(value || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+  }
+
+  private mergeCatalogProductsBySearchCode(products: any[], search: unknown): any[] {
+    const searchCode = this.normalizeProductCode(search);
+    if (!searchCode || searchCode.length < 8 || !Array.isArray(products) || products.length < 2) {
+      return products;
+    }
+
+    const groups = new Map<string, any[]>();
+
+    for (const product of products) {
+      const haystack = this.normalizeProductCode(`${product?.name || ''} ${product?.sku || ''}`);
+      const key = haystack.includes(searchCode) ? `code:${searchCode}` : `id:${product?.id}`;
+      const bucket = groups.get(key) || [];
+      bucket.push(product);
+      groups.set(key, bucket);
+    }
+
+    if (!groups.has(`code:${searchCode}`)) {
+      return products;
+    }
+
+    const merged: any[] = [];
+    for (const [key, bucket] of groups.entries()) {
+      if (!key.startsWith('code:') || bucket.length === 1) {
+        merged.push(...bucket);
+        continue;
+      }
+
+      const representative = [...bucket].sort((a, b) => {
+        const aSupplier = Number(a?.stock_supplier || 0);
+        const bSupplier = Number(b?.stock_supplier || 0);
+        if (aSupplier !== bSupplier) return bSupplier - aSupplier;
+        const aTotal = Number(a?.stock_total || 0);
+        const bTotal = Number(b?.stock_total || 0);
+        if (aTotal !== bTotal) return bTotal - aTotal;
+        return Number(a?.id || 0) - Number(b?.id || 0);
+      })[0];
+
+      const stockLocal = bucket.reduce((sum, item) => sum + (Number(item?.stock_local) || 0), 0);
+      const stockSupplier = bucket.reduce((sum, item) => sum + (Number(item?.stock_supplier) || 0), 0);
+      const supplierNames = Array.from(
+        new Set(bucket.map((item) => String(item?.supplier_name || '').trim()).filter(Boolean)),
+      );
+
+      merged.push({
+        ...representative,
+        stock_local: stockLocal,
+        stock_supplier: stockSupplier,
+        stock_total: stockLocal + stockSupplier,
+        supplier_name: supplierNames.length > 0 ? supplierNames.join(' + ') : representative?.supplier_name,
+        merged_product_ids: bucket.map((item) => item.id),
+      });
+    }
+
+    return merged;
+  }
+
   async verifyCui(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { cui } = req.body;
@@ -2001,34 +2063,38 @@ export class B2BController {
       });
 
       if (projectionResult) {
+        const catalogProducts = projectionResult.products.map((p: any) => {
+          const stockLocal = parseInt(p.local_stock) || 0;
+          const stockSupplier = parseInt(p.supplier_stock) || 0;
+
+          return {
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            description: serializeCatalogDescription(p.description),
+            price: parseFloat(p.price) || 0,
+            currency: p.currency || 'RON',
+            image_url: p.primary_image_url || '',
+            category: p.category_root || p.category_raw || 'Diverse',
+            subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
+            brand: p.brand || null,
+            mounting_type: p.mounting_type || null,
+            ip_rating: p.ip_rating || null,
+            color_temperature: p.color_temperature ? Number(p.color_temperature) : null,
+            supplier_name: p.supplier_name || null,
+            stock_local: stockLocal,
+            stock_supplier: stockSupplier,
+            stock_total: stockLocal + stockSupplier,
+            supplier_lead_time: parseInt(p.supplier_lead_time) || 3,
+          };
+        });
+
+        const mergedProducts = this.mergeCatalogProductsBySearchCode(catalogProducts, search);
+
         res.status(200).json({
           success: true,
           data: {
-            products: projectionResult.products.map((p: any) => {
-              const stockLocal = parseInt(p.local_stock) || 0;
-              const stockSupplier = parseInt(p.supplier_stock) || 0;
-
-              return {
-                id: p.id,
-                sku: p.sku,
-                name: p.name,
-                description: serializeCatalogDescription(p.description),
-                price: parseFloat(p.price) || 0,
-                currency: p.currency || 'RON',
-                image_url: p.primary_image_url || '',
-                category: p.category_root || p.category_raw || 'Diverse',
-                subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
-                brand: p.brand || null,
-                mounting_type: p.mounting_type || null,
-                ip_rating: p.ip_rating || null,
-                color_temperature: p.color_temperature ? Number(p.color_temperature) : null,
-                supplier_name: p.supplier_name || null,
-                stock_local: stockLocal,
-                stock_supplier: stockSupplier,
-                stock_total: stockLocal + stockSupplier,
-                supplier_lead_time: parseInt(p.supplier_lead_time) || 3,
-              };
-            }),
+            products: mergedProducts,
             pagination: {
               page: pageNum,
               limit: limitNum,
@@ -2297,35 +2363,37 @@ export class B2BController {
       `;
 
       const products = await readDataSource.query(productsQuery, params);
+      const mappedProducts = products.map((p: any) => {
+        const stockLocal = parseInt(p.stock_local) || 0;
+        const stockSupplier = parseInt(p.stock_supplier) || 0;
+
+        return {
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          description: serializeCatalogDescription(p.description),
+          price: parseFloat(p.price) || 0,
+          currency: p.currency || 'RON',
+          image_url: '',
+          category: p.category_root || p.category_raw || 'Diverse',
+          subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
+          brand: p.brand || null,
+          mounting_type: p.mounting_type || null,
+          ip_rating: p.ip_rating || null,
+          color_temperature: p.color_temperature ? Number(p.color_temperature) : null,
+          supplier_name: p.supplier_name || null,
+          stock_local: stockLocal,
+          stock_supplier: stockSupplier,
+          stock_total: stockLocal + stockSupplier,
+          supplier_lead_time: parseInt(p.supplier_lead_time) || 3,
+        };
+      });
+      const mergedProducts = this.mergeCatalogProductsBySearchCode(mappedProducts, search);
 
       res.status(200).json({
         success: true,
         data: {
-          products: products.map((p: any) => {
-            const stockLocal = parseInt(p.stock_local) || 0;
-            const stockSupplier = parseInt(p.stock_supplier) || 0;
-
-            return {
-              id: p.id,
-              sku: p.sku,
-              name: p.name,
-              description: serializeCatalogDescription(p.description),
-              price: parseFloat(p.price) || 0,
-              currency: p.currency || 'RON',
-              image_url: '',
-              category: p.category_root || p.category_raw || 'Diverse',
-              subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
-              brand: p.brand || null,
-              mounting_type: p.mounting_type || null,
-              ip_rating: p.ip_rating || null,
-              color_temperature: p.color_temperature ? Number(p.color_temperature) : null,
-              supplier_name: p.supplier_name || null,
-              stock_local: stockLocal,
-              stock_supplier: stockSupplier,
-              stock_total: stockLocal + stockSupplier,
-              supplier_lead_time: parseInt(p.supplier_lead_time) || 3,
-            };
-          }),
+          products: mergedProducts,
           pagination: {
             page: pageNum,
             limit: limitNum,
