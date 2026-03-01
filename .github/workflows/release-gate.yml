@@ -184,7 +184,7 @@ jobs:
             cypher-erp:gate-test || echo "Security issues found in Docker image"
 
       - name: Upload security reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-reports-${{ github.sha }}
@@ -219,6 +219,9 @@ jobs:
 
       - name: Check Prettier formatting
         run: npx prettier --check 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'
+
+      - name: Run VAT literal guard
+        run: node scripts/check-vat-literals.cjs
 
       - name: TypeScript type checking
         run: npx tsc --noEmit
@@ -281,7 +284,7 @@ jobs:
           echo "Backend bundle size: $BACKEND_SIZE"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-${{ github.sha }}
           path: |
@@ -366,7 +369,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-${{ github.sha }}
@@ -552,7 +555,7 @@ jobs:
           fi
 
       - name: Upload smoke test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: smoke-test-results-${{ github.sha }}
@@ -765,7 +768,7 @@ jobs:
           cat gate-summary.md
 
       - name: Upload summary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gate-summary-${{ github.sha }}
           path: gate-summary.md
@@ -815,42 +818,15 @@ jobs:
   # ==============================================================================
   deploy:
     name: Deploy
-    runs-on: ubuntu-latest
     needs: [gate-summary, manual-approval]
     if: |
       always() &&
       (inputs.skip_manual_approval == true || needs.manual-approval.result == 'success') &&
       needs.gate-summary.outputs.can_deploy == 'true'
-
-    environment:
-      name: ${{ inputs.environment }}
-      url: https://erp.cypher.ro
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to ${{ inputs.environment }}
-        run: |
-          echo "Deploying version ${{ needs.gate-summary.outputs.version }} to ${{ inputs.environment }}"
-          # Add actual deployment commands here
-          # For example: deploy to server, update k8s, etc.
-
-      - name: Run post-deployment smoke tests
-        run: |
-          echo "Running post-deployment smoke tests..."
-          # Add smoke test commands against deployed environment
-
-      - name: Create release tag
-        if: inputs.environment == 'production'
-        run: |
-          git tag -a "v${{ needs.gate-summary.outputs.version }}" -m "Release ${{ needs.gate-summary.outputs.version }}"
-          git push origin "v${{ needs.gate-summary.outputs.version }}"
-
-      - name: Notify deployment success
-        run: |
-          echo "Deployment completed successfully"
-          # Add notification commands (Slack, email, etc.)
+    uses: ./.github/workflows/deploy-hetzner.yml
+    with:
+      skip_build_checks: true
+    secrets: inherit
 
   # ==============================================================================
   # Job 13: Rollback (On Failure)
@@ -862,10 +838,9 @@ jobs:
     if: failure()
 
     steps:
-      - name: Execute rollback
+      - name: Rollback note
         run: |
-          echo "Deployment failed - executing rollback"
-          # Add rollback commands here
+          echo "Deployment failed. Rollback is handled by deploy-hetzner workflow rollback job."
 
       - name: Notify rollback
         run: |

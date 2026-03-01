@@ -16,6 +16,8 @@ interface DataTableProps<T> {
   isLoading?: boolean;
   onRowClick?: (row: T) => void;
   selectable?: boolean;
+  onSelectionChange?: (selectedIds: Set<string | number>) => void;
+  bulkActions?: (selectedIds: Set<string | number>) => React.ReactNode;
 }
 
 // Memoized row component to prevent unnecessary re-renders
@@ -28,51 +30,54 @@ interface TableRowProps<T> {
   onToggleSelect: (id: string | number, checked: boolean) => void;
 }
 
-const TableRow = memo(<T extends { id: string | number }>({
-  row,
-  columns,
-  selectable,
-  isSelected,
-  onRowClick,
-  onToggleSelect,
-}: TableRowProps<T>) => {
-  return (
-    <tr
-      onClick={() => onRowClick?.(row)}
-      className={clsx(
-        'border-b border-gray-700 hover:bg-gray-700/30 transition-colors',
-        isSelected && 'bg-blue-600/10',
-        onRowClick && 'cursor-pointer'
-      )}
-    >
-      {selectable && (
-        <td className="px-6 py-4">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => {
-              onToggleSelect(row.id, e.target.checked);
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 rounded cursor-pointer"
-          />
-        </td>
-      )}
-      {columns.map((col) => (
-        <td key={col.key} className="px-6 py-4 text-gray-200">
-          {col.render ? col.render((row as any)[col.key], row) : (row as any)[col.key]}
-        </td>
-      ))}
-    </tr>
-  );
-}, (prevProps, nextProps) => {
-  // Custom comparison: only re-render if row data or selection changed
-  return (
-    prevProps.row.id === nextProps.row.id &&
-    prevProps.isSelected === nextProps.isSelected &&
-    prevProps.columns === nextProps.columns
-  );
-}) as <T extends { id: string | number }>(props: TableRowProps<T>) => JSX.Element;
+const TableRow = memo(
+  <T extends { id: string | number }>({
+    row,
+    columns,
+    selectable,
+    isSelected,
+    onRowClick,
+    onToggleSelect,
+  }: TableRowProps<T>) => {
+    return (
+      <tr
+        onClick={() => onRowClick?.(row)}
+        className={clsx(
+          'border-b border-gray-700 hover:bg-gray-700/30 transition-colors',
+          isSelected && 'bg-blue-600/10',
+          onRowClick && 'cursor-pointer',
+        )}
+      >
+        {selectable && (
+          <td className="px-3 sm:px-6 py-4">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => {
+                onToggleSelect(row.id, e.target.checked);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-4 h-4 rounded cursor-pointer"
+            />
+          </td>
+        )}
+        {columns.map((col) => (
+          <td key={col.key} className="px-3 sm:px-6 py-4 text-gray-200">
+            {col.render ? col.render((row as any)[col.key], row) : (row as any)[col.key]}
+          </td>
+        ))}
+      </tr>
+    );
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison: only re-render if row data or selection changed
+    return (
+      prevProps.row.id === nextProps.row.id &&
+      prevProps.isSelected === nextProps.isSelected &&
+      prevProps.columns === nextProps.columns
+    );
+  },
+) as <T extends { id: string | number }>(props: TableRowProps<T>) => JSX.Element;
 
 export function DataTable<T extends { id: string | number }>({
   columns,
@@ -80,10 +85,17 @@ export function DataTable<T extends { id: string | number }>({
   isLoading = false,
   onRowClick,
   selectable = false,
+  onSelectionChange,
+  bulkActions,
 }: DataTableProps<T>) {
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [selectedRows, setSelectedRows] = useState<Set<string | number>>(new Set());
+
+  const updateSelection = (newSet: Set<string | number>) => {
+    setSelectedRows(newSet);
+    onSelectionChange?.(newSet);
+  };
 
   const handleSort = (key: string) => {
     if (sortBy === key) {
@@ -112,34 +124,35 @@ export function DataTable<T extends { id: string | number }>({
     <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
       {/* Bulk actions toolbar */}
       {selectedRows.size > 0 && (
-        <div className="px-4 py-3 bg-blue-600/10 border-b border-gray-700 flex items-center justify-between">
-          <p className="text-sm font-medium text-blue-400">
-            {selectedRows.size} selected
-          </p>
+        <div className="px-4 py-3 bg-blue-600/10 border-b border-gray-700 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm font-medium text-blue-400">{selectedRows.size} selectate</p>
+            {bulkActions?.(selectedRows)}
+          </div>
           <button
-            onClick={() => setSelectedRows(new Set())}
+            onClick={() => updateSelection(new Set())}
             className="text-sm text-blue-400 hover:underline"
           >
-            Clear
+            Deselecteaza
           </button>
         </div>
       )}
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left text-gray-200">
+        <table className="min-w-full text-sm text-left text-gray-200">
           <thead className="text-xs text-gray-300 uppercase bg-gray-700/50 border-b border-gray-600">
             <tr>
               {selectable && (
-                <th className="w-10 px-6 py-3">
+                <th className="w-10 px-3 sm:px-6 py-3">
                   <input
                     type="checkbox"
                     checked={selectedRows.size === displayData.length && displayData.length > 0}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedRows(new Set(displayData.map((r) => r.id)));
+                        updateSelection(new Set(displayData.map((r) => r.id)));
                       } else {
-                        setSelectedRows(new Set());
+                        updateSelection(new Set());
                       }
                     }}
                     className="w-4 h-4 rounded cursor-pointer"
@@ -151,7 +164,7 @@ export function DataTable<T extends { id: string | number }>({
                   key={col.key}
                   style={{ width: col.width }}
                   onClick={() => col.sortable && handleSort(col.key)}
-                  className={`px-6 py-3 ${col.sortable ? 'cursor-pointer select-none group hover:bg-gray-600/50' : ''}`}
+                  className={`px-3 sm:px-6 py-3 ${col.sortable ? 'cursor-pointer select-none group hover:bg-gray-600/50' : ''}`}
                 >
                   <div className="flex items-center gap-2">
                     <span>{col.label}</span>
@@ -177,9 +190,9 @@ export function DataTable<T extends { id: string | number }>({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-gray-700">
-                  {selectable && <td className="px-6 py-4"></td>}
+                  {selectable && <td className="px-3 sm:px-6 py-4"></td>}
                   {columns.map((col) => (
-                    <td key={col.key} className="px-6 py-4">
+                    <td key={col.key} className="px-3 sm:px-6 py-4">
                       <div className="h-4 bg-gray-600 rounded animate-pulse" />
                     </td>
                   ))}
@@ -187,7 +200,10 @@ export function DataTable<T extends { id: string | number }>({
               ))
             ) : displayData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0)} className="text-center py-8 text-gray-400">
+                <td
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="text-center py-8 text-gray-400"
+                >
                   <p>No data</p>
                 </td>
               </tr>
@@ -207,7 +223,7 @@ export function DataTable<T extends { id: string | number }>({
                     } else {
                       newSet.delete(id);
                     }
-                    setSelectedRows(newSet);
+                    updateSelection(newSet);
                   }}
                 />
               ))
@@ -217,7 +233,7 @@ export function DataTable<T extends { id: string | number }>({
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 border-t border-gray-700 bg-gray-800/30 text-xs text-gray-400">
+      <div className="px-4 sm:px-6 py-3 border-t border-gray-700 bg-gray-800/30 text-xs text-gray-400">
         {displayData.length} results
       </div>
     </div>

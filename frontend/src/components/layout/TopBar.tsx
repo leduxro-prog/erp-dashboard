@@ -3,10 +3,10 @@
  * Global search, AI assistant, notifications, and user menu
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ThemeVariant, isDarkTheme } from '../../styles/themes';
-import { Search, Bell, User, Sparkles, Command, LogOut, Settings } from 'lucide-react';
+import { Search, Bell, Sparkles, Command, LogOut, Settings, Menu } from 'lucide-react';
 import { apiClient } from '../../services/api';
 import { useAuthStore } from '../../stores/auth.store';
 
@@ -21,6 +21,7 @@ interface TopBarProps {
   notificationCount?: number;
   onAIClick: () => void;
   onSearch?: (query: string) => void;
+  onToggleSidebar?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -29,11 +30,54 @@ export const TopBar: React.FC<TopBarProps> = ({
   notificationCount = 3,
   onAIClick,
   onSearch,
+  onToggleSidebar,
 }) => {
   const navigate = useNavigate();
   const isDark = isDarkTheme(currentTheme);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const authUser = useAuthStore((state) => state.user);
+
+  const userIdentity = useMemo(() => {
+    if (authUser?.email) {
+      return {
+        label: authUser.name || authUser.email,
+        email: authUser.email,
+        initials: authUser.name
+          ? authUser.name
+              .split(' ')
+              .map((w) => w[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2)
+          : authUser.email[0].toUpperCase(),
+      };
+    }
+
+    const token = apiClient.getToken();
+    if (token) {
+      try {
+        const [, payload] = token.split('.');
+        if (payload) {
+          const decoded = JSON.parse(atob(payload));
+          const email = decoded.email || '-';
+          return {
+            label: email,
+            email,
+            initials: email !== '-' ? email[0].toUpperCase() : 'U',
+          };
+        }
+      } catch {
+        // no-op
+      }
+    }
+
+    return {
+      label: 'User',
+      email: '-',
+      initials: 'U',
+    };
+  }, [authUser]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -53,27 +97,49 @@ export const TopBar: React.FC<TopBarProps> = ({
     navigate('/login', { replace: true });
   };
 
+  const lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
+
   return (
     <div
       className={`
-        h-14 flex items-center justify-between px-6 border-b
+        min-h-14 flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-6 border-b
         backdrop-blur-xl transition-all duration-300
-        ${isDark
-          ? 'border-gray-800/50 bg-gray-900/30'
-          : 'border-gray-200/50 bg-white/30'
-        }
+        ${isDark ? 'border-gray-800/50 bg-gray-900/30' : 'border-gray-200/50 bg-white/30'}
       `}
     >
       {/* Left: Breadcrumb Navigation */}
-      <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <div
+        className={`flex items-center gap-2 min-w-0 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+      >
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          className={`inline-flex lg:hidden p-2 rounded-lg transition-colors ${
+            isDark
+              ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+          }`}
+          aria-label="Deschide meniul"
+        >
+          <Menu size={18} />
+        </button>
+
         <span className={`font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>CYPHER</span>
+
+        <span className="sm:hidden truncate max-w-[10rem]">
+          / {lastBreadcrumb?.label || 'Dashboard'}
+        </span>
+
         {breadcrumbs.length > 0 && (
           <>
-            <span>/</span>
+            <span className="hidden sm:inline">/</span>
             {breadcrumbs.map((crumb, idx) => (
-              <div key={idx} className="flex items-center gap-2">
+              <div key={idx} className="hidden sm:flex items-center gap-2">
                 {crumb.href ? (
-                  <a href={crumb.href} className={`hover:${isDark ? 'text-gray-200' : 'text-gray-900'} transition-colors`}>
+                  <a
+                    href={crumb.href}
+                    className={`hover:${isDark ? 'text-gray-200' : 'text-gray-900'} transition-colors`}
+                  >
                     {crumb.label}
                   </a>
                 ) : (
@@ -87,15 +153,16 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Center: Global Search Bar */}
-      <div className="flex-1 flex justify-center px-6">
+      <div className="hidden lg:flex flex-1 justify-center px-6">
         <div
           className={`
             w-full max-w-md px-3 py-2 rounded-lg border
             flex items-center gap-2
             transition-all duration-200
-            ${isDark
-              ? 'bg-gray-800/40 border-gray-700 focus-within:border-blue-500/50 focus-within:bg-gray-800/60'
-              : 'bg-white/40 border-gray-300/50 focus-within:border-blue-400/50 focus-within:bg-white/60'
+            ${
+              isDark
+                ? 'bg-gray-800/40 border-gray-700 focus-within:border-blue-500/50 focus-within:bg-gray-800/60'
+                : 'bg-white/40 border-gray-300/50 focus-within:border-blue-400/50 focus-within:bg-white/60'
             }
           `}
         >
@@ -110,40 +177,60 @@ export const TopBar: React.FC<TopBarProps> = ({
               ${isDark ? 'text-white placeholder-gray-600' : 'text-gray-900 placeholder-gray-500'}
             `}
           />
-          <div className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded border ${isDark ? 'border-gray-700 text-gray-500' : 'border-gray-300 text-gray-600'}`}>
-            <Command size={12} />
-            K
+          <div
+            className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded border ${isDark ? 'border-gray-700 text-gray-500' : 'border-gray-300 text-gray-600'}`}
+          >
+            <Command size={12} />K
           </div>
         </div>
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => onSearch?.(searchQuery)}
+          className={`p-2 rounded-lg transition-colors lg:hidden ${
+            isDark
+              ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+              : 'text-gray-600 hover:bg-gray-100'
+          }`}
+          aria-label="Cautare"
+        >
+          <Search size={18} />
+        </button>
+
         {/* AI Assistant Button */}
         <button
           onClick={onAIClick}
           className={`
-            px-3 py-2 rounded-lg border font-medium text-xs
+            px-2.5 sm:px-3 py-2 rounded-lg border font-medium text-xs
             flex items-center gap-2
             transition-all duration-200
-            ${isDark
-              ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white'
-              : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+            ${
+              isDark
+                ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-100'
             }
           `}
         >
           <Sparkles size={14} className="text-purple-500" />
-          AI
-          <span className={`ml-1 text-[10px] ${isDark ? 'opacity-50' : 'opacity-60'}`}>⌘K</span>
+          <span className="hidden sm:inline">AI</span>
+          <span
+            className={`hidden md:inline ml-1 text-[10px] ${isDark ? 'opacity-50' : 'opacity-60'}`}
+          >
+            ⌘K
+          </span>
         </button>
 
         {/* Notifications */}
         <button
           className={`
-            relative p-2 rounded-lg transition-colors
-            ${isDark
-              ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-              : 'text-gray-600 hover:bg-gray-100'
+            relative p-2 rounded-lg transition-colors hidden sm:inline-flex
+            ${
+              isDark
+                ? 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                : 'text-gray-600 hover:bg-gray-100'
             }
           `}
         >
@@ -161,18 +248,15 @@ export const TopBar: React.FC<TopBarProps> = ({
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className={`
               w-8 h-8 rounded-full overflow-hidden border-2
-              transition-all
-              ${isDark
-                ? 'border-gray-700 hover:border-blue-500/50'
-                : 'border-gray-300 hover:border-blue-400/50'
+              transition-all flex items-center justify-center text-xs font-bold
+              ${
+                isDark
+                  ? 'border-gray-700 hover:border-blue-500/50 bg-blue-600/20 text-blue-400'
+                  : 'border-gray-300 hover:border-blue-400/50 bg-blue-100 text-blue-600'
               }
             `}
           >
-            <img
-              src="https://picsum.photos/40/40?random=2"
-              alt="User"
-              className="w-full h-full object-cover"
-            />
+            {userIdentity.initials}
           </button>
 
           {/* User Dropdown Menu */}
@@ -181,27 +265,25 @@ export const TopBar: React.FC<TopBarProps> = ({
               className={`
                 absolute right-0 mt-2 w-48 rounded-lg border shadow-lg
                 overflow-hidden
-                ${isDark
-                  ? 'bg-gray-900 border-gray-700'
-                  : 'bg-white border-gray-200'
-                }
+                ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}
               `}
             >
               <div className={`p-3 border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
                 <div className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Administrator
+                  {userIdentity.label}
                 </div>
                 <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-                  admin@cypher.local
+                  {userIdentity.email}
                 </div>
               </div>
 
               <button
                 onClick={handleAccountSettings}
                 className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors
-                ${isDark
-                  ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
+                ${
+                  isDark
+                    ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
                 }
               `}
               >
@@ -212,9 +294,10 @@ export const TopBar: React.FC<TopBarProps> = ({
               <button
                 onClick={handleLogout}
                 className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 border-t transition-colors
-                ${isDark
-                  ? 'border-gray-800 text-red-400 hover:bg-gray-800'
-                  : 'border-gray-200 text-red-600 hover:bg-gray-100'
+                ${
+                  isDark
+                    ? 'border-gray-800 text-red-400 hover:bg-gray-800'
+                    : 'border-gray-200 text-red-600 hover:bg-gray-100'
                 }
               `}
               >

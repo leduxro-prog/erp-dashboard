@@ -10,6 +10,7 @@
 #   HETZNER_SSH_KEY    - Private SSH key (ed25519)
 #   HETZNER_TARGET_DIR - Remote project path (e.g. /opt/cypher-erp)
 #   APP_BASE_URL       - Base URL for smoke checks (e.g. http://65.108.255.104)
+#   B2B_BASE_URL       - Optional B2B base URL for smoke checks
 # ==============================================================================
 
 name: Deploy to Hetzner
@@ -30,6 +31,26 @@ on:
         required: false
         default: false
         type: boolean
+  workflow_call:
+    inputs:
+      skip_build_checks:
+        description: 'Skip build checks (release-gate path)'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      HETZNER_HOST:
+        required: true
+      HETZNER_USER:
+        required: true
+      HETZNER_SSH_KEY:
+        required: true
+      HETZNER_TARGET_DIR:
+        required: true
+      APP_BASE_URL:
+        required: true
+      B2B_BASE_URL:
+        required: false
 
 env:
   NODE_VERSION: '20.x'
@@ -41,7 +62,7 @@ jobs:
   build_checks:
     runs-on: ubuntu-latest
     name: Build Checks
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_build_checks != 'true' }}
+    if: ${{ !(inputs.skip_build_checks || (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_build_checks == 'true')) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,6 +77,9 @@ jobs:
         run: |
           npm ci
           npm ci --prefix frontend
+
+      - name: Run VAT literal guard
+        run: node scripts/check-vat-literals.cjs
 
       - name: Run release gate checks (ci:green)
         run: npm run ci:green
@@ -96,8 +120,7 @@ jobs:
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "cd ${{ secrets.HETZNER_TARGET_DIR }} && \
-             docker compose exec -T db pg_dump -U \$(grep DB_USER .env | cut -d= -f2) \$(grep DB_NAME .env | cut -d= -f2) | gzip > /tmp/cypher-pre-deploy-\$(date +%Y%m%d%H%M%S).sql.gz" \
+            "systemctl start cypher-k8s-backup.service" \
           || echo "::warning::Pre-deploy DB backup failed (non-blocking)"
 
       - name: Sync application files
@@ -113,14 +136,35 @@ jobs:
             --exclude 'deployment/hetzner_key' \
             ./ ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:${{ secrets.HETZNER_TARGET_DIR }}
 
-      - name: Build and restart containers
+      - name: Capture current deployment revisions
         run: |
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "cd ${{ secrets.HETZNER_TARGET_DIR }} && \
-             docker compose build --no-cache app frontend && \
-             docker compose up -d --force-recreate app frontend"
+            "kubectl -n cypher get deploy cypher-app cypher-frontend -o wide"
+
+      - name: Build images and roll out Kubernetes
+        run: |
+          ssh -i ~/.ssh/hetzner_deploy \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "set -euo pipefail && \
+             APP_TAR=/tmp/cypher-erp-app.tar && \
+             FRONTEND_TAR=/tmp/cypher-erp-frontend.tar && \
+             trap 'rm -f \"$APP_TAR\" \"$FRONTEND_TAR\"' EXIT && \
+             cd ${{ secrets.HETZNER_TARGET_DIR }} && \
+             docker build --no-cache -t cypher-erp-app:latest . && \
+             docker build --no-cache -t cypher-erp-frontend:latest ./frontend && \
+             docker save cypher-erp-app:latest -o \"$APP_TAR\" && \
+             docker save cypher-erp-frontend:latest -o \"$FRONTEND_TAR\" && \
+             k3s ctr images import \"$APP_TAR\" && \
+             k3s ctr images import \"$FRONTEND_TAR\" && \
+             kubectl apply -k orchestration/k8s/overlays/staging && \
+             kubectl -n cypher rollout restart deployment/cypher-app deployment/cypher-frontend && \
+             kubectl -n cypher rollout status deployment/cypher-app --timeout=240s && \
+             kubectl -n cypher rollout status deployment/cypher-frontend --timeout=240s && \
+             bash orchestration/k8s/install-host-services.sh && \
+             systemctl start cypher-launch-readiness.service"
 
       - name: Wait for services to stabilize
         run: sleep 30
@@ -145,9 +189,31 @@ jobs:
       - name: Run smoke checks
         env:
           BASE_URL: ${{ secrets.APP_BASE_URL }}
+          B2B_BASE_URL: ${{ secrets.B2B_BASE_URL || secrets.APP_BASE_URL }}
         run: |
           set -euo pipefail
           bash scripts/smoke-hetzner.sh "$BASE_URL"
+
+      - name: Setup SSH key (VAT guard)
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/hetzner_deploy
+          chmod 600 ~/.ssh/hetzner_deploy
+          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Run open-doc VAT guard (21%)
+        run: |
+          ssh -i ~/.ssh/hetzner_deploy \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=10 \
+            ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
+            "set -euo pipefail && \
+             cd ${{ secrets.HETZNER_TARGET_DIR }} && \
+             bash scripts/recalculate-open-docs-vat-21.sh --dry-run --guard --k8s"
+
+      - name: Cleanup SSH key (VAT guard)
+        if: always()
+        run: rm -f ~/.ssh/hetzner_deploy
 
   # ============================================================================
   # Rollback on failure
@@ -171,9 +237,11 @@ jobs:
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "cd ${{ secrets.HETZNER_TARGET_DIR }} && \
-             docker compose stop app frontend && \
-             docker compose up -d app frontend" \
+            'kubectl -n cypher rollout undo deployment/cypher-app && \
+             kubectl -n cypher rollout undo deployment/cypher-frontend && \
+             kubectl -n cypher rollout status deployment/cypher-app --timeout=240s && \
+             kubectl -n cypher rollout status deployment/cypher-frontend --timeout=240s && \
+             systemctl start cypher-launch-readiness.service' \
           || echo "::error::Rollback failed - manual intervention required"
 
       - name: Cleanup SSH key

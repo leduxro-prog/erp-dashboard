@@ -20,8 +20,14 @@ describe('GenerateProductSeo Use Case', () => {
 
   beforeEach(() => {
     mockProductPort = { getProduct: jest.fn() };
-    mockMetadataRepository = { save: jest.fn() };
-    mockStructuredDataRepository = { save: jest.fn() };
+    mockMetadataRepository = {
+      save: jest.fn(),
+      findByEntity: jest.fn().mockImplementation(async () => null),
+    };
+    mockStructuredDataRepository = {
+      save: jest.fn(),
+      findByEntity: jest.fn().mockImplementation(async () => []),
+    };
     mockMetaTagGenerator = { generateForProduct: jest.fn() };
     mockSlugGenerator = { generate: jest.fn() };
     mockStructuredDataGenerator = { generateProduct: jest.fn() };
@@ -212,7 +218,7 @@ describe('GenerateProductSeo Use Case', () => {
       const result = await useCase.execute(input);
 
       const metadataCall = mockMetadataRepository.save.mock.calls[0][0];
-      expect(metadataCall.canonicalUrl).toContain('https://ledux.ro/products/');
+      expect(metadataCall.canonicalUrl).toContain('https://ledux.ro/produs/');
     });
 
     it('should calculate SEO score', async () => {
@@ -286,6 +292,51 @@ describe('GenerateProductSeo Use Case', () => {
       const result = await useCase.execute(input);
 
       expect(result.metadata).toBeDefined();
+    });
+
+    it('should recover from entity-locale duplicate insert race', async () => {
+      const product = {
+        id: 'prod-race-001',
+        name: 'Race Product',
+        description: 'Race condition test product',
+        price: 199,
+        sku: 'RACE-001',
+      };
+
+      const input: GenerateProductSeoInput = {
+        productId: 'prod-race-001',
+        locale: 'ro',
+      };
+
+      const duplicateError = Object.assign(new Error('duplicate key value violates unique constraint "idx_seo_metadata_entity_locale"'), {
+        code: '23505',
+      });
+
+      mockProductPort.getProduct.mockResolvedValue(product);
+      mockMetaTagGenerator.generateForProduct.mockReturnValue({
+        title: 'Race Product | Ledux',
+        description: 'Race condition test product description.',
+        focusKeyword: 'race product',
+      });
+      mockSlugGenerator.generate.mockReturnValue('race-product');
+      mockStructuredDataGenerator.generateProduct.mockReturnValue({ '@type': 'Product' });
+      mockScoreCalculator.calculate.mockReturnValue(81);
+
+      mockMetadataRepository.save
+        .mockRejectedValueOnce(duplicateError)
+        .mockResolvedValueOnce({ id: 'meta-existing-ro', seoScore: 81 });
+
+      mockMetadataRepository.findByEntity
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'meta-existing-ro' });
+
+      mockStructuredDataRepository.save.mockResolvedValue({ id: 'sd-race-001' });
+
+      const result = await useCase.execute(input);
+
+      expect(result.metadata.id).toBe('meta-existing-ro');
+      expect(mockMetadataRepository.save).toHaveBeenCalledTimes(2);
+      expect(mockMetadataRepository.findByEntity).toHaveBeenCalledWith('PRODUCT', 'prod-race-001', 'ro');
     });
   });
 
@@ -433,6 +484,39 @@ describe('GenerateProductSeo Use Case', () => {
           score: 80,
           focusKeyword: 'product',
         })
+      );
+    });
+
+    it('should not fail when event publish throws', async () => {
+      const product = {
+        id: 'prod-011b',
+        name: 'Event Fallback Product',
+        description: 'Test',
+        price: 100,
+        sku: 'EVENT-002',
+      };
+
+      const input: GenerateProductSeoInput = {
+        productId: 'prod-011b',
+      };
+
+      mockProductPort.getProduct.mockResolvedValue(product);
+      mockMetaTagGenerator.generateForProduct.mockReturnValue({
+        title: 'Product',
+        description: 'Desc.',
+        focusKeyword: 'product',
+      });
+      mockSlugGenerator.generate.mockReturnValue('event-fallback-product');
+      mockStructuredDataGenerator.generateProduct.mockReturnValue({});
+      mockScoreCalculator.calculate.mockReturnValue(80);
+      mockMetadataRepository.save.mockResolvedValue({});
+      mockStructuredDataRepository.save.mockResolvedValue({});
+      mockEventBus.publish.mockRejectedValue(new Error('event bus unavailable'));
+
+      await expect(useCase.execute(input)).resolves.toBeDefined();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to publish seo.metadata_generated event',
+        expect.any(Object)
       );
     });
   });

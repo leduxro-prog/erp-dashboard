@@ -213,7 +213,7 @@ describe('JwtService Integration', () => {
   // ── Cookie Setting on Express Response Mock ───────────────────────────
 
   describe('Cookie management with Express response mock', () => {
-    it('should set 3 cookies with correct names and options', () => {
+    it('should set 4 cookies with correct names and options', () => {
       const service = new JwtService();
       const accessToken = service.generateAccessToken(testPayload);
       const refreshToken = service.generateRefreshToken(testPayload);
@@ -227,7 +227,7 @@ describe('JwtService Integration', () => {
 
       service.setAuthCookies(mockRes, accessToken, refreshToken);
 
-      expect(mockRes.cookie).toHaveBeenCalledTimes(3);
+      expect(mockRes.cookie).toHaveBeenCalledTimes(4);
 
       // access_token
       const accessCookie = cookies.find((c) => c.name === 'access_token');
@@ -248,9 +248,15 @@ describe('JwtService Integration', () => {
       expect(statusCookie).toBeDefined();
       expect(statusCookie!.value).toBe('authenticated');
       expect(statusCookie!.options.httpOnly).toBe(false);
+
+      // auth_persist
+      const persistCookie = cookies.find((c) => c.name === 'auth_persist');
+      expect(persistCookie).toBeDefined();
+      expect(persistCookie!.value).toBe('true');
+      expect(persistCookie!.options.httpOnly).toBe(false);
     });
 
-    it('should clear all 3 cookies on clearAuthCookies', () => {
+    it('should clear all 4 cookies on clearAuthCookies', () => {
       const service = new JwtService();
       const cleared: Array<{ name: string; options: Record<string, unknown> }> = [];
       const mockRes = {
@@ -261,12 +267,13 @@ describe('JwtService Integration', () => {
 
       service.clearAuthCookies(mockRes);
 
-      expect(mockRes.clearCookie).toHaveBeenCalledTimes(3);
+      expect(mockRes.clearCookie).toHaveBeenCalledTimes(4);
 
       const names = cleared.map((c) => c.name);
       expect(names).toContain('access_token');
       expect(names).toContain('refresh_token');
       expect(names).toContain('auth_status');
+      expect(names).toContain('auth_persist');
     });
 
     it('should set secure flag in production mode', () => {

@@ -84,7 +84,7 @@ export const B2BStoreLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#0a0a0f' }}>
+    <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: '#f8f9fa' }}>
       {/* Announcement Bar */}
       <div
         className="text-white text-xs py-2.5 px-4 text-center"
@@ -100,9 +100,9 @@ export const B2BStoreLayout: React.FC = () => {
       <nav
         className="border-b sticky top-0 z-50"
         style={{
-          background: 'rgba(10, 10, 15, 0.92)',
+          background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(16px)',
-          borderColor: 'rgba(218, 165, 32, 0.15)',
+          borderColor: '#e5e7eb',
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -114,27 +114,27 @@ export const B2BStoreLayout: React.FC = () => {
                   src="/images/ledux-logo-header.png"
                   alt="Ledux.ro"
                   className="h-10 w-auto"
-                  style={{ maxHeight: '40px', filter: 'brightness(0) invert(1)' }}
+                  style={{ maxHeight: '40px' }}
                 />
-                <span className="text-xl font-bold tracking-tight text-white">
+                <span className="text-xl font-bold tracking-tight text-gray-800">
                   <span style={{ color: '#daa520' }}>B2B</span>
                 </span>
               </Link>
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden lg:flex items-center space-x-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
                   className="text-sm font-medium transition-colors"
                   style={{
-                    color: location.pathname === link.path ? '#daa520' : '#a0a0b0',
+                    color: location.pathname === link.path ? '#daa520' : '#6b7280',
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#daa520')}
                   onMouseLeave={(e) => {
-                    if (location.pathname !== link.path) e.currentTarget.style.color = '#a0a0b0';
+                    if (location.pathname !== link.path) e.currentTarget.style.color = '#6b7280';
                   }}
                 >
                   {link.name}
@@ -143,14 +143,14 @@ export const B2BStoreLayout: React.FC = () => {
             </div>
 
             {/* Desktop Actions */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-4">
               {/* Language Selector */}
               <button
                 onClick={toggleLanguage}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
                 style={{
-                  color: '#a0a0b0',
-                  border: '1px solid rgba(218, 165, 32, 0.2)',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
                   background: 'rgba(218, 165, 32, 0.05)',
                 }}
                 title={language === 'ro' ? 'Switch to English' : 'Schimbă în Română'}
@@ -162,7 +162,7 @@ export const B2BStoreLayout: React.FC = () => {
               <Link
                 to="/b2b-store/checkout"
                 className="relative hover:opacity-80 transition-opacity"
-                style={{ color: '#a0a0b0' }}
+                style={{ color: '#6b7280' }}
               >
                 <ShoppingCart size={22} />
                 {getTotalItems() > 0 && (
@@ -193,7 +193,7 @@ export const B2BStoreLayout: React.FC = () => {
                     variant="ghost"
                     size="sm"
                     className="gap-1.5"
-                    style={{ color: '#a0a0b0' }}
+                    style={{ color: '#6b7280' }}
                   >
                     <LogIn size={15} />
                     {t(L.auth.login, language)}
@@ -233,14 +233,14 @@ export const B2BStoreLayout: React.FC = () => {
             </div>
 
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center gap-3">
+            <div className="lg:hidden flex items-center gap-3">
               {/* Mobile Language Toggle */}
               <button
                 onClick={toggleLanguage}
                 className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold"
                 style={{
                   color: '#daa520',
-                  border: '1px solid rgba(218, 165, 32, 0.3)',
+                  border: '1px solid rgba(218, 165, 32, 0.4)',
                 }}
               >
                 <Globe size={12} />
@@ -249,7 +249,7 @@ export const B2BStoreLayout: React.FC = () => {
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="p-2 rounded-md transition-colors"
-                style={{ color: '#a0a0b0' }}
+                style={{ color: '#6b7280' }}
                 aria-label="Toggle menu"
               >
                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -261,8 +261,8 @@ export const B2BStoreLayout: React.FC = () => {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div
-            className="md:hidden absolute w-full shadow-2xl"
-            style={{ background: '#0f0f18', borderTop: '1px solid rgba(218,165,32,0.1)' }}
+            className="lg:hidden absolute w-full shadow-2xl"
+            style={{ background: '#ffffff', borderTop: '1px solid #e5e7eb' }}
           >
             <div className="px-4 pt-2 pb-6 space-y-1">
               {navLinks.map((link) => (
@@ -272,7 +272,7 @@ export const B2BStoreLayout: React.FC = () => {
                   onClick={() => setIsMenuOpen(false)}
                   className="block px-3 py-3 rounded-md text-base font-medium"
                   style={{
-                    color: location.pathname === link.path ? '#daa520' : '#a0a0b0',
+                    color: location.pathname === link.path ? '#daa520' : '#6b7280',
                     background:
                       location.pathname === link.path ? 'rgba(218,165,32,0.08)' : 'transparent',
                   }}
@@ -282,13 +282,13 @@ export const B2BStoreLayout: React.FC = () => {
               ))}
               <div
                 className="border-t my-4 pt-4 flex flex-col gap-3 px-3"
-                style={{ borderColor: 'rgba(218,165,32,0.1)' }}
+                style={{ borderColor: '#e5e7eb' }}
               >
                 <Link to="/b2b-store/login" onClick={() => setIsMenuOpen(false)}>
                   <Button
                     variant="outline"
                     className="w-full justify-center"
-                    style={{ borderColor: '#333', color: '#a0a0b0' }}
+                    style={{ borderColor: '#d1d5db', color: '#6b7280' }}
                   >
                     {t(L.auth.login, language)}
                   </Button>
@@ -318,10 +318,7 @@ export const B2BStoreLayout: React.FC = () => {
       <B2BChatWidget />
 
       {/* Footer */}
-      <footer
-        style={{ background: '#060609', borderTop: '1px solid rgba(218,165,32,0.1)' }}
-        className="py-14"
-      >
+      <footer style={{ background: '#1f2937', borderTop: '1px solid #374151' }} className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
             {/* Brand */}
@@ -337,10 +334,10 @@ export const B2BStoreLayout: React.FC = () => {
                   <span style={{ color: '#daa520' }}>B2B</span>
                 </span>
               </div>
-              <p className="text-sm leading-relaxed mb-6" style={{ color: '#666' }}>
+              <p className="text-sm leading-relaxed mb-6" style={{ color: '#9ca3af' }}>
                 {t(L.footer.description, language)}
               </p>
-              <div className="space-y-2.5 text-sm" style={{ color: '#555' }}>
+              <div className="space-y-2.5 text-sm" style={{ color: '#9ca3af' }}>
                 <div className="flex items-center gap-2">
                   <Phone size={13} style={{ color: '#daa520' }} />
                   <span>{companySettings.phone}</span>
@@ -370,7 +367,7 @@ export const B2BStoreLayout: React.FC = () => {
                     <Link
                       to="/b2b-store/catalog"
                       className="transition-colors hover:text-white"
-                      style={{ color: '#555' }}
+                      style={{ color: '#9ca3af' }}
                     >
                       {cat}
                     </Link>
@@ -392,7 +389,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/about"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.about, language)}
                   </Link>
@@ -401,7 +398,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/contact"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.contact, language)}
                   </Link>
@@ -410,7 +407,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/how-to-order"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.howToOrder, language)}
                   </Link>
@@ -419,7 +416,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/shipping"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.shipping, language)}
                   </Link>
@@ -428,7 +425,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/partner"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.partner, language)}
                   </Link>
@@ -437,7 +434,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/led-guide"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.techGuide, language)}
                   </Link>
@@ -446,7 +443,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/request-quote"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.requestQuote, language)}
                   </Link>
@@ -467,7 +464,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/privacy"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.privacy, language)}
                   </Link>
@@ -476,7 +473,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/terms"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.terms, language)}
                   </Link>
@@ -485,7 +482,7 @@ export const B2BStoreLayout: React.FC = () => {
                   <Link
                     to="/b2b-store/cookies"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     {t(L.footer.cookies, language)}
                   </Link>
@@ -496,7 +493,7 @@ export const B2BStoreLayout: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="transition-colors hover:text-white"
-                    style={{ color: '#555' }}
+                    style={{ color: '#9ca3af' }}
                   >
                     ANPC
                   </a>
@@ -504,7 +501,7 @@ export const B2BStoreLayout: React.FC = () => {
                 {companySettings.taxId && (
                   <li
                     className="pt-2 mt-2"
-                    style={{ borderTop: '1px solid rgba(218,165,32,0.08)', color: '#666' }}
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af' }}
                   >
                     CUI: {companySettings.taxId}
                   </li>
@@ -515,13 +512,13 @@ export const B2BStoreLayout: React.FC = () => {
 
           <div
             className="mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4"
-            style={{ borderTop: '1px solid rgba(218,165,32,0.08)' }}
+            style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}
           >
-            <p className="text-xs" style={{ color: '#444' }}>
+            <p className="text-xs" style={{ color: '#9ca3af' }}>
               &copy; {new Date().getFullYear()} {companySettings.companyName} —{' '}
               {t(L.footer.copyright, language)}
             </p>
-            <div className="flex items-center gap-2 text-xs" style={{ color: '#444' }}>
+            <div className="flex items-center gap-2 text-xs" style={{ color: '#9ca3af' }}>
               <Zap size={12} style={{ color: '#daa520' }} />
               <span>Powered by CYPHER ERP</span>
             </div>

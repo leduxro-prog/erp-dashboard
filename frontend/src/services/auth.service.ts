@@ -9,20 +9,63 @@ import {
   TwoFactorSetupResponse,
   TwoFactorVerifyResponse,
 } from '../types/user';
+import { useAuthStore } from '../stores/auth.store';
+
+/**
+ * Map the backend user object (first_name/last_name) to the frontend User shape.
+ */
+function mapBackendUser(backendUser: any): void {
+  if (!backendUser) return;
+  const name =
+    [backendUser.first_name, backendUser.last_name].filter(Boolean).join(' ') ||
+    backendUser.name ||
+    backendUser.email ||
+    'User';
+  const role = backendUser.role || 'user';
+
+  useAuthStore.getState().setUser({
+    id: String(backendUser.id),
+    email: backendUser.email,
+    name,
+    avatar: backendUser.avatar,
+    role,
+    permissions: backendUser.permissions || [],
+  });
+}
 
 class AuthService {
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>('/users/login', credentials);
+  async login(credentials: LoginRequest, remember = true): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>('/users/login', {
+      ...credentials,
+      rememberMe: remember,
+    });
     if (response.token && response.refreshToken) {
-      apiClient.setToken(response.token, response.refreshToken);
+      apiClient.setToken(response.token, response.refreshToken, remember);
+      mapBackendUser((response as any).user);
     }
     return response;
   }
 
-  async verify2FA(data: TwoFactorLoginRequest): Promise<TwoFactorLoginResponse> {
-    const response = await apiClient.post<TwoFactorLoginResponse>('/users/2fa/verify', data);
+  async loginWithGoogle(credential: string, remember = true): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>('/users/auth/google', {
+      credential,
+      rememberMe: remember,
+    });
     if (response.token && response.refreshToken) {
-      apiClient.setToken(response.token, response.refreshToken);
+      apiClient.setToken(response.token, response.refreshToken, remember);
+      mapBackendUser((response as any).user);
+    }
+    return response;
+  }
+
+  async verify2FA(data: TwoFactorLoginRequest, remember = true): Promise<TwoFactorLoginResponse> {
+    const response = await apiClient.post<TwoFactorLoginResponse>('/users/2fa/verify', {
+      ...data,
+      rememberMe: remember,
+    });
+    if (response.token && response.refreshToken) {
+      apiClient.setToken(response.token, response.refreshToken, remember);
+      mapBackendUser((response as any).user);
     }
     return response;
   }

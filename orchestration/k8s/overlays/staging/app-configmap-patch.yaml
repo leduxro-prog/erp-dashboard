@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cypher-app-config
+  namespace: cypher
+data:
+  APP_URL: "https://staging-erp.local"
+  FRONTEND_URL: "https://staging-erp.local"
+  B2B_FRONTEND_URL: "https://staging-b2b.local"
+  PUBLIC_BASE_URL: "https://staging-erp.local"
+  COOKIE_DOMAIN: ".example.com"
+  CORS_ORIGINS: "https://staging-erp.local,https://staging-b2b.local,http://staging-erp.local,http://staging-b2b.local,https://erp.ledux.ro,https://b2b.ledux.ro,http://erp.ledux.ro,http://b2b.ledux.ro"
+
+  DB_HOST: "postgres-staging.cypher-data.svc.cluster.local"
+  DB_SSL: "false"
+  REDIS_HOST: "redis-staging.cypher-data.svc.cluster.local"
+  RABBITMQ_HOST: "rabbitmq-staging.cypher-data.svc.cluster.local"
+
+  LOG_DIR: "/tmp/logs"
+  SUPPLIER_SYNC_AUTORUN: "false"

@@ -76,16 +76,22 @@ export class JwtService {
     }
   }
 
-  setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
+  setAuthCookies(
+    res: Response,
+    accessToken: string,
+    refreshToken: string,
+    options?: { persistent?: boolean },
+  ): void {
     const accessMaxAge = this.parseDurationToMs(this.accessExpiry);
     const refreshMaxAge = this.parseDurationToMs(this.refreshExpiry);
+    const persistent = options?.persistent !== false;
 
     // Access token cookie - short-lived
     res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: this.isProduction,
       sameSite: 'lax',
-      maxAge: accessMaxAge,
+      ...(persistent ? { maxAge: accessMaxAge } : {}),
       path: '/',
     });
 
@@ -94,7 +100,7 @@ export class JwtService {
       httpOnly: true,
       secure: this.isProduction,
       sameSite: 'lax',
-      maxAge: refreshMaxAge,
+      ...(persistent ? { maxAge: refreshMaxAge } : {}),
       path: '/api/v1/auth/refresh',
     });
 
@@ -103,7 +109,16 @@ export class JwtService {
       httpOnly: false,
       secure: this.isProduction,
       sameSite: 'lax',
-      maxAge: refreshMaxAge,
+      ...(persistent ? { maxAge: refreshMaxAge } : {}),
+      path: '/',
+    });
+
+    // Persist preference marker (used by refresh flows to preserve session behavior)
+    res.cookie('auth_persist', persistent ? 'true' : 'false', {
+      httpOnly: false,
+      secure: this.isProduction,
+      sameSite: 'lax',
+      ...(persistent ? { maxAge: refreshMaxAge } : {}),
       path: '/',
     });
 
@@ -114,6 +129,7 @@ export class JwtService {
     res.clearCookie('access_token', { path: '/' });
     res.clearCookie('refresh_token', { path: '/api/v1/auth/refresh' });
     res.clearCookie('auth_status', { path: '/' });
+    res.clearCookie('auth_persist', { path: '/' });
 
     logger.debug('Auth cookies cleared');
   }

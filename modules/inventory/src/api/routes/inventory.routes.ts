@@ -22,6 +22,8 @@ export function createInventoryRoutes(controller: InventoryController): Router {
 
   // Stock levels list endpoint (with alias for frontend compatibility)
   router.get('/stock-levels', wrapController(controller, 'getStockLevels'));
+  router.get('/products/facets', wrapController(controller, 'getProductFacets'));
+
 
   router.get('/products', wrapController(controller, 'getStockLevels'));
 

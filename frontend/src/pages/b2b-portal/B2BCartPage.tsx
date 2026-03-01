@@ -74,10 +74,30 @@ interface EnhancedCartItem extends LocalCartItem {
 }
 
 const TIER_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  STANDARD: { label: 'Standard', color: 'text-gray-700', bg: 'bg-gray-100', border: 'border-gray-300' },
-  SILVER: { label: 'Silver', color: 'text-gray-600', bg: 'bg-gradient-to-r from-gray-100 to-gray-200', border: 'border-gray-400' },
-  GOLD: { label: 'Gold', color: 'text-yellow-800', bg: 'bg-gradient-to-r from-yellow-100 to-amber-100', border: 'border-yellow-400' },
-  PLATINUM: { label: 'Platinum', color: 'text-indigo-800', bg: 'bg-gradient-to-r from-indigo-100 to-purple-100', border: 'border-indigo-400' },
+  STANDARD: {
+    label: 'Standard',
+    color: 'text-gray-700',
+    bg: 'bg-gray-100',
+    border: 'border-gray-300',
+  },
+  SILVER: {
+    label: 'Silver',
+    color: 'text-gray-600',
+    bg: 'bg-gradient-to-r from-gray-100 to-gray-200',
+    border: 'border-gray-400',
+  },
+  GOLD: {
+    label: 'Gold',
+    color: 'text-yellow-800',
+    bg: 'bg-gradient-to-r from-yellow-100 to-amber-100',
+    border: 'border-yellow-400',
+  },
+  PLATINUM: {
+    label: 'Platinum',
+    color: 'text-indigo-800',
+    bg: 'bg-gradient-to-r from-indigo-100 to-purple-100',
+    border: 'border-indigo-400',
+  },
 };
 
 const TIER_DISCOUNTS: Record<string, number> = {
@@ -98,7 +118,7 @@ const DEFAULT_LEAD_TIMES: Record<string, number> = {
   'in-stock': 2,
   'low-stock': 3,
   'made-to-order': 14,
-  'discontinued': 0,
+  discontinued: 0,
 };
 
 const formatPrice = (amount: number, currency: string = 'RON') => {
@@ -110,29 +130,39 @@ const formatPrice = (amount: number, currency: string = 'RON') => {
   }).format(amount);
 };
 
-const ProductSpecBadge: React.FC<{ icon: React.ReactNode; label: string; value?: string }> = ({ icon, label, value }) => {
+const ProductSpecBadge: React.FC<{ icon: React.ReactNode; label: string; value?: string }> = ({
+  icon,
+  label,
+  value,
+}) => {
   if (!value) return null;
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded" title={label}>
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded"
+      title={label}
+    >
       {icon}
       <span>{value}</span>
     </span>
   );
 };
 
-const LeadTimeIndicator: React.FC<{ days?: number; stockStatus: string }> = ({ days, stockStatus }) => {
+const LeadTimeIndicator: React.FC<{ days?: number; stockStatus: string }> = ({
+  days,
+  stockStatus,
+}) => {
   const leadDays = days || DEFAULT_LEAD_TIMES[stockStatus] || 5;
   const isUrgent = leadDays <= 2;
   const isNormal = leadDays <= 7;
 
   return (
-    <div className={`flex items-center gap-1.5 text-xs ${
-      isUrgent ? 'text-green-600' : isNormal ? 'text-blue-600' : 'text-amber-600'
-    }`}>
+    <div
+      className={`flex items-center gap-1.5 text-xs ${
+        isUrgent ? 'text-green-600' : isNormal ? 'text-blue-600' : 'text-amber-600'
+      }`}
+    >
       <Clock size={12} />
-      <span>
-        {leadDays === 0 ? 'Indisponibil' : `${leadDays} zile livrare`}
-      </span>
+      <span>{leadDays === 0 ? 'Indisponibil' : `${leadDays} zile livrare`}</span>
     </div>
   );
 };
@@ -197,13 +227,13 @@ export const B2BCartPage: React.FC = () => {
 
   const enhanceItemsWithSpecs = useCallback(() => {
     if (!serverCart?.items) {
-      setEnhancedItems(items.map(item => ({ ...item })));
+      setEnhancedItems(items.map((item) => ({ ...item })));
       return;
     }
 
-    const enhanced = items.map(item => {
+    const enhanced = items.map((item) => {
       const serverItem = serverCart.items.find(
-        (si: CartItem) => String(si.product_id) === String(item.productId) || si.id === item.id
+        (si: CartItem) => String(si.product_id) === String(item.productId) || si.id === item.id,
       );
 
       const specs: ProductSpec = {
@@ -212,8 +242,10 @@ export const B2BCartPage: React.FC = () => {
         color_temp: (serverItem as any)?.color_temp || (serverItem as any)?.specs?.color_temp,
         lumens: (serverItem as any)?.lumens || (serverItem as any)?.specs?.lumens,
         beam_angle: (serverItem as any)?.beam_angle || (serverItem as any)?.specs?.beam_angle,
-        min_order_qty: (serverItem as any)?.min_order_qty || (serverItem as any)?.specs?.min_order_qty || 1,
-        lead_time_days: (serverItem as any)?.lead_time_days || (serverItem as any)?.specs?.lead_time_days || 5,
+        min_order_qty:
+          (serverItem as any)?.min_order_qty || (serverItem as any)?.specs?.min_order_qty || 1,
+        lead_time_days:
+          (serverItem as any)?.lead_time_days || (serverItem as any)?.specs?.lead_time_days || 5,
       };
 
       return {
@@ -239,8 +271,10 @@ export const B2BCartPage: React.FC = () => {
         tier: profile.tier || customer?.tier || 'STANDARD',
         credit_limit: profile.credit_limit || 0,
         credit_used: profile.credit_used || 0,
-        credit_available: profile.credit_available || (profile.credit_limit || 0) - (profile.credit_used || 0),
-        payment_terms_days: profile.payment_terms_days || TIER_TERMS[profile.tier || 'STANDARD'] || 30,
+        credit_available:
+          profile.credit_available || (profile.credit_limit || 0) - (profile.credit_used || 0),
+        payment_terms_days:
+          profile.payment_terms_days || TIER_TERMS[profile.tier || 'STANDARD'] || 30,
         discount_percentage: profile.discount_percentage || 0,
       });
     } catch (err) {
@@ -277,17 +311,17 @@ export const B2BCartPage: React.FC = () => {
   };
 
   const handleUpdateQuantity = async (productId: number, newQuantity: number) => {
-    const item = enhancedItems.find(i => i.productId === productId);
-    
+    const item = enhancedItems.find((i) => i.productId === productId);
+
     if (item) {
       const validationError = validateQuantity(item, newQuantity);
       if (validationError && newQuantity > 0) {
-        setQuantityErrors(prev => ({ ...prev, [productId]: validationError }));
+        setQuantityErrors((prev) => ({ ...prev, [productId]: validationError }));
         return;
       }
     }
 
-    setQuantityErrors(prev => {
+    setQuantityErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[productId];
       return newErrors;
@@ -301,7 +335,7 @@ export const B2BCartPage: React.FC = () => {
   };
 
   const handleRemoveItem = async (productId: number) => {
-    setQuantityErrors(prev => {
+    setQuantityErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[productId];
       return newErrors;
@@ -333,7 +367,7 @@ export const B2BCartPage: React.FC = () => {
 
   const getStockStatus = (item: LocalCartItem) => {
     const stockIssue = stockValidation?.issues.find(
-      (issue) => issue.product_id === String(item.productId) || issue.product_id === item.id
+      (issue) => issue.product_id === String(item.productId) || issue.product_id === item.id,
     );
     if (stockIssue) {
       return { status: 'insufficient', issue: stockIssue };
@@ -349,7 +383,7 @@ export const B2BCartPage: React.FC = () => {
 
   const getMaxLeadTime = (): number => {
     if (enhancedItems.length === 0) return 0;
-    return Math.max(...enhancedItems.map(item => item.lead_time_days || 5));
+    return Math.max(...enhancedItems.map((item) => item.lead_time_days || 5));
   };
 
   const tierInfo = TIER_LABELS[tier] || TIER_LABELS.STANDARD;
@@ -360,7 +394,8 @@ export const B2BCartPage: React.FC = () => {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const maxLeadTime = getMaxLeadTime();
 
-  const hasValidationErrors = Object.keys(quantityErrors).length > 0 || (stockValidation !== null && !stockValidation.valid);
+  const hasValidationErrors =
+    Object.keys(quantityErrors).length > 0 || (stockValidation !== null && !stockValidation.valid);
   const canProceedToCheckout = !hasValidationErrors && !isLoading && !validatingStock;
 
   const downloadCSVTemplate = () => {
@@ -420,11 +455,11 @@ LED-BULB-A60,50,Urgent delivery`;
     setAddingToCart(true);
     try {
       await b2bApi.importCSVAddToCart(
-        importResult.valid_items.map(item => ({
+        importResult.valid_items.map((item) => ({
           product_id: item.product_id,
           quantity: item.quantity,
           notes: item.notes,
-        }))
+        })),
       );
       await syncWithServer();
       setShowImportModal(false);
@@ -447,18 +482,19 @@ LED-BULB-A60,50,Urgent delivery`;
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Coș de Cumpărături</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Coș de Cumpărături</h1>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-16 text-center">
+            <div className="p-8 sm:p-16 text-center">
               <div className="w-28 h-28 mx-auto mb-8 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
                 <ShoppingCart size={48} className="text-blue-500" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">Coșul este gol</h2>
               <p className="text-gray-500 mb-10 max-w-lg mx-auto text-lg">
-                Adăugați produse din catalogul nostru de echipamente de iluminat profesionale pentru a începe o comandă B2B.
+                Adăugați produse din catalogul nostru de echipamente de iluminat profesionale pentru
+                a începe o comandă B2B.
               </p>
               <Link
                 to="/b2b-portal/catalog"
@@ -476,24 +512,28 @@ LED-BULB-A60,50,Urgent delivery`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Coș de Cumpărături</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Coș de Cumpărături</h1>
             <p className="text-gray-500 mt-1">
-              {enhancedItems.length} {enhancedItems.length === 1 ? 'produs' : 'produse'} • {totalItems} {totalItems === 1 ? 'bucată' : 'bucăți'} totale
+              {enhancedItems.length} {enhancedItems.length === 1 ? 'produs' : 'produse'} •{' '}
+              {totalItems} {totalItems === 1 ? 'bucată' : 'bucăți'} totale
             </p>
           </div>
-           <div className="flex items-center gap-4">
+
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             {isAuthenticated && (
-              <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${tierInfo.bg} ${tierInfo.color} border ${tierInfo.border}`}>
+              <span
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${tierInfo.bg} ${tierInfo.color} border ${tierInfo.border}`}
+              >
                 <Shield size={16} />
                 {tierInfo.label} Partner
               </span>
             )}
             <button
               onClick={() => setShowImportModal(true)}
-              className="inline-flex items-center px-5 py-2.5 text-blue-600 border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors font-medium"
+              className="inline-flex items-center px-4 sm:px-5 py-2.5 text-blue-600 border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors font-medium"
             >
               <Upload size={18} className="mr-2" />
               Importă din CSV
@@ -502,13 +542,13 @@ LED-BULB-A60,50,Urgent delivery`;
               <button
                 onClick={() => setShowClearConfirm(true)}
                 disabled={isLoading}
-                className="inline-flex items-center px-5 py-2.5 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 font-medium"
+                className="inline-flex items-center px-4 sm:px-5 py-2.5 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 font-medium"
               >
                 <Trash2 size={18} className="mr-2" />
                 Golește Coșul
               </button>
             ) : (
-              <div className="flex items-center gap-2 bg-red-50 px-4 py-2.5 rounded-xl border border-red-200">
+              <div className="flex flex-wrap items-center gap-2 bg-red-50 px-4 py-2.5 rounded-xl border border-red-200">
                 <span className="text-red-700 text-sm font-medium">Sigur ștergeți tot?</span>
                 <button
                   onClick={handleClearCart}
@@ -548,13 +588,17 @@ LED-BULB-A60,50,Urgent delivery`;
                 </p>
                 <div className="mt-4 space-y-2">
                   {stockValidation.issues.map((issue, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-white/70 rounded-xl px-4 py-3">
+                    <div
+                      key={idx}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white/70 rounded-xl px-4 py-3"
+                    >
                       <div>
                         <span className="font-semibold text-gray-900">{issue.product_name}</span>
                         <span className="text-gray-500 ml-2 font-mono text-sm">({issue.sku})</span>
                       </div>
                       <div className="text-red-600 font-semibold text-sm">
-                        Necesită: {issue.requested} • Disponibil: {issue.available} • Lipsă: {issue.shortage}
+                        Necesită: {issue.requested} • Disponibil: {issue.available} • Lipsă:{' '}
+                        {issue.shortage}
                       </div>
                     </div>
                   ))}
@@ -564,7 +608,7 @@ LED-BULB-A60,50,Urgent delivery`;
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
           <div className="xl:col-span-2">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="hidden lg:grid grid-cols-12 gap-4 px-6 py-4 bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200 text-sm font-semibold text-gray-600">
@@ -579,7 +623,9 @@ LED-BULB-A60,50,Urgent delivery`;
                 {enhancedItems.map((item) => {
                   const stockStatus = getStockStatus(item);
                   const itemTotal = item.price * item.quantity;
-                  const basePrice = item.base_price || (discountPercent > 0 ? item.price / (1 - discountPercent) : item.price);
+                  const basePrice =
+                    item.base_price ||
+                    (discountPercent > 0 ? item.price / (1 - discountPercent) : item.price);
                   const itemDiscount = item.discount_percent || discountPercent;
                   const discountAmount = (basePrice - item.price) * item.quantity;
                   const specs = item.specs;
@@ -592,8 +638,8 @@ LED-BULB-A60,50,Urgent delivery`;
                         stockStatus.status === 'insufficient'
                           ? 'bg-red-50/50'
                           : qtyError
-                          ? 'bg-amber-50/50'
-                          : 'hover:bg-gray-50/50'
+                            ? 'bg-amber-50/50'
+                            : 'hover:bg-gray-50/50'
                       }`}
                     >
                       <div className="lg:grid lg:grid-cols-12 lg:gap-6 lg:items-center">
@@ -618,7 +664,9 @@ LED-BULB-A60,50,Urgent delivery`;
                                 <h3 className="text-lg font-bold text-gray-900 line-clamp-2">
                                   {item.name}
                                 </h3>
-                                <p className="text-sm text-gray-500 mt-1 font-mono">SKU: {item.sku}</p>
+                                <p className="text-sm text-gray-500 mt-1 font-mono">
+                                  SKU: {item.sku}
+                                </p>
                               </div>
                               <button
                                 onClick={() => handleRemoveItem(item.productId)}
@@ -632,36 +680,61 @@ LED-BULB-A60,50,Urgent delivery`;
 
                             <div className="flex flex-wrap gap-1.5 mt-3">
                               {specs?.wattage && (
-                                <ProductSpecBadge icon={<Zap size={12} />} label="Putere" value={`${specs.wattage}W`} />
+                                <ProductSpecBadge
+                                  icon={<Zap size={12} />}
+                                  label="Putere"
+                                  value={`${specs.wattage}W`}
+                                />
                               )}
                               {specs?.ip_rating && (
-                                <ProductSpecBadge icon={<Droplets size={12} />} label="Protecție" value={`IP${specs.ip_rating}`} />
+                                <ProductSpecBadge
+                                  icon={<Droplets size={12} />}
+                                  label="Protecție"
+                                  value={`IP${specs.ip_rating}`}
+                                />
                               )}
                               {specs?.lumens && (
-                                <ProductSpecBadge icon={<Sun size={12} />} label="Flux luminos" value={`${specs.lumens}lm`} />
+                                <ProductSpecBadge
+                                  icon={<Sun size={12} />}
+                                  label="Flux luminos"
+                                  value={`${specs.lumens}lm`}
+                                />
                               )}
                               {specs?.color_temp && (
-                                <ProductSpecBadge icon={<Sun size={12} />} label="Temperatură" value={specs.color_temp} />
+                                <ProductSpecBadge
+                                  icon={<Sun size={12} />}
+                                  label="Temperatură"
+                                  value={specs.color_temp}
+                                />
                               )}
                               {specs?.beam_angle && (
-                                <ProductSpecBadge icon={<Info size={12} />} label="Unghi fascicul" value={`${specs.beam_angle}°`} />
+                                <ProductSpecBadge
+                                  icon={<Info size={12} />}
+                                  label="Unghi fascicul"
+                                  value={`${specs.beam_angle}°`}
+                                />
                               )}
                             </div>
 
                             <div className="flex flex-wrap items-center gap-3 mt-3">
                               {item.stock_available !== undefined && (
-                                <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${
-                                  stockStatus.status === 'ok'
-                                    ? 'bg-green-100 text-green-700'
-                                    : stockStatus.status === 'low'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-red-100 text-red-700'
-                                }`}>
+                                <span
+                                  className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${
+                                    stockStatus.status === 'ok'
+                                      ? 'bg-green-100 text-green-700'
+                                      : stockStatus.status === 'low'
+                                        ? 'bg-blue-100 text-blue-700'
+                                        : 'bg-red-100 text-red-700'
+                                  }`}
+                                >
                                   <Package size={12} />
                                   Stoc: {item.stock_available} buc
                                 </span>
                               )}
-                              <LeadTimeIndicator days={item.lead_time_days} stockStatus={stockStatus.status} />
+                              <LeadTimeIndicator
+                                days={item.lead_time_days}
+                                stockStatus={stockStatus.status}
+                              />
                             </div>
 
                             {item.min_order_qty && item.min_order_qty > 1 && (
@@ -676,7 +749,9 @@ LED-BULB-A60,50,Urgent delivery`;
                         <div className="lg:col-span-2 flex items-center justify-center">
                           <div className="flex items-center border border-gray-200 rounded-xl bg-white shadow-sm">
                             <button
-                              onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)}
+                              onClick={() =>
+                                handleUpdateQuantity(item.productId, item.quantity - 1)
+                              }
                               disabled={isLoading}
                               className="p-3 text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 rounded-l-xl"
                             >
@@ -695,7 +770,9 @@ LED-BULB-A60,50,Urgent delivery`;
                               min={item.min_order_qty || 1}
                             />
                             <button
-                              onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)}
+                              onClick={() =>
+                                handleUpdateQuantity(item.productId, item.quantity + 1)
+                              }
                               disabled={isLoading}
                               className="p-3 text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 rounded-r-xl"
                             >
@@ -705,9 +782,13 @@ LED-BULB-A60,50,Urgent delivery`;
                         </div>
 
                         <div className="lg:col-span-2 text-right mt-4 lg:mt-0">
-                          <p className="font-semibold text-gray-900 text-lg">{formatPrice(item.price)}</p>
+                          <p className="font-semibold text-gray-900 text-lg">
+                            {formatPrice(item.price)}
+                          </p>
                           {itemDiscount > 0 && (
-                            <p className="text-sm text-gray-400 line-through">{formatPrice(basePrice)}</p>
+                            <p className="text-sm text-gray-400 line-through">
+                              {formatPrice(basePrice)}
+                            </p>
                           )}
                           <p className="text-xs text-gray-400 mt-0.5">per bucată</p>
                         </div>
@@ -715,8 +796,7 @@ LED-BULB-A60,50,Urgent delivery`;
                         <div className="lg:col-span-2 text-right mt-4 lg:mt-0">
                           {itemDiscount > 0 && (
                             <div className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-medium">
-                              <CheckCircle size={14} />
-                              -{itemDiscount}%
+                              <CheckCircle size={14} />-{itemDiscount}%
                             </div>
                           )}
                           {discountAmount > 0 && (
@@ -728,7 +808,9 @@ LED-BULB-A60,50,Urgent delivery`;
 
                         <div className="lg:col-span-1 flex items-center justify-between lg:justify-end gap-3 mt-4 lg:mt-0">
                           <div className="text-right">
-                            <p className="text-xl font-bold text-gray-900">{formatPrice(itemTotal)}</p>
+                            <p className="text-xl font-bold text-gray-900">
+                              {formatPrice(itemTotal)}
+                            </p>
                           </div>
                           <button
                             onClick={() => handleRemoveItem(item.productId)}
@@ -742,23 +824,35 @@ LED-BULB-A60,50,Urgent delivery`;
                       </div>
 
                       {(stockStatus.status === 'insufficient' || qtyError) && (
-                        <div className={`mt-5 p-4 rounded-xl flex items-start gap-3 ${
-                          qtyError ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200'
-                        }`}>
-                          <AlertTriangle size={20} className={`flex-shrink-0 mt-0.5 ${qtyError ? 'text-amber-500' : 'text-red-500'}`} />
+                        <div
+                          className={`mt-5 p-4 rounded-xl flex items-start gap-3 ${
+                            qtyError
+                              ? 'bg-amber-50 border border-amber-200'
+                              : 'bg-red-50 border border-red-200'
+                          }`}
+                        >
+                          <AlertTriangle
+                            size={20}
+                            className={`flex-shrink-0 mt-0.5 ${qtyError ? 'text-amber-500' : 'text-red-500'}`}
+                          />
                           <div className="text-sm">
                             {qtyError ? (
                               <span className="font-medium text-amber-800">{qtyError}</span>
-                            ) : stockStatus.issue && (
-                              <>
-                                <span className="font-semibold text-red-800">Stoc insuficient: </span>
-                                <span className="text-red-700">
-                                  Disponibil doar {stockStatus.issue.available} din {stockStatus.issue.requested} buc.
-                                </span>
-                                <span className="text-red-600 font-bold ml-1">
-                                  (−{stockStatus.issue.shortage} buc)
-                                </span>
-                              </>
+                            ) : (
+                              stockStatus.issue && (
+                                <>
+                                  <span className="font-semibold text-red-800">
+                                    Stoc insuficient:{' '}
+                                  </span>
+                                  <span className="text-red-700">
+                                    Disponibil doar {stockStatus.issue.available} din{' '}
+                                    {stockStatus.issue.requested} buc.
+                                  </span>
+                                  <span className="text-red-600 font-bold ml-1">
+                                    (−{stockStatus.issue.shortage} buc)
+                                  </span>
+                                </>
+                              )
                             )}
                           </div>
                         </div>
@@ -778,12 +872,15 @@ LED-BULB-A60,50,Urgent delivery`;
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-6">
               <Link
                 to="/b2b-portal/catalog"
                 className="inline-flex items-center text-blue-600 hover:text-blue-700 font-semibold transition-colors group text-lg"
               >
-                <ArrowLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" />
+                <ArrowLeft
+                  size={20}
+                  className="mr-2 group-hover:-translate-x-1 transition-transform"
+                />
                 Continuă cumpărăturile
               </Link>
               {validatingStock && (
@@ -796,7 +893,7 @@ LED-BULB-A60,50,Urgent delivery`;
           </div>
 
           <div className="xl:col-span-1">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 sticky top-6 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 xl:sticky xl:top-6 overflow-hidden">
               <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600">
                 <h2 className="text-xl font-bold text-white">Sumar Comandă</h2>
               </div>
@@ -806,11 +903,15 @@ LED-BULB-A60,50,Urgent delivery`;
                   <div className="p-5 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border border-blue-100">
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-sm text-gray-600 font-medium">Cont B2B</span>
-                      <span className={`px-3 py-1 text-xs font-bold rounded-full ${tierInfo.bg} ${tierInfo.color} border ${tierInfo.border}`}>
+                      <span
+                        className={`px-3 py-1 text-xs font-bold rounded-full ${tierInfo.bg} ${tierInfo.color} border ${tierInfo.border}`}
+                      >
                         {tierInfo.label}
                       </span>
                     </div>
-                    <p className="font-bold text-gray-900 text-lg mb-4">{customerProfile.company_name}</p>
+                    <p className="font-bold text-gray-900 text-lg mb-4">
+                      {customerProfile.company_name}
+                    </p>
 
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
@@ -827,9 +928,13 @@ LED-BULB-A60,50,Urgent delivery`;
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Credit Disponibil</span>
-                        <span className={`font-bold ${
-                          customerProfile.credit_available >= total ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        <span
+                          className={`font-bold ${
+                            customerProfile.credit_available >= total
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                          }`}
+                        >
                           {formatPrice(customerProfile.credit_available)}
                         </span>
                       </div>
@@ -845,8 +950,8 @@ LED-BULB-A60,50,Urgent delivery`;
                               creditUsedPercent > 90
                                 ? 'bg-gradient-to-r from-red-500 to-red-600'
                                 : creditUsedPercent > 70
-                                ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                                : 'bg-gradient-to-r from-green-500 to-emerald-500'
+                                  ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                                  : 'bg-gradient-to-r from-green-500 to-emerald-500'
                             }`}
                             style={{ width: `${Math.min(creditUsedPercent, 100)}%` }}
                           />
@@ -900,8 +1005,8 @@ LED-BULB-A60,50,Urgent delivery`;
 
                   {customerProfile && (
                     <div className="pt-2 border-t border-gray-100">
-                      <CreditWidgetMini 
-                        creditLimit={customerProfile.credit_limit} 
+                      <CreditWidgetMini
+                        creditLimit={customerProfile.credit_limit}
                         usedCredit={customerProfile.credit_used + total}
                         className="text-xs"
                       />
@@ -946,7 +1051,10 @@ LED-BULB-A60,50,Urgent delivery`;
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                       <Clock size={16} className="text-blue-600" />
                     </div>
-                    <span>Termen plată: Net {customerProfile?.payment_terms_days || TIER_TERMS[tier] || 30} zile</span>
+                    <span>
+                      Termen plată: Net{' '}
+                      {customerProfile?.payment_terms_days || TIER_TERMS[tier] || 30} zile
+                    </span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-gray-600">
                     <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -976,11 +1084,15 @@ LED-BULB-A60,50,Urgent delivery`;
                   <div
                     key={key}
                     className={`flex items-center justify-between p-4 rounded-xl transition-all ${
-                      tier === key ? 'bg-indigo-50 border-2 border-indigo-300 shadow-sm' : 'bg-white border border-gray-100'
+                      tier === key
+                        ? 'bg-indigo-50 border-2 border-indigo-300 shadow-sm'
+                        : 'bg-white border border-gray-100'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`font-bold ${tier === key ? 'text-indigo-700' : 'text-gray-700'}`}>
+                      <span
+                        className={`font-bold ${tier === key ? 'text-indigo-700' : 'text-gray-700'}`}
+                      >
                         {info.label}
                       </span>
                       {tier === key && (
@@ -990,7 +1102,9 @@ LED-BULB-A60,50,Urgent delivery`;
                       )}
                     </div>
                     <div className="text-right">
-                      <span className={`font-bold text-lg ${tier === key ? 'text-indigo-700' : 'text-gray-800'}`}>
+                      <span
+                        className={`font-bold text-lg ${tier === key ? 'text-indigo-700' : 'text-gray-800'}`}
+                      >
                         {TIER_DISCOUNTS[key]}%
                       </span>
                       <span className="text-gray-400 text-sm ml-1">
@@ -1006,27 +1120,31 @@ LED-BULB-A60,50,Urgent delivery`;
       </div>
 
       {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <FileSpreadsheet size={24} />
                 Importă Comandă din CSV
               </h2>
-              <button onClick={closeImportModal} className="text-white/80 hover:text-white transition-colors">
+              <button
+                onClick={closeImportModal}
+                className="text-white/80 hover:text-white transition-colors"
+              >
                 <X size={24} />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
               {!importResult ? (
                 <>
                   <div className="mb-6">
                     <p className="text-gray-600 mb-4">
-                      Încarcă un fișier CSV cu produsele pe care dorești să le comanzi. 
-                      Formatul acceptat: <code className="bg-gray-100 px-2 py-1 rounded">sku, quantity, notes</code>
+                      Încarcă un fișier CSV cu produsele pe care dorești să le comanzi. Formatul
+                      acceptat:{' '}
+                      <code className="bg-gray-100 px-2 py-1 rounded">sku, quantity, notes</code>
                     </p>
-                    <div className="flex items-center gap-3 mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
                       <button
                         onClick={downloadCSVTemplate}
                         className="inline-flex items-center px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -1042,7 +1160,9 @@ LED-BULB-A60,50,Urgent delivery`;
 
                   <div
                     className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-                      importFile ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                      importFile
+                        ? 'border-green-400 bg-green-50'
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                     }`}
                   >
                     <input
@@ -1085,7 +1205,7 @@ LED-BULB-A60,50,Urgent delivery`;
                     </div>
                   )}
 
-                  <div className="flex justify-end gap-3 mt-6">
+                  <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6">
                     <button
                       onClick={closeImportModal}
                       className="px-5 py-2.5 text-gray-700 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-medium"
@@ -1114,15 +1234,17 @@ LED-BULB-A60,50,Urgent delivery`;
               ) : (
                 <>
                   <div className="mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className={`px-4 py-2 rounded-xl font-medium ${
-                          importResult.valid_count > 0 && importResult.invalid_count === 0
-                            ? 'bg-green-100 text-green-700'
-                            : importResult.valid_count > 0
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <div
+                          className={`px-4 py-2 rounded-xl font-medium ${
+                            importResult.valid_count > 0 && importResult.invalid_count === 0
+                              ? 'bg-green-100 text-green-700'
+                              : importResult.valid_count > 0
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-red-100 text-red-700'
+                          }`}
+                        >
                           {importResult.valid_count} produse valide
                         </div>
                         {importResult.invalid_count > 0 && (
@@ -1178,11 +1300,21 @@ LED-BULB-A60,50,Urgent delivery`;
                           <table className="w-full text-sm">
                             <thead className="bg-gray-50 sticky top-0">
                               <tr>
-                                <th className="text-left px-4 py-2 font-semibold text-gray-600">SKU</th>
-                                <th className="text-left px-4 py-2 font-semibold text-gray-600">Produs</th>
-                                <th className="text-right px-4 py-2 font-semibold text-gray-600">Cant.</th>
-                                <th className="text-right px-4 py-2 font-semibold text-gray-600">Preț</th>
-                                <th className="text-right px-4 py-2 font-semibold text-gray-600">Stoc</th>
+                                <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                  SKU
+                                </th>
+                                <th className="text-left px-4 py-2 font-semibold text-gray-600">
+                                  Produs
+                                </th>
+                                <th className="text-right px-4 py-2 font-semibold text-gray-600">
+                                  Cant.
+                                </th>
+                                <th className="text-right px-4 py-2 font-semibold text-gray-600">
+                                  Preț
+                                </th>
+                                <th className="text-right px-4 py-2 font-semibold text-gray-600">
+                                  Stoc
+                                </th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -1190,10 +1322,20 @@ LED-BULB-A60,50,Urgent delivery`;
                                 <tr key={idx} className="hover:bg-gray-50">
                                   <td className="px-4 py-2 font-mono text-gray-600">{item.sku}</td>
                                   <td className="px-4 py-2 text-gray-900">{item.product_name}</td>
-                                  <td className="px-4 py-2 text-right font-medium">{item.quantity}</td>
-                                  <td className="px-4 py-2 text-right">{formatPrice(item.unit_price)}</td>
+                                  <td className="px-4 py-2 text-right font-medium">
+                                    {item.quantity}
+                                  </td>
                                   <td className="px-4 py-2 text-right">
-                                    <span className={item.stock_available >= item.quantity ? 'text-green-600' : 'text-amber-600'}>
+                                    {formatPrice(item.unit_price)}
+                                  </td>
+                                  <td className="px-4 py-2 text-right">
+                                    <span
+                                      className={
+                                        item.stock_available >= item.quantity
+                                          ? 'text-green-600'
+                                          : 'text-amber-600'
+                                      }
+                                    >
                                       {item.stock_available}
                                     </span>
                                   </td>
@@ -1253,7 +1395,7 @@ LED-BULB-A60,50,Urgent delivery`;
                     </div>
                   )}
 
-                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                  <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-gray-200">
                     <button
                       onClick={closeImportModal}
                       className="px-5 py-2.5 text-gray-700 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-medium"
