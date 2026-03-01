@@ -135,15 +135,15 @@ export class WorkflowInstanceRepository implements IWorkflowInstanceRepository {
     }
 
     if (filters?.entityType) {
-      query = query.andWhere('wf.entityType = :entityType', { entityType: filters.entityType });
+      query = query.andWhere('wf."entityType" = :entityType', { entityType: filters.entityType });
     }
 
     if (filters?.templateId) {
-      query = query.andWhere('wf.templateId = :templateId', { templateId: filters.templateId });
+      query = query.andWhere('wf."templateId" = :templateId', { templateId: filters.templateId });
     }
 
     const [entities, total] = await query
-      .orderBy('wf.createdAt', 'DESC')
+      .orderBy('wf."createdAt"', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();

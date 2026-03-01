@@ -23,7 +23,7 @@ export class WorkflowTemplateRepository implements IWorkflowTemplateRepository {
   }
 
   async findByEntityType(entityType: string, version?: number): Promise<WorkflowTemplate | null> {
-    let query = this.repository.createQueryBuilder().where('entityType = :entityType', { entityType });
+    let query = this.repository.createQueryBuilder().where('"entityType" = :entityType', { entityType });
 
     if (version !== undefined) {
       query = query.andWhere('version = :version', { version });
@@ -86,7 +86,7 @@ export class WorkflowTemplateRepository implements IWorkflowTemplateRepository {
   async getLatestVersion(entityType: string): Promise<number> {
     const result = await this.repository
       .createQueryBuilder()
-      .where('entityType = :entityType', { entityType })
+      .where('"entityType" = :entityType', { entityType })
       .orderBy('version', 'DESC')
       .limit(1)
       .getOne();
