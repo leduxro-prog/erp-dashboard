@@ -40,15 +40,56 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
 
-      - name: Run ESLint
+      - name: Fetch base commit for PR lint diff
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --depth=1 origin ${{ github.event.pull_request.base.sha }}
+
+      - name: Run ESLint (PR changed files)
+        if: github.event_name == 'pull_request'
+        run: |
+          CHANGED_TS=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.sha }} | grep -E '^(src|shared|modules)/.*\.ts$' || true)
+          if [ -z "$CHANGED_TS" ]; then
+            echo "No backend TypeScript files changed. Skipping backend ESLint."
+            exit 0
+          fi
+          echo "Running backend ESLint on changed files:"
+          echo "$CHANGED_TS"
+          echo "$CHANGED_TS" | xargs npx eslint
+
+      - name: Run ESLint (push full)
+        if: github.event_name != 'pull_request'
         run: npm run lint
         continue-on-error: false
 
-      - name: Run frontend ESLint
+      - name: Run frontend ESLint (PR changed files)
+        if: github.event_name == 'pull_request'
+        run: |
+          CHANGED_FE=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.sha }} | grep -E '^frontend/src/.*\.(ts|tsx)$' || true)
+          if [ -z "$CHANGED_FE" ]; then
+            echo "No frontend TS/TSX files changed. Skipping frontend ESLint."
+            exit 0
+          fi
+          echo "Running frontend ESLint on changed files:"
+          echo "$CHANGED_FE"
+          echo "$CHANGED_FE" | xargs npm --prefix frontend exec eslint
+
+      - name: Run frontend ESLint (push full)
+        if: github.event_name != 'pull_request'
         run: npm --prefix frontend run lint
         continue-on-error: false
 
-      - name: Check code formatting with Prettier
+      - name: Check Prettier (PR changed files)
+        if: github.event_name == 'pull_request'
+        run: |
+          CHANGED_FMT=$(git diff --name-only ${{ github.event.pull_request.base.sha }}...${{ github.sha }} | grep -E '^(src|shared|modules)/.*\.ts$' || true)
+          if [ -z "$CHANGED_FMT" ]; then
+            echo "No backend TypeScript files changed. Skipping Prettier check."
+            exit 0
+          fi
+          echo "$CHANGED_FMT" | xargs npx prettier --check
+
+      - name: Check code formatting with Prettier (push full)
+        if: github.event_name != 'pull_request'
         run: npx prettier --check 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'
         continue-on-error: false
 
@@ -233,6 +274,7 @@ jobs:
   performance:
     runs-on: ubuntu-latest
     name: Lighthouse Mobile Budgets
+    if: github.event_name != 'pull_request'
     strategy:
       matrix:
         node-version: [20.x]
