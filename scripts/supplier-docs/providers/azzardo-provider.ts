@@ -1,0 +1,143 @@
+import { DiscoveredDoc, DocType } from '../types';
+
+const AZZARDO_DOWNLOAD_ZONE_URL = 'https://www.en.azzardo.com/download-zone';
+
+const INSTALLATION_HINTS = [
+  'manual',
+  'installation',
+  'install',
+  'guide',
+  'instruction',
+  'assembly',
+  'mounting',
+];
+
+const DATASHEET_HINTS = ['data sheet', 'datasheet', 'specification', 'spec sheet', 'technical'];
+
+export function parseAzzardoDocs(html: string): DiscoveredDoc[] {
+  const links = extractAnchorLinks(html);
+  const docs: DiscoveredDoc[] = [];
+  const seen = new Set<string>();
+
+  for (const link of links) {
+    const sourceUrl = toAbsoluteUrl(link.href);
+    if (!sourceUrl || !isDocumentUrl(sourceUrl)) {
+      continue;
+    }
+
+    const fileName = getFileNameFromUrl(sourceUrl);
+    const hintText = `${fileName} ${link.text}`.trim();
+    const supplierSku = extractSupplierSku(hintText);
+    const docType = classifyDocType(hintText);
+
+    if (!supplierSku || !docType) {
+      continue;
+    }
+
+    const dedupeKey = `${sourceUrl}|${supplierSku}|${docType}`;
+    if (seen.has(dedupeKey)) {
+      continue;
+    }
+
+    seen.add(dedupeKey);
+    docs.push({
+      supplier: 'azzardo',
+      supplierSku,
+      docType,
+      sourceUrl,
+      fileName,
+    });
+  }
+
+  return docs;
+}
+
+export async function fetchAzzardoDocs(): Promise<DiscoveredDoc[]> {
+  const response = await fetch(AZZARDO_DOWNLOAD_ZONE_URL);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Azzardo download zone: ${response.status}`);
+  }
+
+  const html = await response.text();
+  return parseAzzardoDocs(html);
+}
+
+interface AnchorLink {
+  href: string;
+  text: string;
+}
+
+function extractAnchorLinks(html: string): AnchorLink[] {
+  const links: AnchorLink[] = [];
+  const anchorRegex = /<a\b[^>]*href\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi;
+
+  for (const match of html.matchAll(anchorRegex)) {
+    const href = (match[1] ?? match[2] ?? match[3] ?? '').trim();
+    if (!href) {
+      continue;
+    }
+
+    const text = stripHtml(match[4] ?? '');
+    links.push({ href, text });
+  }
+
+  return links;
+}
+
+function stripHtml(value: string): string {
+  return value
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function toAbsoluteUrl(rawHref: string): string | null {
+  try {
+    return new URL(rawHref, AZZARDO_DOWNLOAD_ZONE_URL).toString();
+  } catch {
+    return null;
+  }
+}
+
+function isDocumentUrl(sourceUrl: string): boolean {
+  try {
+    const parsed = new URL(sourceUrl);
+    return /\.(pdf|doc|docx)$/i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+function getFileNameFromUrl(sourceUrl: string): string {
+  try {
+    const parsed = new URL(sourceUrl);
+    const baseName = parsed.pathname.split('/').filter(Boolean).at(-1) ?? 'document.pdf';
+    return decodeURIComponent(baseName);
+  } catch {
+    return 'document.pdf';
+  }
+}
+
+function extractSupplierSku(value: string): string | null {
+  const match = value.match(/\b(AZ[-_ ]?\d{3,6}[A-Z0-9]*)\b/i);
+  if (!match) {
+    return null;
+  }
+
+  return match[1].toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function classifyDocType(value: string): DocType | null {
+  const normalized = value.toLowerCase();
+
+  if (INSTALLATION_HINTS.some((hint) => normalized.includes(hint))) {
+    return 'installation_guide';
+  }
+
+  if (DATASHEET_HINTS.some((hint) => normalized.includes(hint))) {
+    return 'datasheet';
+  }
+
+  return null;
+}
