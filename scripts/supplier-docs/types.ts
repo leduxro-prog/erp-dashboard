@@ -1,6 +1,13 @@
 export type SupplierCode = 'azzardo' | 'aca';
 
-export type DocType = 'datasheet' | 'installation_guide';
+export type DocType =
+  | 'datasheet'
+  | 'installation_guide'
+  | 'technical_drawing'
+  | 'product_image'
+  | 'model_3d'
+  | 'certificate'
+  | 'photometric_data';
 
 export interface DiscoveredDoc {
   supplier: SupplierCode;

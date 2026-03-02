@@ -311,7 +311,15 @@ function normalizeSupplierDocMetadata(value: unknown): SupplierDocMetadata | nul
 }
 
 function normalizeDocType(value: unknown): DocType | null {
-  return value === 'datasheet' || value === 'installation_guide' ? value : null;
+  return value === 'datasheet' ||
+    value === 'installation_guide' ||
+    value === 'technical_drawing' ||
+    value === 'product_image' ||
+    value === 'model_3d' ||
+    value === 'certificate' ||
+    value === 'photometric_data'
+    ? value
+    : null;
 }
 
 function normalizeTranslationMode(value: unknown): 'auto' | 'manual' | 'none' | null {

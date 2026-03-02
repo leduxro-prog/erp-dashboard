@@ -12,6 +12,7 @@ function run(): void {
   testChoosePrimaryDocUrlFallsBackToOriginal();
   testMergeSupplierDocsMetadataAppendsAndReplacesDeterministically();
   testMergeSupplierDocsIntoCustomSpecsPreservesOtherFields();
+  testMergeSupplierDocsMetadataKeepsExtendedDocTypes();
 }
 
 function testChoosePrimaryDocUrlPrefersTranslated(): void {
@@ -107,6 +108,27 @@ function testMergeSupplierDocsIntoCustomSpecsPreservesOtherFields(): void {
   assert.equal(merged.voltage, '220V');
   assert.equal(Array.isArray(merged.supplierDocs), true);
   assert.equal((merged.supplierDocs as unknown[]).length, 2);
+}
+
+function testMergeSupplierDocsMetadataKeepsExtendedDocTypes(): void {
+  const merged = mergeSupplierDocsMetadata([], [
+    {
+      source_url: 'https://docs.example.com/m1.glb',
+      checksum: 'm1',
+      doc_type: 'model_3d',
+      primary_url: 'https://cdn.local/m1.glb',
+    },
+    {
+      source_url: 'https://docs.example.com/p1.ies',
+      checksum: 'p1',
+      doc_type: 'photometric_data',
+      primary_url: 'https://cdn.local/p1.ies',
+    },
+  ]);
+
+  assert.equal(merged.length, 2);
+  assert.equal(merged[0].doc_type, 'model_3d');
+  assert.equal(merged[1].doc_type, 'photometric_data');
 }
 
 run();

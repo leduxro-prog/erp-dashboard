@@ -13,6 +13,11 @@ const INSTALLATION_HINTS = [
 ];
 
 const DATASHEET_HINTS = ['data sheet', 'datasheet', 'specification', 'spec sheet', 'technical'];
+const DRAWING_HINTS = ['drawing', 'dwg', 'dxf', 'cad', 'technical drawing', 'scheme'];
+const IMAGE_HINTS = ['image', 'photo', 'picture', 'render', 'preview'];
+const MODEL_3D_HINTS = ['3d', 'model', 'obj', 'fbx', 'glb', 'gltf', 'stl', '3ds'];
+const CERTIFICATE_HINTS = ['certificate', 'certification', 'declaration', 'ce', 'rohs', 'ul', 'enec'];
+const PHOTOMETRIC_HINTS = ['photometric', 'ies', 'ldt', 'eulumdat'];
 
 export function parseAzzardoDocs(html: string): DiscoveredDoc[] {
   const links = extractAnchorLinks(html);
@@ -103,7 +108,9 @@ function toAbsoluteUrl(rawHref: string): string | null {
 function isDocumentUrl(sourceUrl: string): boolean {
   try {
     const parsed = new URL(sourceUrl);
-    return /\.(pdf|doc|docx)$/i.test(parsed.pathname);
+    return /\.(pdf|doc|docx|dwg|dxf|jpg|jpeg|png|webp|svg|obj|fbx|3ds|stl|glb|gltf|ies|ldt|zip)$/i.test(
+      parsed.pathname,
+    );
   } catch {
     return false;
   }
@@ -130,6 +137,26 @@ function extractSupplierSku(value: string): string | null {
 
 function classifyDocType(value: string): DocType | null {
   const normalized = value.toLowerCase();
+
+  if (PHOTOMETRIC_HINTS.some((hint) => normalized.includes(hint))) {
+    return 'photometric_data';
+  }
+
+  if (MODEL_3D_HINTS.some((hint) => normalized.includes(hint))) {
+    return 'model_3d';
+  }
+
+  if (CERTIFICATE_HINTS.some((hint) => normalized.includes(hint))) {
+    return 'certificate';
+  }
+
+  if (DRAWING_HINTS.some((hint) => normalized.includes(hint))) {
+    return 'technical_drawing';
+  }
+
+  if (IMAGE_HINTS.some((hint) => normalized.includes(hint))) {
+    return 'product_image';
+  }
 
   if (INSTALLATION_HINTS.some((hint) => normalized.includes(hint))) {
     return 'installation_guide';
