@@ -25,7 +25,7 @@ export function parseAzzardoDocs(html: string): DiscoveredDoc[] {
   const seen = new Set<string>();
 
   for (const link of links) {
-    const sourceUrl = toAbsoluteUrl(link.href);
+    const sourceUrl = normalizeSourceUrl(toAbsoluteUrl(link.href));
     if (!sourceUrl || !isDocumentUrl(sourceUrl)) {
       continue;
     }
@@ -104,6 +104,30 @@ function toAbsoluteUrl(rawHref: string): string | null {
     return new URL(rawHref, AZZARDO_DOWNLOAD_ZONE_URL).toString();
   } catch {
     return null;
+  }
+}
+
+function normalizeSourceUrl(sourceUrl: string | null): string | null {
+  if (!sourceUrl) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(sourceUrl);
+
+    if (parsed.hostname.includes('dropbox.com') && parsed.pathname.includes('/scl/fo/')) {
+      const rlkey = parsed.searchParams.get('rlkey');
+      parsed.search = '';
+      if (rlkey) {
+        parsed.searchParams.set('rlkey', rlkey);
+      }
+      parsed.searchParams.set('dl', '1');
+      return parsed.toString();
+    }
+
+    return parsed.toString();
+  } catch {
+    return sourceUrl;
   }
 }
 

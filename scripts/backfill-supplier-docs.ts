@@ -6,6 +6,7 @@ import { computeFileSha256 } from './supplier-docs/checksum';
 import { buildConfig } from './supplier-docs/config';
 import { attachDocsToProductSpecifications, type AttachDocsResult } from './supplier-docs/db-attach';
 import { downloadToFile } from './supplier-docs/downloader';
+import { expandCollectionArchive, type ExpandedCollectionDoc } from './supplier-docs/collection-expander';
 import { fetchAcaDocsForSku } from './supplier-docs/providers/aca-provider';
 import { fetchAzzardoDocs } from './supplier-docs/providers/azzardo-provider';
 import { buildDocPaths } from './supplier-docs/storage';
@@ -59,6 +60,12 @@ export interface OrchestratorDependencies {
   toPublicUrl(filePath: string): string;
   getSupplierId(supplier: SupplierCode): Promise<number | null>;
   attachDocs(input: { supplierId: number; supplierSku: string; docs: AttachableSupplierDoc[] }): Promise<AttachDocsResult>;
+  expandCollectionDocs?(input: {
+    supplier: SupplierCode;
+    docType: DocType;
+    sourceUrl: string;
+    archivePath: string;
+  }): Promise<ExpandedCollectionDoc[]>;
   buildOriginalPath(input: BuildOriginalPathInput): string;
   printSummary(summary: OrchestratorSummary): void;
   cleanup?(): Promise<void> | void;
@@ -216,6 +223,36 @@ export async function runOrchestrator(
             translationMode: translatedPath ? 'auto' : 'none',
           };
 
+          if (doc.supplier === 'azzardo' && doc.supplierSku === 'AZZARDO_COLLECTION' && deps.expandCollectionDocs) {
+            const expandedDocs = await deps.expandCollectionDocs({
+              supplier: doc.supplier,
+              docType: doc.docType,
+              sourceUrl: doc.sourceUrl,
+              archivePath: downloaded.destinationPath,
+            });
+
+            for (const expanded of expandedDocs) {
+              if (expanded.translatedPath) {
+                summary.translated += 1;
+              }
+
+              const expandedAttachableDoc: AttachableSupplierDoc = {
+                docType: expanded.docType,
+                sourceUrl: expanded.sourceUrl,
+                checksum: expanded.checksum,
+                originalUrl: deps.toPublicUrl(expanded.originalPath),
+                translatedUrl: expanded.translatedPath ? deps.toPublicUrl(expanded.translatedPath) : null,
+                translationMode: expanded.translationMode,
+              };
+
+              const expandedExisting = docsBySku.get(expanded.supplierSku) ?? [];
+              expandedExisting.push(expandedAttachableDoc);
+              docsBySku.set(expanded.supplierSku, expandedExisting);
+            }
+
+            continue;
+          }
+
           const existing = docsBySku.get(doc.supplierSku) ?? [];
           existing.push(attachableDoc);
           docsBySku.set(doc.supplierSku, existing);
@@ -344,7 +381,10 @@ function createDefaultDependencies(args: CliArgs): OrchestratorDependencies {
 
   const translator = new AutoTranslatorAdapter();
   const supplierIdCache = new Map<SupplierCode, number | null>();
-  const maxDownloadBytes = Number(process.env.SUPPLIER_DOC_MAX_BYTES || 800 * 1024 * 1024);
+  const maxDownloadBytes = Number(process.env.SUPPLIER_DOC_MAX_BYTES || 2 * 1024 * 1024 * 1024);
+  const downloadTimeoutMs = Number(process.env.SUPPLIER_DOC_TIMEOUT_MS || 20 * 60 * 1000);
+  const downloadRetries = Number(process.env.SUPPLIER_DOC_RETRIES || 1);
+  const expandedCollectionsRoot = path.join(cfg.storageRootDir, '_collections');
 
   return {
     discoverDocsForSupplier: async ({ supplier, limit }) => {
@@ -372,12 +412,26 @@ function createDefaultDependencies(args: CliArgs): OrchestratorDependencies {
       return docs;
     },
     downloadDoc: async (sourceUrl, destinationPath) =>
-      downloadToFile(sourceUrl, destinationPath, { maxBytes: maxDownloadBytes }),
+      downloadToFile(sourceUrl, destinationPath, {
+        maxBytes: maxDownloadBytes,
+        timeoutMs: downloadTimeoutMs,
+        retries: downloadRetries,
+      }),
     computeChecksum: async (filePath) => computeFileSha256(filePath),
     translateDoc: async (filePath) => translator.translate(filePath, 'en', 'ro'),
     toPublicUrl: (filePath) => toPublicUploadUrl(filePath),
     getSupplierId: async (supplier) => resolveSupplierId(pool, supplier, supplierIdCache),
     attachDocs: async ({ supplierId, supplierSku, docs }) => attachDocsToProductSpecifications(pool, { supplierId, supplierSku, docs }),
+    expandCollectionDocs: async ({ supplier, docType, sourceUrl, archivePath }) =>
+      expandCollectionArchive({
+        archivePath,
+        sourceUrl,
+        docType,
+        outputDir: path.join(expandedCollectionsRoot, supplier),
+        computeChecksum: async (filePath) => computeFileSha256(filePath),
+        translateDoc: async (filePath) => translator.translate(filePath, 'en', 'ro'),
+        shouldTranslate: shouldTranslateDoc(docType),
+      }),
     buildOriginalPath: ({ supplier, supplierSku, fileName }) =>
       buildDocPaths(cfg.storageRootDir, supplier, supplierSku, fileName).originalPath,
     printSummary: (summary) => {

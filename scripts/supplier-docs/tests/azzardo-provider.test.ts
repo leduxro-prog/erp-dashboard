@@ -83,7 +83,7 @@ assert.deepEqual(docs[7], {
   supplierSku: 'AZZARDO_COLLECTION',
   docType: 'model_3d',
   sourceUrl:
-    'https://www.dropbox.com/scl/fo/a9nhphetnfq7lsoggtgge/AARnd4b2geUlEaLW2Wao4Qg?rlkey=ey5rfdr9aafi4huh549p6q7zi&dl=0',
+    'https://www.dropbox.com/scl/fo/a9nhphetnfq7lsoggtgge/AARnd4b2geUlEaLW2Wao4Qg?rlkey=ey5rfdr9aafi4huh549p6q7zi&dl=1',
   fileName: '3d-models.zip',
 });
 
@@ -92,7 +92,7 @@ assert.deepEqual(docs[8], {
   supplierSku: 'AZZARDO_COLLECTION',
   docType: 'product_image',
   sourceUrl:
-    'https://www.dropbox.com/scl/fo/bm9trtno3h88kw8u4thh7/APrul-BgfD0bfuELKfIXugg?rlkey=qxht3dzdj9n8ci2o4ca9s63qd&dl=0',
+    'https://www.dropbox.com/scl/fo/bm9trtno3h88kw8u4thh7/APrul-BgfD0bfuELKfIXugg?rlkey=qxht3dzdj9n8ci2o4ca9s63qd&dl=1',
   fileName: 'product-photo-database.zip',
 });
 

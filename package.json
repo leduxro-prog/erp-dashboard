@@ -35,7 +35,7 @@
     "seed": "ts-node database/seeds/index.ts",
     "supplier-docs:backfill": "ts-node scripts/backfill-supplier-docs.ts",
     "supplier-docs:dry-run": "ts-node scripts/backfill-supplier-docs.ts --supplier=all --dry-run",
-    "supplier-docs:test": "ts-node scripts/supplier-docs/tests/config.test.ts && ts-node scripts/supplier-docs/tests/storage.test.ts && ts-node scripts/supplier-docs/tests/azzardo-provider.test.ts && ts-node scripts/supplier-docs/tests/aca-provider.test.ts && ts-node scripts/supplier-docs/tests/translator.test.ts && ts-node scripts/supplier-docs/tests/db-attach.test.ts && ts-node scripts/supplier-docs/tests/orchestrator.test.ts",
+    "supplier-docs:test": "ts-node scripts/supplier-docs/tests/config.test.ts && ts-node scripts/supplier-docs/tests/storage.test.ts && ts-node scripts/supplier-docs/tests/collection-expander.test.ts && ts-node scripts/supplier-docs/tests/azzardo-provider.test.ts && ts-node scripts/supplier-docs/tests/aca-provider.test.ts && ts-node scripts/supplier-docs/tests/translator.test.ts && ts-node scripts/supplier-docs/tests/db-attach.test.ts && ts-node scripts/supplier-docs/tests/orchestrator.test.ts",
     "deploy:safe": "bash scripts/deploy-safe-app.sh",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",

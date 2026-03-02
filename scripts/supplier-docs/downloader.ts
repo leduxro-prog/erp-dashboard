@@ -1,4 +1,5 @@
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { mkdir, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export interface DownloadOptions {
@@ -15,7 +16,7 @@ export interface DownloadResult {
   attempts: number;
 }
 
-const DEFAULT_TIMEOUT_MS = 15000;
+const DEFAULT_TIMEOUT_MS = 180000;
 const DEFAULT_RETRIES = 2;
 const DEFAULT_MAX_BYTES = 20 * 1024 * 1024;
 const DEFAULT_RETRY_DELAY_MS = 100;
@@ -78,9 +79,8 @@ async function downloadAttempt(
       }
     }
 
-    const buffer = await readBodyWithSizeGuard(response, maxBytes);
-    await persistBuffer(destinationPath, buffer);
-    return buffer.byteLength;
+    const bytes = await persistResponseBody(destinationPath, response, maxBytes);
+    return bytes;
   } catch (error) {
     if (controller.signal.aborted) {
       throw new Error(`Download timed out after ${timeoutMs}ms`);
@@ -92,7 +92,11 @@ async function downloadAttempt(
   }
 }
 
-async function readBodyWithSizeGuard(response: Response, maxBytes: number): Promise<Buffer> {
+async function persistResponseBody(destinationPath: string, response: Response, maxBytes: number): Promise<number> {
+  const directory = path.dirname(destinationPath);
+  await mkdir(directory, { recursive: true });
+  const tempPath = `${destinationPath}.part`;
+
   if (!response.body) {
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -101,40 +105,62 @@ async function readBodyWithSizeGuard(response: Response, maxBytes: number): Prom
       throw new Error(`Download exceeds max size of ${maxBytes} bytes`);
     }
 
-    return buffer;
+    await writeFile(tempPath, buffer);
+    await rename(tempPath, destinationPath);
+    return buffer.byteLength;
   }
 
   const reader = response.body.getReader();
-  const chunks: Buffer[] = [];
+  const stream = createWriteStream(tempPath);
   let totalBytes = 0;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      const chunk = Buffer.from(value);
+      totalBytes += chunk.byteLength;
+
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new Error(`Download exceeds max size of ${maxBytes} bytes`);
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        stream.write(chunk, (error: Error | null | undefined) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve();
+        });
+      });
     }
 
-    const chunk = Buffer.from(value);
-    totalBytes += chunk.byteLength;
+    await new Promise<void>((resolve, reject) => {
+      stream.end((error: Error | null | undefined) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
 
-    if (totalBytes > maxBytes) {
-      await reader.cancel();
-      throw new Error(`Download exceeds max size of ${maxBytes} bytes`);
+    await rename(tempPath, destinationPath);
+    return totalBytes;
+  } catch (error) {
+    stream.destroy();
+    try {
+      await unlink(tempPath);
+    } catch {
+      // best effort cleanup
     }
-
-    chunks.push(chunk);
+    throw error;
   }
-
-  return Buffer.concat(chunks);
-}
-
-async function persistBuffer(destinationPath: string, buffer: Buffer): Promise<void> {
-  const directory = path.dirname(destinationPath);
-  await mkdir(directory, { recursive: true });
-
-  const tempPath = `${destinationPath}.part`;
-  await writeFile(tempPath, buffer);
-  await rename(tempPath, destinationPath);
 }
 
 function isMaxSizeError(error: Error): boolean {

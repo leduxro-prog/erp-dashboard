@@ -14,9 +14,58 @@ async function run(): Promise<void> {
   testParseArgsSupportsSingleSupplierAndLimit();
   await testOrchestratorDryRunCounters();
   await testOrchestratorSkipsTranslationForMediaTypes();
+  await testOrchestratorAttachesExpandedCollectionDocsBySku();
   await testOrchestratorContinuesAfterProviderFailure();
   await testOrchestratorContinuesAfterSupplierIdLookupFailure();
   await testOrchestratorPrintsSummaryAndCleansUpOnFatalError();
+}
+
+async function testOrchestratorAttachesExpandedCollectionDocsBySku(): Promise<void> {
+  const summary = await runOrchestrator(
+    {
+      suppliers: ['azzardo'],
+      dryRun: false,
+      limit: null,
+      resume: false,
+    },
+    createDeps({
+      docsBySupplier: {
+        azzardo: [
+          {
+            supplier: 'azzardo',
+            supplierSku: 'AZZARDO_COLLECTION',
+            docType: 'product_image',
+            sourceUrl: 'https://docs.local/photos.zip',
+            fileName: 'photos.zip',
+          },
+        ],
+      },
+      expandCollectionDocs: async () => [
+        {
+          supplierSku: 'AZ0311',
+          docType: 'product_image',
+          sourceUrl: 'https://docs.local/photos.zip',
+          checksum: 'img-1',
+          originalPath: '/tmp/az0311.jpg',
+          translatedPath: null,
+          translationMode: 'none',
+        },
+        {
+          supplierSku: 'AZ1200',
+          docType: 'product_image',
+          sourceUrl: 'https://docs.local/photos.zip',
+          checksum: 'img-2',
+          originalPath: '/tmp/az1200.jpg',
+          translatedPath: null,
+          translationMode: 'none',
+        },
+      ],
+    }),
+  );
+
+  assert.equal(summary.downloaded, 1);
+  assert.equal(summary.attached, 2);
+  assert.equal(summary.productNotFound, 0);
 }
 
 async function testOrchestratorSkipsTranslationForMediaTypes(): Promise<void> {
@@ -229,6 +278,7 @@ type DepsOptions = {
   getSupplierId?: OrchestratorDependencies['getSupplierId'];
   printSummary?: OrchestratorDependencies['printSummary'];
   cleanup?: OrchestratorDependencies['cleanup'];
+  expandCollectionDocs?: OrchestratorDependencies['expandCollectionDocs'];
 };
 
 function createDeps(options: DepsOptions): OrchestratorDependencies {
@@ -254,6 +304,7 @@ function createDeps(options: DepsOptions): OrchestratorDependencies {
       installationGuideUrl: null,
       attachedDocsCount: 1,
     }),
+    expandCollectionDocs: options.expandCollectionDocs,
     buildOriginalPath: ({ supplier, supplierSku, fileName }) => `/tmp/${supplier}/${supplierSku}/${fileName}`,
     printSummary:
       options.printSummary ??
