@@ -1,6 +1,8 @@
 import path from 'node:path';
+import { createReadStream } from 'node:fs';
 
 import { Pool } from 'pg';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 import { computeFileSha256 } from './supplier-docs/checksum';
 import { buildConfig } from './supplier-docs/config';
@@ -58,6 +60,7 @@ export interface OrchestratorDependencies {
   computeChecksum(filePath: string): Promise<string>;
   translateDoc(filePath: string): Promise<string | null>;
   toPublicUrl(filePath: string): string;
+  publishFile?(filePath: string): Promise<string>;
   getSupplierId(supplier: SupplierCode): Promise<number | null>;
   attachDocs(input: { supplierId: number; supplierSku: string; docs: AttachableSupplierDoc[] }): Promise<AttachDocsResult>;
   expandCollectionDocs?(input: {
@@ -210,6 +213,9 @@ export async function runOrchestrator(
             ? await deps.translateDoc(downloaded.destinationPath)
             : null;
 
+          const originalUrl = await resolvePublicUrl(deps, downloaded.destinationPath);
+          const translatedUrl = translatedPath ? await resolvePublicUrl(deps, translatedPath) : null;
+
           if (translatedPath) {
             summary.translated += 1;
           }
@@ -218,8 +224,8 @@ export async function runOrchestrator(
             docType: doc.docType,
             sourceUrl: doc.sourceUrl,
             checksum,
-            originalUrl: deps.toPublicUrl(downloaded.destinationPath),
-            translatedUrl: translatedPath ? deps.toPublicUrl(translatedPath) : null,
+            originalUrl,
+            translatedUrl,
             translationMode: translatedPath ? 'auto' : 'none',
           };
 
@@ -240,8 +246,10 @@ export async function runOrchestrator(
                 docType: expanded.docType,
                 sourceUrl: expanded.sourceUrl,
                 checksum: expanded.checksum,
-                originalUrl: deps.toPublicUrl(expanded.originalPath),
-                translatedUrl: expanded.translatedPath ? deps.toPublicUrl(expanded.translatedPath) : null,
+                originalUrl: await resolvePublicUrl(deps, expanded.originalPath),
+                translatedUrl: expanded.translatedPath
+                  ? await resolvePublicUrl(deps, expanded.translatedPath)
+                  : null,
                 translationMode: expanded.translationMode,
               };
 
@@ -385,6 +393,8 @@ function createDefaultDependencies(args: CliArgs): OrchestratorDependencies {
   const downloadTimeoutMs = Number(process.env.SUPPLIER_DOC_TIMEOUT_MS || 20 * 60 * 1000);
   const downloadRetries = Number(process.env.SUPPLIER_DOC_RETRIES || 1);
   const expandedCollectionsRoot = path.join(cfg.storageRootDir, '_collections');
+  const storageDriver = (process.env.STORAGE_DRIVER || 'local').trim().toLowerCase();
+  const objectStorage = storageDriver === 's3' ? createS3PublisherFromEnv() : null;
 
   return {
     discoverDocsForSupplier: async ({ supplier, limit }) => {
@@ -420,6 +430,13 @@ function createDefaultDependencies(args: CliArgs): OrchestratorDependencies {
     computeChecksum: async (filePath) => computeFileSha256(filePath),
     translateDoc: async (filePath) => translator.translate(filePath, 'en', 'ro'),
     toPublicUrl: (filePath) => toPublicUploadUrl(filePath),
+    publishFile: objectStorage
+      ? async (filePath) => {
+          const objectKey = buildObjectStorageKey(filePath);
+          await objectStorage.upload(filePath, objectKey);
+          return objectStorage.toPublicUrl(objectKey);
+        }
+      : undefined,
     getSupplierId: async (supplier) => resolveSupplierId(pool, supplier, supplierIdCache),
     attachDocs: async ({ supplierId, supplierSku, docs }) => attachDocsToProductSpecifications(pool, { supplierId, supplierSku, docs }),
     expandCollectionDocs: async ({ supplier, docType, sourceUrl, archivePath }) =>
@@ -441,6 +458,68 @@ function createDefaultDependencies(args: CliArgs): OrchestratorDependencies {
       await pool.end();
     },
   };
+}
+
+async function resolvePublicUrl(deps: OrchestratorDependencies, filePath: string): Promise<string> {
+  if (deps.publishFile) {
+    return deps.publishFile(filePath);
+  }
+
+  return deps.toPublicUrl(filePath);
+}
+
+function buildObjectStorageKey(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/');
+  const uploadsIndex = normalized.indexOf('uploads/');
+  if (uploadsIndex >= 0) {
+    return normalized.slice(uploadsIndex);
+  }
+
+  return normalized.replace(/^\/+/, '');
+}
+
+function createS3PublisherFromEnv(): {
+  upload(filePath: string, objectKey: string): Promise<void>;
+  toPublicUrl(objectKey: string): string;
+} {
+  const endpoint = requiredEnv('S3_ENDPOINT');
+  const region = process.env.S3_REGION || 'us-east-1';
+  const bucket = requiredEnv('S3_BUCKET');
+  const accessKeyId = requiredEnv('S3_ACCESS_KEY_ID');
+  const secretAccessKey = requiredEnv('S3_SECRET_ACCESS_KEY');
+  const forcePathStyle = String(process.env.S3_FORCE_PATH_STYLE || 'true').toLowerCase() !== 'false';
+  const publicBaseUrl = process.env.S3_PUBLIC_BASE_URL || `${endpoint.replace(/\/$/, '')}/${bucket}`;
+
+  const client = new S3Client({
+    endpoint,
+    region,
+    forcePathStyle,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+  });
+
+  return {
+    upload: async (filePath, objectKey) => {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: objectKey,
+          Body: createReadStream(filePath),
+        }),
+      );
+    },
+    toPublicUrl: (objectKey) => `${publicBaseUrl.replace(/\/$/, '')}/${objectKey.replace(/^\/+/, '')}`,
+  };
+}
+
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
 }
 
 async function resolveSupplierId(

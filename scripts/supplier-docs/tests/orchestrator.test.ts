@@ -13,6 +13,7 @@ async function run(): Promise<void> {
   testParseArgsSupportsAllAndResume();
   testParseArgsSupportsSingleSupplierAndLimit();
   await testOrchestratorDryRunCounters();
+  await testOrchestratorPublishesFilesViaObjectStorageHook();
   await testOrchestratorSkipsTranslationForMediaTypes();
   await testOrchestratorAttachesExpandedCollectionDocsBySku();
   await testOrchestratorContinuesAfterProviderFailure();
@@ -94,6 +95,53 @@ async function testOrchestratorSkipsTranslationForMediaTypes(): Promise<void> {
   assert.equal(summary.downloaded, 1);
   assert.equal(summary.translated, 0);
   assert.equal(summary.attached, 1);
+}
+
+async function testOrchestratorPublishesFilesViaObjectStorageHook(): Promise<void> {
+  let attachedDocs: unknown[] = [];
+
+  await runOrchestrator(
+    {
+      suppliers: ['azzardo'],
+      dryRun: false,
+      limit: null,
+      resume: false,
+    },
+    createDeps({
+      docsBySupplier: {
+        azzardo: [
+          {
+            supplier: 'azzardo',
+            supplierSku: 'AZ1200',
+            docType: 'datasheet',
+            sourceUrl: 'https://docs.local/az1200.pdf',
+            fileName: 'az1200.pdf',
+          },
+        ],
+      },
+      publishFile: async (filePath: string) => `https://bucket.example/${filePath.split('/').at(-1)}`,
+      attachDocs: async ({ docs }) => {
+        attachedDocs = docs;
+        return {
+          status: 'attached',
+          productId: 25,
+          datasheetUrl: 'https://bucket.example/original-ro-auto.pdf',
+          installationGuideUrl: null,
+          attachedDocsCount: docs.length,
+        };
+      },
+    }),
+  );
+
+  assert.equal(attachedDocs.length, 1);
+  assert.deepEqual(attachedDocs[0], {
+    docType: 'datasheet',
+    sourceUrl: 'https://docs.local/az1200.pdf',
+    checksum: 'checksum-1',
+    originalUrl: 'https://bucket.example/original.pdf',
+    translatedUrl: 'https://bucket.example/original-ro-auto.pdf',
+    translationMode: 'auto',
+  });
 }
 
 function testParseArgsSupportsCommaSupplierList(): void {
@@ -279,6 +327,8 @@ type DepsOptions = {
   printSummary?: OrchestratorDependencies['printSummary'];
   cleanup?: OrchestratorDependencies['cleanup'];
   expandCollectionDocs?: OrchestratorDependencies['expandCollectionDocs'];
+  publishFile?: OrchestratorDependencies['publishFile'];
+  attachDocs?: OrchestratorDependencies['attachDocs'];
 };
 
 function createDeps(options: DepsOptions): OrchestratorDependencies {
@@ -297,14 +347,17 @@ function createDeps(options: DepsOptions): OrchestratorDependencies {
     translateDoc: async () => '/tmp/original-ro-auto.pdf',
     toPublicUrl: (filePath) => filePath,
     getSupplierId: options.getSupplierId ?? (async () => 10),
-    attachDocs: async () => ({
-      status: 'attached',
-      productId: 25,
-      datasheetUrl: '/tmp/original-ro-auto.pdf',
-      installationGuideUrl: null,
-      attachedDocsCount: 1,
-    }),
+    attachDocs:
+      options.attachDocs ??
+      (async () => ({
+        status: 'attached',
+        productId: 25,
+        datasheetUrl: '/tmp/original-ro-auto.pdf',
+        installationGuideUrl: null,
+        attachedDocsCount: 1,
+      })),
     expandCollectionDocs: options.expandCollectionDocs,
+    publishFile: options.publishFile,
     buildOriginalPath: ({ supplier, supplierSku, fileName }) => `/tmp/${supplier}/${supplierSku}/${fileName}`,
     printSummary:
       options.printSummary ??
