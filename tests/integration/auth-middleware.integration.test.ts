@@ -193,6 +193,21 @@ describe('Auth Middleware Integration', () => {
 
       authenticate(req, res, next);
     });
+
+    it('should accept lowercase bearer prefix and extra spacing', (done) => {
+      const accessToken = service.generateAccessToken(testUser);
+      const req = mockRequest({ authorizationHeader: `bearer    ${accessToken}` });
+      const res = mockResponse();
+
+      const next: NextFunction = (err?: any) => {
+        expect(err).toBeUndefined();
+        expect((req as any).user).toBeDefined();
+        expect((req as any).user.id).toBe(testUser.id);
+        done();
+      };
+
+      authenticate(req, res, next);
+    });
   });
 
   // ── Cookie priority over header ───────────────────────────────────────

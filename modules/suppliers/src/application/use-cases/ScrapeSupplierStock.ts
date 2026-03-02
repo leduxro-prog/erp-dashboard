@@ -259,7 +259,7 @@ export class ScrapeSupplierStock {
 
   private normalizeCustomSpecs(
     attributes: Record<string, string | number | boolean> | undefined,
-    customSpecs: Record<string, unknown> | undefined,
+    customSpecs: unknown,
   ): Record<string, unknown> | undefined {
     const merged: Record<string, unknown> = {};
 

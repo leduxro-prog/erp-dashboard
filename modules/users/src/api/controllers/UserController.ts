@@ -5,7 +5,6 @@ import { createModuleLogger } from '@shared/utils/logger';
 import { jwtService } from '@shared/services/JwtService';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import * as jwt from 'jsonwebtoken';
-import { OAuth2Client } from 'google-auth-library';
 import {
   loginSchema,
   registerSchema,
@@ -325,6 +324,14 @@ export class UserController {
       }
 
       // Verify the Google ID token
+      const { OAuth2Client } = require('google-auth-library') as {
+        OAuth2Client: new (clientId: string) => {
+          verifyIdToken: (input: {
+            idToken: string;
+            audience: string;
+          }) => Promise<{ getPayload: () => any }>;
+        };
+      };
       const client = new OAuth2Client(googleClientId);
       let payload: any;
       try {

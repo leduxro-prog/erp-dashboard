@@ -88,4 +88,57 @@ describe('BusinessCentralScraper', () => {
     expect(products[0].stockQuantity).toBe(7);
     expect(products[0].price).toBe(18);
   });
+
+  it('merges duplicate supplier codes across casing/whitespace variants', async () => {
+    mockClient.fetchInventoryRows.mockResolvedValue([
+      {
+        No: ' art-300 ',
+        Description: 'Legacy name',
+        Inventory: 3,
+        Unit_Price: 12,
+      },
+      {
+        No: 'ART-300',
+        Description: 'Updated name',
+        Inventory: 9,
+        Unit_Price: 0,
+      },
+    ]);
+
+    const products = await scraper.scrapeProducts(credentials);
+
+    expect(products).toHaveLength(1);
+    expect(products[0]).toMatchObject({
+      supplierSku: 'ART-300',
+      stockQuantity: 9,
+      price: 12,
+    });
+  });
+
+  it('maps Business Central availability text variants to stock tiers', async () => {
+    mockClient.fetchInventoryRows.mockResolvedValue([
+      {
+        No: 'ART-IN-STOC',
+        Description: 'Romanian in stock',
+        Availability: 'In stoc',
+      },
+      {
+        No: 'ART-LOW-STOC',
+        Description: 'Romanian low stock',
+        StockStatus: 'Stoc limitat',
+      },
+      {
+        No: 'ART-PREORDER',
+        Description: 'Backorder item',
+        StockStatus: 'La comanda',
+      },
+    ]);
+
+    const products = await scraper.scrapeProducts(credentials);
+    const bySku = new Map(products.map((p) => [p.supplierSku, p]));
+
+    expect(bySku.get('ART-IN-STOC')?.stockQuantity).toBe(40);
+    expect(bySku.get('ART-LOW-STOC')?.stockQuantity).toBe(5);
+    expect(bySku.get('ART-PREORDER')?.stockQuantity).toBe(0);
+  });
 });

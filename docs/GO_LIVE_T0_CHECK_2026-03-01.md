@@ -70,3 +70,42 @@ Trigger rollback if any of the following occurs for >5 minutes:
 - critical endpoint health failures
 - sustained `5xx` beyond agreed threshold
 - pricing/workflow path returns unhandled server errors in production flow
+
+## PR1 Backlog Cleanup Evidence (2026-03-01T22:12Z)
+
+Executed from branch `chore/pr1-backlog-cleanup-plan` in worktree `/root/.config/superpowers/worktrees/cypher-erp/pr1-backlog-cleanup`.
+
+- `npm test -- --runInBand modules/suppliers/tests/infrastructure/BusinessCentralScraper.test.ts` -> PASS (`5/5`)
+- `API_BASE_URL="http://65.108.255.104/api/v1" npx jest tests/smoke/ApiSmokeTests.ts -t "Products|Inventory|workflow" --runInBand` -> PASS (`6 passed`, `26 skipped`)
+- `npm test -- --runInBand tests/integration/auth-middleware.integration.test.ts` -> PASS (`19/19`)
+- `npm test -- --runInBand tests/integration/auth-refresh-route.integration.test.ts` -> PASS (`4/4`)
+- `npm test -- --runInBand tests/unit/JwtService.test.ts` -> PASS (`34/34`)
+- `API_BASE_URL="http://65.108.255.104/api/v1" npx jest tests/smoke/ApiSmokeTests.ts --runInBand` -> PASS (`32/32`)
+- `bash scripts/t0-go-live-check.sh` -> PASS (`GO`, `13 PASS`, `0 FAIL`)
+- `npm run build:incremental` -> FAIL (pre-existing branch drift; missing modules/contracts in `modules/suppliers`, `modules/smartbill`, `modules/seo-automation`, `modules/users`)
+
+### Notes
+
+- Supplier scraper edge cases closed and validated:
+  - duplicate supplier code merge across case/whitespace variants
+  - Business Central availability text variants (`In stoc`, `Stoc limitat`, `La comanda`)
+- Auth contract edge case closed and validated:
+  - Authorization header accepts case-insensitive `Bearer` prefix with variable spacing.
+
+## PR1 Backlog Cleanup Evidence (2026-03-02T06:23Z)
+
+Root-cause remediation pass for branch compile drift completed.
+
+- `npm run build:incremental` -> PASS
+- `npm test -- --runInBand modules/suppliers/tests/infrastructure/BusinessCentralScraper.test.ts` -> PASS (`5/5`)
+- `npm test -- --runInBand tests/integration/auth-middleware.integration.test.ts` -> PASS (`19/19`)
+- `npm test -- --runInBand tests/integration/auth-refresh-route.integration.test.ts` -> PASS (`4/4`)
+- `npm test -- --runInBand tests/unit/JwtService.test.ts` -> PASS (`34/34`)
+- `API_BASE_URL="http://65.108.255.104/api/v1" npx jest tests/smoke/ApiSmokeTests.ts --runInBand` -> PASS (`32/32`)
+- `bash scripts/t0-go-live-check.sh` -> PASS (`GO`, `13 PASS`, `0 FAIL`)
+
+### Root Causes Closed
+
+- Missing compile-time modules/files restored: `shared/utils/brand-strategy.ts`, SmartBill `CreateB2BProforma` use case, supplier service/scraper placeholders required by branch references.
+- Supplier contract drift aligned between domain ports and use cases (`ScrapedProduct`, `SupplierProduct`, `SupplierProductSpecification`, `ScrapeResult`, repository contract methods).
+- Auth/users compile drift aligned by adding `findOrCreateGoogleUser` in `UserService` and deferring Google client import to runtime inside controller method.

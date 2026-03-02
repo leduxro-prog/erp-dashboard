@@ -4,6 +4,7 @@ import {
   BulkUpsertResult,
   Supplier,
   SupplierProduct,
+  SupplierProductSpecification,
   SkuMapping,
   SupplierOrder,
 } from '../../domain';
@@ -15,6 +16,7 @@ export class TypeOrmSupplierRepository implements ISupplierRepository {
     private supplierProductRepository: Repository<any>,
     private skuMappingRepository: Repository<any>,
     private supplierOrderRepository: Repository<any>,
+    _dataSource?: unknown,
   ) {}
 
   // Supplier operations
@@ -925,5 +927,147 @@ export class TypeOrmSupplierRepository implements ISupplierRepository {
       slug: r.slug,
       isActive: r.isActive,
     }));
+  }
+
+  async upsertProductSpecifications(
+    specs: SupplierProductSpecification[],
+    options?: { conflictPolicy?: string; source?: string },
+  ): Promise<number> {
+    if (specs.length === 0) {
+      return 0;
+    }
+
+    let updated = 0;
+
+    for (const spec of specs) {
+      try {
+        await this.supplierRepository.query(
+          `INSERT INTO supplier_product_specifications (
+             product_id,
+             supplier_id,
+             supplier_sku,
+             brand,
+             manufacturer,
+             ean_code,
+             custom_specs,
+             source,
+             source_updated_at,
+             updated_at,
+             created_at
+           )
+           VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,NOW(),NOW())
+           ON CONFLICT (product_id, supplier_id) DO UPDATE
+           SET supplier_sku = EXCLUDED.supplier_sku,
+               brand = COALESCE(NULLIF(EXCLUDED.brand, ''), supplier_product_specifications.brand),
+               manufacturer = COALESCE(NULLIF(EXCLUDED.manufacturer, ''), supplier_product_specifications.manufacturer),
+               ean_code = COALESCE(NULLIF(EXCLUDED.ean_code, ''), supplier_product_specifications.ean_code),
+               custom_specs = CASE
+                 WHEN $10 = 'merge_non_empty'
+                   THEN COALESCE(supplier_product_specifications.custom_specs, '{}'::jsonb) || COALESCE(EXCLUDED.custom_specs, '{}'::jsonb)
+                 ELSE COALESCE(EXCLUDED.custom_specs, supplier_product_specifications.custom_specs)
+               END,
+               source = COALESCE(EXCLUDED.source, supplier_product_specifications.source),
+               source_updated_at = COALESCE(EXCLUDED.source_updated_at, supplier_product_specifications.source_updated_at),
+               updated_at = NOW()`,
+          [
+            spec.productId,
+            spec.supplierId,
+            spec.supplierSku,
+            spec.brand || null,
+            spec.manufacturer || null,
+            spec.eanCode || null,
+            JSON.stringify(spec.customSpecs || {}),
+            options?.source || null,
+            spec.sourceUpdatedAt || new Date(),
+            options?.conflictPolicy || 'replace',
+          ],
+        );
+        updated += 1;
+      } catch {
+        // best-effort in legacy schemas
+      }
+    }
+
+    return updated;
+  }
+
+  async getSyncReports(
+    supplierId: number,
+    limit: number = 8,
+  ): Promise<Array<{ syncStatus?: string; errorMessage?: string | null; createdAt?: Date }>> {
+    try {
+      const rows = await this.supplierRepository.query(
+        `SELECT
+           sync_status AS "syncStatus",
+           error_message AS "errorMessage",
+           created_at AS "createdAt"
+         FROM supplier_sync_reports
+         WHERE supplier_id = $1
+         ORDER BY created_at DESC
+         LIMIT $2`,
+        [supplierId, limit],
+      );
+
+      return rows;
+    } catch {
+      return [];
+    }
+  }
+
+  async saveSyncReport(report: {
+    supplierId: number;
+    supplierName: string;
+    syncType: string;
+    success: boolean;
+    productsFound: number;
+    productsUpdated: number;
+    priceChanges: number;
+    significantPriceChanges: number;
+    specificationsDetected?: number;
+    specificationsUpdated?: number;
+    specificationCoveragePct?: number;
+    durationMs: number;
+    errorMessage?: string;
+    smartbillOverlap: number;
+  }): Promise<void> {
+    try {
+      await this.supplierRepository.query(
+        `INSERT INTO supplier_sync_reports (
+           supplier_id,
+           supplier_name,
+           sync_type,
+           sync_status,
+           products_found,
+           products_updated,
+           price_changes,
+           significant_price_changes,
+           specifications_detected,
+           specifications_updated,
+           specification_coverage_pct,
+           smartbill_overlap,
+           duration_ms,
+           error_message,
+           created_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())`,
+        [
+          report.supplierId,
+          report.supplierName,
+          report.syncType,
+          report.success ? 'success' : 'failed',
+          report.productsFound,
+          report.productsUpdated,
+          report.priceChanges,
+          report.significantPriceChanges,
+          report.specificationsDetected || 0,
+          report.specificationsUpdated || 0,
+          report.specificationCoveragePct || null,
+          report.smartbillOverlap || 0,
+          report.durationMs,
+          report.errorMessage || null,
+        ],
+      );
+    } catch {
+      // best-effort metrics sink
+    }
   }
 }

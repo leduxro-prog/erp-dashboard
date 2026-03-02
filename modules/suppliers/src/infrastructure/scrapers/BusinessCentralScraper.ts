@@ -205,20 +205,32 @@ export class BusinessCentralScraper extends BaseScraper {
   }
 
   private mapStockStatusToTier(status: string): number {
-    const text = status.trim().toLowerCase();
+    const text = status
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
     if (!text) {
       return 0;
     }
 
-    if (text.includes('out') || text.includes('not available') || text.includes('unavailable')) {
+    if (
+      text.includes('out') ||
+      text.includes('not available') ||
+      text.includes('unavailable') ||
+      text.includes('fara stoc') ||
+      text.includes('epuizat') ||
+      text.includes('la comanda') ||
+      text.includes('preorder')
+    ) {
       return 0;
     }
 
-    if (text.includes('limited') || text.includes('low')) {
+    if (text.includes('limited') || text.includes('low') || text.includes('stoc limitat')) {
       return 5;
     }
 
-    if (text.includes('available') || text.includes('in stock')) {
+    if (text.includes('available') || text.includes('in stock') || text.includes('in stoc')) {
       return 40;
     }
 
