@@ -3,6 +3,7 @@ export { Supplier, SupplierEntity, SupplierCode, KNOWN_SUPPLIERS, type SupplierC
 export {
   SupplierProduct,
   SupplierProductEntity,
+  type SupplierProductSpecification,
   type PriceHistoryEntry,
 } from './entities/SupplierProduct';
 export { SkuMapping, SkuMappingEntity } from './entities/SkuMapping';

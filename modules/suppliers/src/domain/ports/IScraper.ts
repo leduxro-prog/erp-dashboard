@@ -6,6 +6,13 @@ export interface ScrapedProduct {
   stockQuantity: number;
   category?: string;
   imageUrl?: string;
+  images?: string[];
+  manufacturer?: string;
+  brand?: string;
+  ean?: string;
+  attributes?: Record<string, string | number | boolean>;
+  specifications?: Record<string, unknown>;
+  sourceUpdatedAt?: Date | string;
 }
 
 export interface IScraper {

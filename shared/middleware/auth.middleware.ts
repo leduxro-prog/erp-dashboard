@@ -50,8 +50,11 @@ function extractAccessToken(req: Request): string | null {
 
   // 2. Fall back to Authorization header
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7);
+  if (authHeader) {
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (bearerMatch?.[1]) {
+      return bearerMatch[1].trim();
+    }
   }
 
   return null;

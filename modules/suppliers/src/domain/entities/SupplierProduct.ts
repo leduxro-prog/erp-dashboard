@@ -15,20 +15,68 @@ export interface SupplierProduct {
   minOrderQuantity?: number;
   leadTimeDays?: number;
   isActive?: boolean;
+  markupPercentage?: number | null;
+  sellingPrice?: number | null;
+  imageUrl?: string | null;
+  manufacturerId?: number | null;
   lastScraped: Date;
   priceHistory: PriceHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }
 
+export interface SupplierProductSpecification {
+  productId: number;
+  supplierId: number;
+  supplierSku: string;
+  brand?: string;
+  manufacturer?: string;
+  countryOfOrigin?: string;
+  eanCode?: string;
+  wattage?: number;
+  lumens?: number;
+  colorTemperature?: number;
+  cri?: number;
+  beamAngle?: number;
+  ipRating?: string;
+  efficacy?: number;
+  dimmable?: boolean;
+  dimmingType?: string;
+  voltageInput?: string;
+  voltageOutput?: string;
+  powerFactor?: number;
+  frequency?: string;
+  mountingType?: string;
+  material?: string;
+  color?: string;
+  lifespanHours?: number;
+  warrantyYears?: number;
+  certificationCe?: boolean;
+  certificationRohs?: boolean;
+  certificationUl?: boolean;
+  certificationEtl?: boolean;
+  certificationEnec?: boolean;
+  energyClass?: string;
+  datasheetUrl?: string;
+  iesFileUrl?: string;
+  installationGuideUrl?: string;
+  customSpecs?: Record<string, unknown>;
+  sourceUpdatedAt: Date;
+}
+
 export class SupplierProductEntity implements SupplierProduct {
   id!: number;
   supplierId!: number;
+  productId?: number;
   supplierSku!: string;
   name!: string;
   price!: number;
   currency!: string;
   stockQuantity!: number;
+  markupPercentage?: number | null;
+  sellingPrice?: number | null;
+  imageUrl?: string | null;
+  manufacturerId?: number | null;
   lastScraped!: Date;
   priceHistory!: PriceHistoryEntry[];
   createdAt!: Date;

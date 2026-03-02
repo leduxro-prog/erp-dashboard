@@ -4,13 +4,40 @@
  */
 
 import { Supplier } from '../../domain/entities/Supplier';
-import { SupplierProduct } from '../../domain/entities/SupplierProduct';
+import {
+  SupplierProduct,
+  SupplierProductSpecification,
+} from '../../domain/entities/SupplierProduct';
 import { SkuMapping } from '../../domain/entities/SkuMapping';
 import { SupplierOrder } from '../../domain/entities/SupplierOrder';
 
 export interface BulkUpsertResult {
   updated: number;
   created: number;
+}
+
+export interface CategoryMarkup {
+  id: number;
+  supplierId: number;
+  categoryId: number;
+  categoryName: string;
+  markupPercentage: number;
+  isActive: boolean;
+}
+
+export interface ManufacturerMarkup {
+  id: number;
+  supplierId: number;
+  manufacturerId: number;
+  manufacturerName: string;
+  markupPercentage: number;
+  isActive: boolean;
+}
+
+export interface SupplierSyncReport {
+  syncStatus?: string;
+  errorMessage?: string | null;
+  createdAt?: Date | string;
 }
 
 /**
@@ -57,4 +84,11 @@ export interface ISupplierRepository {
   // Sync tracking
   updateLastSync(supplierId: number, syncTime: Date): Promise<void>;
   getLastSync(supplierId: number): Promise<Date | null>;
+
+  // Specifications and sync reporting
+  upsertProductSpecifications(
+    specs: SupplierProductSpecification[],
+    options?: { conflictPolicy?: string; source?: string },
+  ): Promise<number>;
+  getSyncReports(supplierId: number, limit?: number): Promise<SupplierSyncReport[]>;
 }

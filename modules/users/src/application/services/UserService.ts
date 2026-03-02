@@ -265,4 +265,36 @@ export class UserService {
 
     return true;
   }
+
+  async findOrCreateGoogleUser(data: {
+    googleId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string;
+  }): Promise<UserEntity & { avatar_url?: string; auth_provider?: string }> {
+    const existing = await this.findByEmail(data.email);
+    if (existing) {
+      return {
+        ...(existing as any),
+        avatar_url: (existing as any).avatar_url || data.avatarUrl,
+        auth_provider: (existing as any).auth_provider || 'google',
+      };
+    }
+
+    const generatedPassword = `${data.googleId.slice(0, 12)}A1x!`;
+    const created = await this.create({
+      email: data.email,
+      password: generatedPassword,
+      first_name: data.firstName,
+      last_name: data.lastName || '',
+      role: UserRole.GUEST,
+    });
+
+    return {
+      ...(created as any),
+      avatar_url: data.avatarUrl,
+      auth_provider: 'google',
+    };
+  }
 }

@@ -25,9 +25,6 @@ const PRODUCT_CATEGORIES = [
 ];
 
 export class AcaLightingScraper extends BaseScraper {
-  private loginPage: Page | null = null;
-  private isLoggedIn = false;
-
   constructor(browser?: any) {
     super('aca-lighting', browser);
   }
@@ -266,10 +263,8 @@ export class AcaLightingScraper extends BaseScraper {
         throw new Error('Login failed - unable to verify successful authentication');
       }
 
-      this.isLoggedIn = true;
       logger.info('Successfully logged in to Aca Lighting B2B portal');
     } catch (error) {
-      this.isLoggedIn = false;
       throw new Error(
         `Aca Lighting login failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
@@ -338,7 +333,7 @@ export class AcaLightingScraper extends BaseScraper {
           '[class*="product"]',
         ];
 
-        let productElements = [];
+        let productElements: any[] = [];
         for (const selector of productSelectors) {
           try {
             const elements = await page.$$(selector);
@@ -420,7 +415,7 @@ export class AcaLightingScraper extends BaseScraper {
       try {
         const skuElement = await element.$('.sku, .product-sku, [data-sku]');
         if (skuElement) {
-          sku = await element.evaluate((el) => el.textContent?.trim(), skuElement);
+            sku = await element.evaluate((el: any) => el.textContent?.trim(), skuElement);
         }
       } catch (e) {
         // Ignore
@@ -443,7 +438,7 @@ export class AcaLightingScraper extends BaseScraper {
         try {
           const nameElement = await element.$(selector);
           if (nameElement) {
-            name = await element.evaluate((el) => el.textContent?.trim(), nameElement);
+            name = await element.evaluate((el: any) => el.textContent?.trim(), nameElement);
             if (name) break;
           }
         } catch (e) {
@@ -456,7 +451,10 @@ export class AcaLightingScraper extends BaseScraper {
         try {
           const linkElement = await element.$('a');
           if (linkElement) {
-            name = await element.evaluate((el) => el.getAttribute('title') || el.textContent?.trim(), linkElement);
+            name = await element.evaluate(
+              (el: any) => el.getAttribute('title') || el.textContent?.trim(),
+              linkElement,
+            );
           }
         } catch (e) {
           // Ignore
@@ -486,7 +484,7 @@ export class AcaLightingScraper extends BaseScraper {
         try {
           const priceElement = await element.$(selector);
           if (priceElement) {
-            const priceText = await element.evaluate((el) => el.textContent?.trim(), priceElement);
+            const priceText = await element.evaluate((el: any) => el.textContent?.trim(), priceElement);
             price = this.parsePrice(priceText || '');
             if (price > 0) break;
           }
@@ -508,7 +506,10 @@ export class AcaLightingScraper extends BaseScraper {
         try {
           const stockElement = await element.$(selector);
           if (stockElement) {
-            const stockText = await element.evaluate((el) => el.textContent?.toLowerCase(), stockElement);
+            const stockText = await element.evaluate(
+              (el: any) => el.textContent?.toLowerCase(),
+              stockElement,
+            );
             if (stockText?.includes('in stock') || stockText?.includes('disponibil')) {
               stock = 999; // High stock if "in stock"
             } else if (stockText?.includes('out of stock') || stockText?.includes('stoc epuizat')) {
