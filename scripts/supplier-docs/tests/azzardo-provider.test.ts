@@ -11,6 +11,8 @@ const html = `
     <a href="/files/AZ1200-3d-model.glb">AZ1200 3D model</a>
     <a href="/files/AZ1200-ce-certificate.pdf">AZ1200 CE certificate</a>
     <a href="/files/AZ1200-photometric.ies">AZ1200 photometric</a>
+    <a href="https://www.dropbox.com/scl/fo/a9nhphetnfq7lsoggtgge/AARnd4b2geUlEaLW2Wao4Qg?rlkey=ey5rfdr9aafi4huh549p6q7zi&dl=0">3D models</a>
+    <a href="https://www.dropbox.com/scl/fo/bm9trtno3h88kw8u4thh7/APrul-BgfD0bfuELKfIXugg?rlkey=qxht3dzdj9n8ci2o4ca9s63qd&dl=0">Product photo database</a>
     <a href="/files/brochure.pdf">Catalog brochure</a>
     <a href="/files/AZ0999-assembly.PDF">AZ0999 installation guide</a>
   </div>
@@ -18,7 +20,7 @@ const html = `
 
 const docs = parseAzzardoDocs(html);
 
-assert.equal(docs.length, 8);
+assert.equal(docs.length, 10);
 
 assert.deepEqual(docs[0], {
   supplier: 'azzardo',
@@ -77,6 +79,24 @@ assert.deepEqual(docs[6], {
 });
 
 assert.deepEqual(docs[7], {
+  supplier: 'azzardo',
+  supplierSku: 'AZZARDO_COLLECTION',
+  docType: 'model_3d',
+  sourceUrl:
+    'https://www.dropbox.com/scl/fo/a9nhphetnfq7lsoggtgge/AARnd4b2geUlEaLW2Wao4Qg?rlkey=ey5rfdr9aafi4huh549p6q7zi&dl=0',
+  fileName: '3d-models.zip',
+});
+
+assert.deepEqual(docs[8], {
+  supplier: 'azzardo',
+  supplierSku: 'AZZARDO_COLLECTION',
+  docType: 'product_image',
+  sourceUrl:
+    'https://www.dropbox.com/scl/fo/bm9trtno3h88kw8u4thh7/APrul-BgfD0bfuELKfIXugg?rlkey=qxht3dzdj9n8ci2o4ca9s63qd&dl=0',
+  fileName: 'product-photo-database.zip',
+});
+
+assert.deepEqual(docs[9], {
   supplier: 'azzardo',
   supplierSku: 'AZ0999',
   docType: 'installation_guide',

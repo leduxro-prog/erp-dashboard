@@ -13,9 +13,38 @@ async function run(): Promise<void> {
   testParseArgsSupportsAllAndResume();
   testParseArgsSupportsSingleSupplierAndLimit();
   await testOrchestratorDryRunCounters();
+  await testOrchestratorSkipsTranslationForMediaTypes();
   await testOrchestratorContinuesAfterProviderFailure();
   await testOrchestratorContinuesAfterSupplierIdLookupFailure();
   await testOrchestratorPrintsSummaryAndCleansUpOnFatalError();
+}
+
+async function testOrchestratorSkipsTranslationForMediaTypes(): Promise<void> {
+  const summary = await runOrchestrator(
+    {
+      suppliers: ['azzardo'],
+      dryRun: false,
+      limit: null,
+      resume: false,
+    },
+    createDeps({
+      docsBySupplier: {
+        azzardo: [
+          {
+            supplier: 'azzardo',
+            supplierSku: 'AZZARDO_COLLECTION',
+            docType: 'model_3d',
+            sourceUrl: 'https://docs.local/model.glb',
+            fileName: 'model.glb',
+          },
+        ],
+      },
+    }),
+  );
+
+  assert.equal(summary.downloaded, 1);
+  assert.equal(summary.translated, 0);
+  assert.equal(summary.attached, 1);
 }
 
 function testParseArgsSupportsCommaSupplierList(): void {

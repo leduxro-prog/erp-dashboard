@@ -30,16 +30,18 @@ export function parseAzzardoDocs(html: string): DiscoveredDoc[] {
       continue;
     }
 
-    const fileName = getFileNameFromUrl(sourceUrl);
+    const fileName = getFileNameFromUrl(sourceUrl, link.text);
     const hintText = `${fileName} ${link.text}`.trim();
     const supplierSku = extractSupplierSku(hintText);
     const docType = classifyDocType(hintText);
 
-    if (!supplierSku || !docType) {
+    if (!docType) {
       continue;
     }
 
-    const dedupeKey = `${sourceUrl}|${supplierSku}|${docType}`;
+    const resolvedSku = supplierSku ?? 'AZZARDO_COLLECTION';
+
+    const dedupeKey = `${sourceUrl}|${resolvedSku}|${docType}`;
     if (seen.has(dedupeKey)) {
       continue;
     }
@@ -47,7 +49,7 @@ export function parseAzzardoDocs(html: string): DiscoveredDoc[] {
     seen.add(dedupeKey);
     docs.push({
       supplier: 'azzardo',
-      supplierSku,
+      supplierSku: resolvedSku,
       docType,
       sourceUrl,
       fileName,
@@ -108,6 +110,10 @@ function toAbsoluteUrl(rawHref: string): string | null {
 function isDocumentUrl(sourceUrl: string): boolean {
   try {
     const parsed = new URL(sourceUrl);
+    if (parsed.hostname.includes('dropbox.com') && parsed.pathname.includes('/scl/fo/')) {
+      return true;
+    }
+
     return /\.(pdf|doc|docx|dwg|dxf|jpg|jpeg|png|webp|svg|obj|fbx|3ds|stl|glb|gltf|ies|ldt|zip)$/i.test(
       parsed.pathname,
     );
@@ -116,11 +122,25 @@ function isDocumentUrl(sourceUrl: string): boolean {
   }
 }
 
-function getFileNameFromUrl(sourceUrl: string): string {
+function getFileNameFromUrl(sourceUrl: string, linkText: string): string {
   try {
     const parsed = new URL(sourceUrl);
-    const baseName = parsed.pathname.split('/').filter(Boolean).at(-1) ?? 'document.pdf';
-    return decodeURIComponent(baseName);
+    const baseName = parsed.pathname.split('/').filter(Boolean).at(-1);
+
+    if (baseName && /\.[a-z0-9]+$/i.test(baseName)) {
+      return decodeURIComponent(baseName);
+    }
+
+    if (parsed.hostname.includes('dropbox.com') && parsed.pathname.includes('/scl/fo/')) {
+      const normalized = linkText
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const fallback = normalized || 'azzardo-collection';
+      return `${fallback}.zip`;
+    }
+
+    return 'document.pdf';
   } catch {
     return 'document.pdf';
   }

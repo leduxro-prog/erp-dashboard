@@ -11,7 +11,7 @@ import { fetchAzzardoDocs } from './supplier-docs/providers/azzardo-provider';
 import { buildDocPaths } from './supplier-docs/storage';
 import { AutoTranslatorAdapter } from './supplier-docs/translator';
 import type { AttachableSupplierDoc } from './supplier-docs/db-attach';
-import type { DiscoveredDoc, SupplierCode } from './supplier-docs/types';
+import type { DiscoveredDoc, DocType, SupplierCode } from './supplier-docs/types';
 
 const ALL_SUPPLIERS: SupplierCode[] = ['azzardo', 'aca'];
 
@@ -199,7 +199,9 @@ export async function runOrchestrator(
           summary.downloaded += 1;
 
           const checksum = await deps.computeChecksum(downloaded.destinationPath);
-          const translatedPath = await deps.translateDoc(downloaded.destinationPath);
+          const translatedPath = shouldTranslateDoc(doc.docType)
+            ? await deps.translateDoc(downloaded.destinationPath)
+            : null;
 
           if (translatedPath) {
             summary.translated += 1;
@@ -316,6 +318,10 @@ function parseLimitArg(raw: string): number {
   return parsed;
 }
 
+function shouldTranslateDoc(docType: DocType): boolean {
+  return docType === 'datasheet' || docType === 'installation_guide';
+}
+
 function compareDocsDeterministically(left: SupplierDocCandidate, right: SupplierDocCandidate): number {
   return `${left.supplier}|${left.supplierSku}|${left.docType}|${left.sourceUrl}|${left.fileName}`.localeCompare(
     `${right.supplier}|${right.supplierSku}|${right.docType}|${right.sourceUrl}|${right.fileName}`,
@@ -338,6 +344,7 @@ function createDefaultDependencies(args: CliArgs): OrchestratorDependencies {
 
   const translator = new AutoTranslatorAdapter();
   const supplierIdCache = new Map<SupplierCode, number | null>();
+  const maxDownloadBytes = Number(process.env.SUPPLIER_DOC_MAX_BYTES || 800 * 1024 * 1024);
 
   return {
     discoverDocsForSupplier: async ({ supplier, limit }) => {
@@ -364,7 +371,8 @@ function createDefaultDependencies(args: CliArgs): OrchestratorDependencies {
 
       return docs;
     },
-    downloadDoc: async (sourceUrl, destinationPath) => downloadToFile(sourceUrl, destinationPath),
+    downloadDoc: async (sourceUrl, destinationPath) =>
+      downloadToFile(sourceUrl, destinationPath, { maxBytes: maxDownloadBytes }),
     computeChecksum: async (filePath) => computeFileSha256(filePath),
     translateDoc: async (filePath) => translator.translate(filePath, 'en', 'ro'),
     toPublicUrl: (filePath) => toPublicUploadUrl(filePath),
