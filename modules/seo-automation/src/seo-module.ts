@@ -43,6 +43,12 @@ import {
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
 import { createSeoModuleCompositionRoot, SeoModuleCompositionRoot } from './infrastructure/composition-root';
+import {
+  SEO_QUEUE_AUTORUN_CONFIG_KEY,
+  SEO_QUEUE_AUTORUN_FEATURE_FLAG,
+  SEO_QUEUE_CATCHUP_BATCH_SIZE_CONFIG_KEY,
+  SEO_QUEUE_CATCHUP_INTERVAL_MS_CONFIG_KEY,
+} from './infrastructure/jobs';
 import { IProductPort } from './application/ports/IProductPort';
 import { ICategoryPort } from './application/ports/ICategoryPort';
 import { IWooCommercePort } from './application/ports/IWooCommercePort';
@@ -119,6 +125,11 @@ export default class SeoAutomationModule implements ICypherModule {
   private compositionRoot!: SeoModuleCompositionRoot;
 
   /**
+   * Queue autorun guard state
+   */
+  private isQueueAutorunEnabled = false;
+
+  /**
    * Whether module is started
    */
   private isStarted = false;
@@ -163,13 +174,21 @@ export default class SeoAutomationModule implements ICypherModule {
 
       // Create composition root
       logger.debug('Creating composition root');
+      this.isQueueAutorunEnabled = this.resolveQueueAutorunEnabled(context);
+
       this.compositionRoot = await createSeoModuleCompositionRoot(
         context.dataSource,
         context.eventBus,
         context.eventBus.client,
         productPort,
         categoryPort,
-        woocommercePort
+        woocommercePort,
+        {
+          enabled: this.isQueueAutorunEnabled,
+          intervalMs: this.resolvePositiveInt(context.config[SEO_QUEUE_CATCHUP_INTERVAL_MS_CONFIG_KEY]),
+          batchSize: this.resolvePositiveInt(context.config[SEO_QUEUE_CATCHUP_BATCH_SIZE_CONFIG_KEY]),
+          defaultLocale: context.config.SEO_QUEUE_DEFAULT_LOCALE || 'ro',
+        },
       );
 
       // Get router from composition root
@@ -200,33 +219,37 @@ export default class SeoAutomationModule implements ICypherModule {
       // Subscribe to product events
       logger.debug('Subscribing to product events');
 
-      await this.context.eventBus.subscribe('product.created', (data) => {
+      await this.context.eventBus.subscribe('product.created', (data: unknown) => {
         this.onProductCreated(data).catch((err) => {
           logger.error('Error handling product.created event', { error: err });
           this.metrics.errorCount++;
         });
       });
 
-      await this.context.eventBus.subscribe('product.updated', (data) => {
+      await this.context.eventBus.subscribe('product.updated', (data: unknown) => {
         this.onProductUpdated(data).catch((err) => {
           logger.error('Error handling product.updated event', { error: err });
           this.metrics.errorCount++;
         });
       });
 
-      await this.context.eventBus.subscribe('category.updated', (data) => {
+      await this.context.eventBus.subscribe('category.updated', (data: unknown) => {
         this.onCategoryUpdated(data).catch((err) => {
           logger.error('Error handling category.updated event', { error: err });
           this.metrics.errorCount++;
         });
       });
 
-      await this.context.eventBus.subscribe('woocommerce.product_synced', (data) => {
+      await this.context.eventBus.subscribe('woocommerce.product_synced', (data: unknown) => {
         this.onWooCommerceSynced(data).catch((err) => {
           logger.error('Error handling woocommerce.product_synced event', { error: err });
           this.metrics.errorCount++;
         });
       });
+
+      if (this.isQueueAutorunEnabled) {
+        await this.compositionRoot.seoQueueAutoTriggerJob.start();
+      }
 
       this.isStarted = true;
       logger.info('SEO Automation module started successfully');
@@ -250,6 +273,8 @@ export default class SeoAutomationModule implements ICypherModule {
 
     try {
       this.isStarted = false;
+
+      await this.compositionRoot.seoQueueAutoTriggerJob.stop();
 
       // In production, would unsubscribe from events here
       logger.debug('Unsubscribing from events');
@@ -352,6 +377,12 @@ export default class SeoAutomationModule implements ICypherModule {
     logger.debug('Product created event received', { data });
     this.metrics.eventCount.received++;
 
+    if (!this.isQueueAutorunEnabled) {
+      return;
+    }
+
+    await this.compositionRoot.seoQueueAutoTriggerJob.handleProductEvent(data);
+
     // TODO: Generate initial SEO metadata
     // TODO: Publish seo.metadata_generated event
   }
@@ -366,6 +397,12 @@ export default class SeoAutomationModule implements ICypherModule {
   private async onProductUpdated(data: unknown): Promise<void> {
     logger.debug('Product updated event received', { data });
     this.metrics.eventCount.received++;
+
+    if (!this.isQueueAutorunEnabled) {
+      return;
+    }
+
+    await this.compositionRoot.seoQueueAutoTriggerJob.handleProductEvent(data);
 
     // TODO: Check if product details changed
     // TODO: Regenerate SEO metadata if needed
@@ -400,6 +437,34 @@ export default class SeoAutomationModule implements ICypherModule {
 
     // TODO: Sync SEO metadata to WooCommerce
     // TODO: Handle sync errors and retry logic
+  }
+
+  private resolveQueueAutorunEnabled(context: IModuleContext): boolean {
+    const featureFlagEnabled = context.featureFlags.isEnabled(SEO_QUEUE_AUTORUN_FEATURE_FLAG);
+    const configEnabled = this.parseBoolean(context.config[SEO_QUEUE_AUTORUN_CONFIG_KEY]);
+    return featureFlagEnabled || configEnabled;
+  }
+
+  private resolvePositiveInt(raw: string | undefined): number | undefined {
+    if (!raw) {
+      return undefined;
+    }
+
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return undefined;
+    }
+
+    return parsed;
+  }
+
+  private parseBoolean(raw: string | undefined): boolean {
+    if (!raw) {
+      return false;
+    }
+
+    const normalized = raw.trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
   }
 }
 

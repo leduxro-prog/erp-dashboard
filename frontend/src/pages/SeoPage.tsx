@@ -13,6 +13,7 @@ import {
   SEOData, ProductSEOStatus, SEOAudit,
   StructuredDataTemplate
 } from '../services/seo.service';
+import { SeoQueueChangeset, SeoQueueStatus } from '../types/seo-queue';
 
 import { DataTable } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
@@ -354,13 +355,16 @@ const AuditView: React.FC = () => {
 
             {/* Score by Category */}
             <div className="grid grid-cols-4 gap-4 mb-6">
-              {Object.entries(selectedAudit.categories).map(([key, value]) => (
+              {Object.entries(selectedAudit.categories).map(([key, value]) => {
+                const category = value as { score: number; issues: number };
+                return (
                 <div key={key} className="p-3 bg-gray-50 rounded">
                   <p className="text-xs text-gray-500 capitalize">{key.replace('_', ' ')}</p>
-                  <p className="text-lg font-bold">{value.score}</p>
-                  <p className="text-xs text-red-500">{value.issues} issues</p>
+                  <p className="text-lg font-bold">{category.score}</p>
+                  <p className="text-xs text-red-500">{category.issues} issues</p>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Issues List */}
@@ -732,6 +736,332 @@ const ProductsView: React.FC = () => {
                     onAction={() => generateMutation.mutate(selectedProduct.productId)}
                   />
                 )}
+              </div>
+            )}
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+const QueueView: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [status, setStatus] = useState<SeoQueueStatus | 'all'>('pending');
+  const [locale, setLocale] = useState('');
+  const [productId, setProductId] = useState('');
+  const [selectedChangesetId, setSelectedChangesetId] = useState<number | null>(null);
+  const [fieldDecisions, setFieldDecisions] = useState<Record<string, 'approved' | 'rejected'>>({});
+
+  const filters = {
+    productId: productId ? Number(productId) : undefined,
+    locale: locale.trim() || undefined,
+    status: status === 'all' ? undefined : status,
+  };
+
+  const { data: queueItems = [], isLoading } = useQuery({
+    queryKey: ['seo', 'queue', filters],
+    queryFn: () => seoService.getQueueChangesets(filters),
+  });
+
+  const { data: selectedChangeset, isLoading: detailLoading } = useQuery({
+    queryKey: ['seo', 'queue', selectedChangesetId],
+    queryFn: () => seoService.getQueueChangeset(selectedChangesetId as number),
+    enabled: selectedChangesetId !== null,
+  });
+
+  const refreshQueue = () => {
+    queryClient.invalidateQueries({ queryKey: ['seo', 'queue'] });
+  };
+
+  const buildDecisionScope = () => ({
+    productId: filters.productId,
+    locale: filters.locale,
+    status: filters.status,
+    applyAll: !filters.productId && !filters.locale,
+  });
+
+  const buildApplyScope = () => ({
+    productId: filters.productId,
+    locale: filters.locale,
+    applyAll: !filters.productId && !filters.locale,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: () => seoService.approveQueue(buildDecisionScope()),
+    onSuccess: (result) => {
+      toast.success(`Approved ${result.updatedCount} queue item(s)`);
+      refreshQueue();
+    },
+    onError: () => toast.error('Failed to approve queue items'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: () => seoService.rejectQueue(buildDecisionScope()),
+    onSuccess: (result) => {
+      toast.success(`Rejected ${result.updatedCount} queue item(s)`);
+      refreshQueue();
+    },
+    onError: () => toast.error('Failed to reject queue items'),
+  });
+
+  const applyMutation = useMutation({
+    mutationFn: () => seoService.applyQueue(buildApplyScope()),
+    onSuccess: (result) => {
+      toast.success(`Applied ${result.appliedCount} approved change(s)`);
+      refreshQueue();
+      setSelectedChangesetId(null);
+    },
+    onError: () => toast.error('Failed to apply approved queue items'),
+  });
+
+  const runFieldDecision = async (decision: 'approved' | 'rejected', fieldName: string) => {
+    if (!selectedChangeset) return;
+
+    const key = `${selectedChangeset.id}:${fieldName}`;
+    setFieldDecisions((prev) => ({ ...prev, [key]: decision }));
+
+    const payload = {
+      productId: selectedChangeset.productId,
+      locale: selectedChangeset.locale,
+      status: 'pending' as SeoQueueStatus,
+    };
+
+    try {
+      if (decision === 'approved') {
+        await seoService.approveQueue(payload);
+      } else {
+        await seoService.rejectQueue(payload);
+      }
+
+      toast.success(`Queued ${decision} decision for pending changeset scope (${selectedChangeset.productId}/${selectedChangeset.locale})`);
+      refreshQueue();
+    } catch {
+      toast.error(`Failed to ${decision} pending changeset scope`);
+    }
+  };
+
+  const statusCounts = queueItems.reduce<Record<string, number>>((acc, row) => {
+    acc[row.status] = (acc[row.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const reasonCounts = queueItems.reduce<Record<string, number>>((acc, row) => {
+    row.items.forEach((item) => {
+      if (!item.reason) return;
+      acc[item.reason] = (acc[item.reason] || 0) + 1;
+    });
+    return acc;
+  }, {});
+
+  const columns = [
+    {
+      key: 'id',
+      label: 'Changeset',
+      render: (value: number) => <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">#{value}</code>,
+    },
+    { key: 'productId', label: 'Product ID' },
+    { key: 'locale', label: 'Locale' },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (value: SeoQueueStatus) => {
+        const statusMap = {
+          pending: 'warning' as const,
+          approved: 'success' as const,
+          rejected: 'error' as const,
+          superseded: 'info' as const,
+        };
+        return <Badge status={statusMap[value] || 'info'}>{value}</Badge>;
+      },
+    },
+    {
+      key: 'items',
+      label: 'Fields',
+      render: (value: SeoQueueChangeset['items']) => <span>{value.length}</span>,
+    },
+    {
+      key: 'items',
+      label: 'Reasons',
+      render: (value: SeoQueueChangeset['items']) => {
+        const counts = value.reduce<Record<string, number>>((acc, item) => {
+          if (!item.reason) return acc;
+          acc[item.reason] = (acc[item.reason] || 0) + 1;
+          return acc;
+        }, {});
+
+        const compact = Object.entries(counts)
+          .slice(0, 2)
+          .map(([reason, count]) => `${reason} (${count})`)
+          .join(', ');
+
+        return <span className="text-sm text-gray-600">{compact || 'No reasons'}</span>;
+      },
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <p className="text-sm text-gray-500">Pending</p>
+          <p className="text-2xl font-bold text-amber-600">{statusCounts.pending || 0}</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <p className="text-sm text-gray-500">Approved</p>
+          <p className="text-2xl font-bold text-green-600">{statusCounts.approved || 0}</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <p className="text-sm text-gray-500">Rejected</p>
+          <p className="text-2xl font-bold text-red-600">{statusCounts.rejected || 0}</p>
+        </div>
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <p className="text-sm text-gray-500">Top Reason</p>
+          <p className="text-sm font-semibold text-gray-900 truncate">
+            {Object.entries(reasonCounts)
+              .sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0] || 'No reason'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 justify-between">
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="number"
+            min={1}
+            value={productId}
+            onChange={(event) => setProductId(event.target.value)}
+            placeholder="Product ID"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <input
+            type="text"
+            value={locale}
+            onChange={(event) => setLocale(event.target.value)}
+            placeholder="Locale (ro/en)"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <select
+            value={status}
+            onChange={(event) => setStatus(event.target.value as SeoQueueStatus | 'all')}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="superseded">Superseded</option>
+          </select>
+          <button
+            onClick={refreshQueue}
+            className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+          >
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => approveMutation.mutate()}
+            disabled={approveMutation.isPending}
+            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+          >
+            Approve All Filtered
+          </button>
+          <button
+            onClick={() => rejectMutation.mutate()}
+            disabled={rejectMutation.isPending}
+            className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            Reject All Filtered
+          </button>
+          <button
+            onClick={() => applyMutation.mutate()}
+            disabled={applyMutation.isPending}
+            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            Apply Approved
+          </button>
+        </div>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={queueItems}
+        isLoading={isLoading}
+        onRowClick={(row) => setSelectedChangesetId((row as SeoQueueChangeset).id)}
+      />
+
+      {selectedChangesetId !== null && (
+        <Modal isOpen={selectedChangesetId !== null} onClose={() => setSelectedChangesetId(null)} size="xl">
+          <div className="p-6">
+            {detailLoading || !selectedChangeset ? (
+              <p className="text-gray-500">Loading queue details...</p>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold">Changeset #{selectedChangeset.id}</h3>
+                    <p className="text-sm text-gray-500">
+                      Product {selectedChangeset.productId} • {selectedChangeset.locale}
+                    </p>
+                  </div>
+                  <Badge status={selectedChangeset.status === 'approved' ? 'success' : selectedChangeset.status === 'rejected' ? 'error' : 'warning'}>
+                    {selectedChangeset.status}
+                  </Badge>
+                </div>
+
+                <div className="space-y-3 max-h-[420px] overflow-y-auto">
+                  {selectedChangeset.items.map((item) => {
+                    const key = `${selectedChangeset.id}:${item.fieldName}`;
+                    const decision = fieldDecisions[key];
+
+                    return (
+                      <div key={key} className="border border-gray-200 rounded-lg p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="font-medium text-gray-900">{item.fieldName}</p>
+                            <p className="text-xs text-gray-500">Confidence: {item.aiConfidence ?? 'n/a'}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => runFieldDecision('approved', item.fieldName)}
+                              className="px-3 py-1.5 text-sm bg-green-100 text-green-800 rounded hover:bg-green-200"
+                            >
+                              Approve pending scope
+                            </button>
+                            <button
+                              onClick={() => runFieldDecision('rejected', item.fieldName)}
+                              className="px-3 py-1.5 text-sm bg-red-100 text-red-800 rounded hover:bg-red-200"
+                            >
+                              Reject pending scope
+                            </button>
+                          </div>
+                        </div>
+                        {item.reason && (
+                          <p className="text-sm text-gray-600">
+                            <span className="font-medium">Reason:</span> {item.reason}
+                          </p>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div className="bg-gray-50 rounded p-2">
+                            <p className="text-xs text-gray-500">Current</p>
+                            <p className="text-gray-800 break-words">{item.currentValue || '—'}</p>
+                          </div>
+                          <div className="bg-blue-50 rounded p-2">
+                            <p className="text-xs text-blue-600">Proposed</p>
+                            <p className="text-blue-900 break-words">{item.proposedValue || '—'}</p>
+                          </div>
+                        </div>
+                        {decision && (
+                          <p className={`text-xs font-medium ${decision === 'approved' ? 'text-green-700' : 'text-red-700'}`}>
+                            Latest field decision: {decision}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -1118,6 +1448,7 @@ const SeoPage: React.FC = () => {
 
   const tabs = [
     { id: 'audit', label: 'SEO Audit', icon: <Zap size={18} /> },
+    { id: 'queue', label: 'Queue', icon: <Clock size={18} /> },
     { id: 'products', label: 'Products', icon: <List size={18} /> },
     { id: 'sitemap', label: 'Sitemap', icon: <Globe size={18} /> },
     { id: 'structured', label: 'Structured Data', icon: <FileText size={18} /> },
@@ -1154,6 +1485,7 @@ const SeoPage: React.FC = () => {
       {/* Tab Content */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         {activeTab === 'audit' && <AuditView />}
+        {activeTab === 'queue' && <QueueView />}
         {activeTab === 'products' && <ProductsView />}
         {activeTab === 'sitemap' && <SitemapView />}
         {activeTab === 'structured' && <StructuredDataView />}

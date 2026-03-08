@@ -23,6 +23,9 @@ import { StructuredDataGenerator } from '../domain/services/StructuredDataGenera
 // Use cases
 import { GenerateProductSeo } from '../application/use-cases/GenerateProductSeo';
 import { AuditProductSeo } from '../application/use-cases/AuditProductSeo';
+import { EnqueueSeoDrafts } from '../application/use-cases/EnqueueSeoDrafts';
+import { ApproveSeoDraftItems } from '../application/use-cases/ApproveSeoDraftItems';
+import { ApplyApprovedSeoDrafts } from '../application/use-cases/ApplyApprovedSeoDrafts';
 
 // Ports
 import { IProductPort } from '../application/ports/IProductPort';
@@ -40,6 +43,8 @@ import { TypeOrmSeoMetadataRepository } from './repositories/TypeOrmSeoMetadataR
 import { TypeOrmSitemapRepository } from './repositories/TypeOrmSitemapRepository';
 import { TypeOrmStructuredDataRepository } from './repositories/TypeOrmStructuredDataRepository';
 import { TypeOrmAuditRepository } from './repositories/TypeOrmAuditRepository';
+import { TypeOrmSeoDraftQueueRepository } from './repositories/TypeOrmSeoDraftQueueRepository';
+import { SeoQueueAutoTriggerJob, SeoQueueAutoTriggerJobOptions } from './jobs';
 
 // Controller
 import { SeoController } from '../api/controllers/SeoController';
@@ -59,6 +64,7 @@ export interface SeoModuleCompositionRoot {
   sitemapRepository: ISitemapRepository;
   structuredDataRepository: IStructuredDataRepository;
   auditRepository: IAuditRepository;
+  seoDraftQueueRepository: TypeOrmSeoDraftQueueRepository;
 
   // Domain services
   scoreCalculator: SeoScoreCalculator;
@@ -69,6 +75,10 @@ export interface SeoModuleCompositionRoot {
   // Use cases
   generateProductSeo: GenerateProductSeo;
   auditProductSeo: AuditProductSeo;
+  enqueueSeoDrafts: EnqueueSeoDrafts;
+  approveSeoDraftItems: ApproveSeoDraftItems;
+  applyApprovedSeoDrafts: ApplyApprovedSeoDrafts;
+  seoQueueAutoTriggerJob: SeoQueueAutoTriggerJob;
 
   // External ports
   productPort: IProductPort;
@@ -100,6 +110,7 @@ export async function createSeoModuleCompositionRoot(
   productPort: IProductPort,
   categoryPort: ICategoryPort,
   woocommercePort: IWooCommercePort,
+  queueAutoTriggerOptions?: Omit<SeoQueueAutoTriggerJobOptions, 'dataSource' | 'enqueueSeoDrafts'>,
 ): Promise<SeoModuleCompositionRoot> {
   const logger = createModuleLogger('seo-automation');
 
@@ -112,6 +123,7 @@ export async function createSeoModuleCompositionRoot(
     dataSource,
   );
   const auditRepository: IAuditRepository = new TypeOrmAuditRepository(dataSource);
+  const seoDraftQueueRepository = new TypeOrmSeoDraftQueueRepository(dataSource);
 
   // Instantiate domain services (stateless, pure functions)
   const scoreCalculator = new SeoScoreCalculator();
@@ -141,18 +153,35 @@ export async function createSeoModuleCompositionRoot(
     logger,
   );
 
+  const enqueueSeoDrafts = new EnqueueSeoDrafts(seoDraftQueueRepository);
+  const approveSeoDraftItems = new ApproveSeoDraftItems(seoDraftQueueRepository);
+  const applyApprovedSeoDrafts = new ApplyApprovedSeoDrafts(seoDraftQueueRepository);
+  const seoQueueAutoTriggerJob = new SeoQueueAutoTriggerJob({
+    dataSource,
+    enqueueSeoDrafts,
+    enabled: queueAutoTriggerOptions?.enabled ?? false,
+    intervalMs: queueAutoTriggerOptions?.intervalMs,
+    batchSize: queueAutoTriggerOptions?.batchSize,
+    defaultLocale: queueAutoTriggerOptions?.defaultLocale,
+  });
+
   // Build the composition root object (needed by controller + router)
   const compositionRoot: SeoModuleCompositionRoot = {
     metadataRepository,
     sitemapRepository,
     structuredDataRepository,
     auditRepository,
+    seoDraftQueueRepository,
     scoreCalculator,
     metaTagGenerator,
     slugGenerator,
     structuredDataGenerator,
     generateProductSeo,
     auditProductSeo,
+    enqueueSeoDrafts,
+    approveSeoDraftItems,
+    applyApprovedSeoDrafts,
+    seoQueueAutoTriggerJob,
     productPort,
     categoryPort,
     woocommercePort,

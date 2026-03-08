@@ -8,16 +8,15 @@ import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import {
   generateSeoMetadataSchema,
   auditSeoSchema,
-  getSeoMetadataSchema,
   updateSeoMetadataSchema,
   bulkGenerateSeoSchema,
   bulkAuditSeoSchema,
-  listSeoAuditsSchema,
-  getAuditDetailsSchema,
   generateSitemapSchema,
-  getSitemapStatusSchema,
-  getStructuredDataSchema,
   updateStructuredDataSchema,
+  queueRefreshSchema,
+  queueListSchema,
+  queueDecisionSchema,
+  queueApplySchema,
   validateRequest,
 } from '../validators/seo.validators';
 
@@ -97,6 +96,58 @@ export function createSeoRoutes(controller: SeoController): Router {
    */
   router.post('/bulk/audit', requireRole(['admin']), validateRequest(bulkAuditSeoSchema), (req: Request, res: Response, next: NextFunction) =>
     controller.bulkAuditSeo(req, res, next)
+  );
+
+  /**
+   * QUEUE MANAGEMENT ROUTES
+   */
+
+  /**
+   * POST /api/v1/seo/queue/refresh
+   * Auth: admin
+   */
+  router.post('/queue/refresh', requireRole(['admin']), validateRequest(queueRefreshSchema), (req: Request, res: Response, next: NextFunction) =>
+    controller.refreshSeoQueue(req, res, next)
+  );
+
+  /**
+   * GET /api/v1/seo/queue
+   * Auth: admin
+   */
+  router.get('/queue', requireRole(['admin']), validateRequest(queueListSchema), (req: Request, res: Response, next: NextFunction) =>
+    controller.listSeoQueue(req, res, next)
+  );
+
+  /**
+   * POST /api/v1/seo/queue/approve
+   * Auth: admin
+   */
+  router.post('/queue/approve', requireRole(['admin']), validateRequest(queueDecisionSchema), (req: Request, res: Response, next: NextFunction) =>
+    controller.approveSeoQueue(req, res, next)
+  );
+
+  /**
+   * POST /api/v1/seo/queue/reject
+   * Auth: admin
+   */
+  router.post('/queue/reject', requireRole(['admin']), validateRequest(queueDecisionSchema), (req: Request, res: Response, next: NextFunction) =>
+    controller.rejectSeoQueue(req, res, next)
+  );
+
+  /**
+   * POST /api/v1/seo/queue/apply
+   * Auth: admin
+   */
+  router.post('/queue/apply', requireRole(['admin']), validateRequest(queueApplySchema), (req: Request, res: Response, next: NextFunction) =>
+    controller.applySeoQueue(req, res, next)
+  );
+
+  /**
+   * GET /api/v1/seo/queue/:changesetId
+   * Auth: admin
+   */
+  router.get('/queue/:changesetId', requireRole(['admin']), (req: Request, res: Response, next: NextFunction) =>
+    controller.getSeoQueueChangeset(req, res, next)
   );
 
   /**

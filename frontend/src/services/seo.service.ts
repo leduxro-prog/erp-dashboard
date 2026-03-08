@@ -4,6 +4,15 @@
 
 import { apiClient } from './api';
 import { ApiResponse, PaginatedResponse } from '../types/common';
+import {
+  SeoQueueApplyInput,
+  SeoQueueApplyResult,
+  SeoQueueChangeset,
+  SeoQueueDecisionInput,
+  SeoQueueDecisionResult,
+  SeoQueueFilters,
+  SeoQueueStatus,
+} from '../types/seo-queue';
 
 // Helper to build query string
 const buildQueryString = (params: Record<string, any> | undefined): string => {
@@ -202,7 +211,68 @@ export interface RobotsTxtContent {
   updatedAt: string;
 }
 
+interface SeoQueueItemApi {
+  field_name: string;
+  current_value: string | null;
+  proposed_value: string | null;
+  ai_confidence: number | null;
+  reason: string | null;
+  is_selected: boolean;
+}
+
+interface SeoQueueChangesetApi {
+  id: number;
+  product_id: number;
+  locale: string;
+  fingerprint: string;
+  status: SeoQueueStatus;
+  is_active: boolean;
+  items: SeoQueueItemApi[];
+}
+
 class SEOService {
+  private mapQueueChangeset(raw: SeoQueueChangesetApi): SeoQueueChangeset {
+    return {
+      id: raw.id,
+      productId: raw.product_id,
+      locale: raw.locale,
+      fingerprint: raw.fingerprint,
+      status: raw.status,
+      isActive: raw.is_active,
+      items: (raw.items || []).map((item) => ({
+        fieldName: item.field_name,
+        currentValue: item.current_value,
+        proposedValue: item.proposed_value,
+        aiConfidence: item.ai_confidence,
+        reason: item.reason,
+        isSelected: item.is_selected,
+      })),
+    };
+  }
+
+  private buildQueueQueryParams(params?: SeoQueueFilters): Record<string, unknown> | undefined {
+    if (!params) {
+      return undefined;
+    }
+
+    return {
+      product_id: params.productId,
+      locale: params.locale,
+      status: params.status,
+      page: params.page,
+      limit: params.limit,
+    };
+  }
+
+  private buildQueueDecisionPayload(input?: SeoQueueDecisionInput | SeoQueueApplyInput): Record<string, unknown> {
+    return {
+      product_id: input?.productId,
+      locale: input?.locale,
+      status: (input as SeoQueueDecisionInput | undefined)?.status,
+      apply_all: input?.applyAll,
+    };
+  }
+
   // ============================================================
   // AUDIT METHODS
   // ============================================================
@@ -325,6 +395,60 @@ class SEOService {
       issueSummary: SEOIssueSummary[];
     }>>(
       '/seo/audits/summary',
+    );
+    return unwrapData(response);
+  }
+
+  // ============================================================
+  // SEO QUEUE METHODS
+  // ============================================================
+
+  /**
+   * List SEO queue changesets
+   */
+  async getQueueChangesets(params?: SeoQueueFilters): Promise<SeoQueueChangeset[]> {
+    const qs = buildQueryString(this.buildQueueQueryParams(params));
+    const response = await apiClient.get<ApiResponse<SeoQueueChangesetApi[]>>(`/seo/queue${qs}`);
+    return unwrapData(response).map((row) => this.mapQueueChangeset(row));
+  }
+
+  /**
+   * Get SEO queue changeset details
+   */
+  async getQueueChangeset(changesetId: number): Promise<SeoQueueChangeset> {
+    const response = await apiClient.get<ApiResponse<SeoQueueChangesetApi>>(`/seo/queue/${changesetId}`);
+    return this.mapQueueChangeset(unwrapData(response));
+  }
+
+  /**
+   * Approve SEO queue changesets in scope
+   */
+  async approveQueue(input: SeoQueueDecisionInput): Promise<SeoQueueDecisionResult> {
+    const response = await apiClient.post<ApiResponse<SeoQueueDecisionResult>>(
+      '/seo/queue/approve',
+      this.buildQueueDecisionPayload(input),
+    );
+    return unwrapData(response);
+  }
+
+  /**
+   * Reject SEO queue changesets in scope
+   */
+  async rejectQueue(input: SeoQueueDecisionInput): Promise<SeoQueueDecisionResult> {
+    const response = await apiClient.post<ApiResponse<SeoQueueDecisionResult>>(
+      '/seo/queue/reject',
+      this.buildQueueDecisionPayload(input),
+    );
+    return unwrapData(response);
+  }
+
+  /**
+   * Apply approved SEO queue changesets in scope
+   */
+  async applyQueue(input: SeoQueueApplyInput): Promise<SeoQueueApplyResult> {
+    const response = await apiClient.post<ApiResponse<SeoQueueApplyResult>>(
+      '/seo/queue/apply',
+      this.buildQueueDecisionPayload(input),
     );
     return unwrapData(response);
   }

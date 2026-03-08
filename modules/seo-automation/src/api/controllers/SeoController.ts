@@ -15,6 +15,50 @@ import { StructuredData, SchemaType } from '../../domain/entities/StructuredData
 export class SeoController {
   constructor(private readonly root: SeoModuleCompositionRoot) {}
 
+  private mapQueueChangeset(changeset: {
+    id: number;
+    productId: number;
+    locale: string;
+    fingerprint: string;
+    status: string;
+    isActive: boolean;
+    items: Array<{
+      fieldName: string;
+      currentValue?: string | null;
+      proposedValue?: string | null;
+      aiConfidence?: number | null;
+      reason?: string | null;
+      isSelected: boolean;
+    }>;
+  }): Record<string, unknown> {
+    return {
+      id: changeset.id,
+      product_id: changeset.productId,
+      locale: changeset.locale,
+      fingerprint: changeset.fingerprint,
+      status: changeset.status,
+      is_active: changeset.isActive,
+      items: changeset.items.map((item) => ({
+        field_name: item.fieldName,
+        current_value: item.currentValue ?? null,
+        proposed_value: item.proposedValue ?? null,
+        ai_confidence: item.aiConfidence ?? null,
+        reason: item.reason ?? null,
+        is_selected: item.isSelected,
+      })),
+    };
+  }
+
+  private getAuthenticatedUserId(req: Request): number | undefined {
+    const userId = (req as Request & { user?: { id?: string } }).user?.id;
+    if (!userId) {
+      return undefined;
+    }
+
+    const parsed = Number.parseInt(userId, 10);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }
+
   /**
    * Generate SEO metadata for a product
    * POST /api/v1/seo/products/:productId/generate
@@ -254,6 +298,182 @@ export class SeoController {
           result.limit,
         ),
       );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Refresh SEO queue changeset
+   * POST /api/v1/seo/queue/refresh
+   */
+  async refreshSeoQueue(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const body = (req as Request & { validatedBody?: Record<string, any> }).validatedBody || req.body;
+      const authenticatedUserId = this.getAuthenticatedUserId(req);
+
+      const result = await this.root.enqueueSeoDrafts.execute({
+        productId: body.product_id,
+        locale: body.locale,
+        fingerprint: body.fingerprint,
+        createdBy: authenticatedUserId,
+        items: (body.items || []).map((item: Record<string, any>) => ({
+          fieldName: item.field_name,
+          currentValue: item.current_value ?? null,
+          proposedValue: item.proposed_value ?? null,
+          aiConfidence: item.ai_confidence ?? null,
+          reason: item.reason ?? null,
+          isSelected: item.is_selected ?? true,
+        })),
+        metadata: body.metadata || {},
+      });
+
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * List queue changesets
+   * GET /api/v1/seo/queue
+   */
+  async listSeoQueue(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const query = (req as Request & { validatedQuery?: Record<string, any> }).validatedQuery || req.query;
+
+      const rows = await this.root.seoDraftQueueRepository.findByFilter({
+        productId: query.product_id,
+        locale: query.locale,
+        status: query.status,
+        page: query.page,
+        limit: query.limit,
+      });
+
+      res.json(successResponse(rows.map((row) => this.mapQueueChangeset(row))));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Get queue changeset by id
+   * GET /api/v1/seo/queue/:changesetId
+   */
+  async getSeoQueueChangeset(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const changesetId = Number.parseInt(req.params.changesetId, 10);
+      if (Number.isNaN(changesetId) || changesetId <= 0) {
+        res.status(400).json(errorResponse('VALIDATION_ERROR', 'Invalid changesetId', 400));
+        return;
+      }
+
+      const match = await this.root.seoDraftQueueRepository.findById(changesetId);
+
+      if (!match) {
+        res.status(404).json(errorResponse('NOT_FOUND', 'Queue changeset not found', 404));
+        return;
+      }
+
+      res.json(successResponse(this.mapQueueChangeset(match)));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Approve queue changesets
+   * POST /api/v1/seo/queue/approve
+   */
+  async approveSeoQueue(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const body = (req as Request & { validatedBody?: Record<string, any> }).validatedBody || req.body;
+      const authenticatedUserId = this.getAuthenticatedUserId(req);
+
+      if (!body.apply_all && !body.product_id && !body.locale) {
+        res.status(400).json(
+          errorResponse(
+            'VALIDATION_ERROR',
+            'queue decision requires product_id, locale, or apply_all=true',
+            400,
+          ),
+        );
+        return;
+      }
+
+      const result = await this.root.approveSeoDraftItems.execute({
+        filter: {
+          productId: body.apply_all ? undefined : body.product_id,
+          locale: body.apply_all ? undefined : body.locale,
+          status: body.status,
+        },
+        decision: 'approved',
+        approvedBy: authenticatedUserId,
+      });
+
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reject queue changesets
+   * POST /api/v1/seo/queue/reject
+   */
+  async rejectSeoQueue(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const body = (req as Request & { validatedBody?: Record<string, any> }).validatedBody || req.body;
+      const authenticatedUserId = this.getAuthenticatedUserId(req);
+
+      if (!body.apply_all && !body.product_id && !body.locale) {
+        res.status(400).json(
+          errorResponse(
+            'VALIDATION_ERROR',
+            'queue decision requires product_id, locale, or apply_all=true',
+            400,
+          ),
+        );
+        return;
+      }
+
+      const result = await this.root.approveSeoDraftItems.execute({
+        filter: {
+          productId: body.apply_all ? undefined : body.product_id,
+          locale: body.apply_all ? undefined : body.locale,
+          status: body.status,
+        },
+        decision: 'rejected',
+        approvedBy: authenticatedUserId,
+      });
+
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Apply approved queue changesets
+   * POST /api/v1/seo/queue/apply
+   */
+  async applySeoQueue(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const body = (req as Request & { validatedBody?: Record<string, any> }).validatedBody || req.body;
+
+      if (!body.apply_all && !body.product_id && !body.locale) {
+        res.status(400).json(
+          errorResponse('VALIDATION_ERROR', 'queue apply requires product_id, locale, or apply_all=true', 400),
+        );
+        return;
+      }
+
+      const result = await this.root.applyApprovedSeoDrafts.execute({
+        productId: body.apply_all ? undefined : body.product_id,
+        locale: body.apply_all ? undefined : body.locale,
+      });
+
+      res.json(successResponse(result));
     } catch (error) {
       next(error);
     }

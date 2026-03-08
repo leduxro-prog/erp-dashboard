@@ -152,6 +152,67 @@ export const updateStructuredDataSchema = Joi.object({
 });
 
 /**
+ * Queue refresh schema
+ */
+export const queueRefreshSchema = Joi.object({
+  product_id: Joi.number().integer().positive().required(),
+  locale: Joi.string().trim().min(2).max(5).required(),
+  fingerprint: Joi.string().trim().min(1).max(128).required(),
+  items: Joi.array()
+    .items(
+      Joi.object({
+        field_name: Joi.string().trim().min(1).max(100).required(),
+        current_value: Joi.string().allow(null).optional(),
+        proposed_value: Joi.string().allow(null).optional(),
+        ai_confidence: Joi.number().min(0).max(1).allow(null).optional(),
+        reason: Joi.string().allow(null).optional(),
+        is_selected: Joi.boolean().optional().default(true),
+      }),
+    )
+    .min(1)
+    .required(),
+  metadata: Joi.object().optional().default({}),
+});
+
+/**
+ * Queue list schema
+ */
+export const queueListSchema = Joi.object({
+  product_id: Joi.number().integer().positive().optional(),
+  locale: Joi.string().trim().min(2).max(5).optional(),
+  status: Joi.string().valid('pending', 'approved', 'rejected', 'superseded').optional(),
+  page: Joi.number().integer().min(1).optional().default(1),
+  limit: Joi.number().integer().min(1).max(100).optional().default(50),
+});
+
+/**
+ * Queue decision schema
+ */
+export const queueDecisionSchema = Joi.object({
+  product_id: Joi.number().integer().positive().optional(),
+  locale: Joi.string().trim().min(2).max(5).optional(),
+  status: Joi.string().valid('pending', 'approved', 'rejected', 'superseded').optional(),
+  apply_all: Joi.boolean().valid(true).optional(),
+})
+  .or('product_id', 'locale', 'apply_all')
+  .messages({
+    'object.missing': 'queue decision requires product_id, locale, or apply_all=true',
+  });
+
+/**
+ * Queue apply schema
+ */
+export const queueApplySchema = Joi.object({
+  product_id: Joi.number().integer().positive().optional(),
+  locale: Joi.string().trim().min(2).max(5).optional(),
+  apply_all: Joi.boolean().valid(true).optional(),
+})
+  .or('product_id', 'locale', 'apply_all')
+  .messages({
+    'object.missing': 'queue apply requires product_id, locale, or apply_all=true',
+  });
+
+/**
  * Validation middleware for requests
  */
 export function validateRequest(schema: Joi.Schema) {
