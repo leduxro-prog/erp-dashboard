@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Search,
@@ -18,9 +18,12 @@ import {
   Shield,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { ResponsiveImage } from '../../components/ui/ResponsiveImage';
 import { b2bApi } from '../../services/b2b-api';
 import { useCartStore } from '../../stores/cart.store';
 import { useB2BAuthStore } from '../../stores/b2b/b2b-auth.store';
+import { trackAddToCart } from '../../services/retargeting';
+import { resolveSupplierLeadTimeLabel } from '../../utils/supplierLeadTime';
 
 interface Product {
   id: number;
@@ -34,12 +37,63 @@ interface Product {
   stock_supplier: number;
   stock_total?: number;
   supplier_lead_time: number;
+  supplier_lead_time_label?: string;
+  supplier_name?: string | null;
   rating?: number;
   category?: string;
+  brand?: string | null;
+  manufacturer?: string | null;
+  mounting_type?: string | null;
+  ip_rating?: string | null;
+  color_temperature?: number | null;
 }
 
 const getTotalStock = (product: Product): number => {
   return Number(product.stock_total ?? 0) || product.stock_local + product.stock_supplier;
+};
+
+const getSupplierStockDisplay = (
+  product: Product,
+): { label: string; color: string; dot: string } | null => {
+  const leadTimeLabel = resolveSupplierLeadTimeLabel(
+    product.supplier_name,
+    product.supplier_lead_time,
+    product.supplier_lead_time_label,
+    product.brand,
+    product.manufacturer,
+  );
+  const supplierName = String(product.supplier_name || '').toLowerCase();
+  const isMplSupplier = supplierName.includes('mpl power');
+
+  if (isMplSupplier) {
+    const available = product.stock_supplier > 0;
+    return {
+      label: available
+        ? `Furnizor: Disponibil (${leadTimeLabel} zile)`
+        : 'Furnizor: Indisponibil',
+      color: available ? '#4f8eff' : '#ef4444',
+      dot: available ? '#4f8eff' : '#ef4444',
+    };
+  }
+
+  if (product.stock_supplier <= 0) {
+    return null;
+  }
+
+  return {
+    label: `Furnizor: ${product.stock_supplier} buc (${leadTimeLabel} zile)`,
+    color: '#4f8eff',
+    dot: '#4f8eff',
+  };
+};
+
+const getManufacturer = (product: Product): string | null => {
+  const value =
+    String(product.manufacturer || '').trim() ||
+    String(product.brand || '').trim() ||
+    String(product.supplier_name || '').trim();
+
+  return value.length > 0 ? value : null;
 };
 
 // Specs parser - extract lighting specs from product name/description
@@ -92,16 +146,27 @@ const sortOptions = [
 ];
 
 export const B2BStoreCatalogPage: React.FC = () => {
+  const PAGE_SIZE = 48;
+  const AUTO_LOAD_ROOT_MARGIN = '280px';
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Toate Produsele');
   const [selectedKelvin, setSelectedKelvin] = useState<string[]>([]);
   const [selectedIp, setSelectedIp] = useState<string[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<string[]>([]);
+  const [selectedMountingType, setSelectedMountingType] = useState<string[]>([]);
+  const [selectedStripType, setSelectedStripType] = useState<string[]>([]);
+  const [selectedLedVoltage, setSelectedLedVoltage] = useState<string[]>([]);
+  const [selectedLightColor, setSelectedLightColor] = useState<string[]>([]);
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
-  const [stockFilter, setStockFilter] = useState<'all' | 'local' | 'supplier'>('all');
+  const [stockFilter, setStockFilter] = useState<'all' | 'stock' | 'local' | 'supplier'>('all');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -114,23 +179,45 @@ export const B2BStoreCatalogPage: React.FC = () => {
   });
 
   const [availableCategories, setAvailableCategories] = useState<string[]>(lightingCategories);
-  const [availableFilters, setAvailableFilters] = useState<{ kelvin: any[]; ip: any[] }>({
+  const [availableFilters, setAvailableFilters] = useState<{
+    kelvin: any[];
+    ip: any[];
+    brand: any[];
+    mountingType: any[];
+    stripType: any[];
+    ledVoltage: any[];
+    lightColor: any[];
+  }>({
     kelvin: kelvinOptions,
     ip: ipOptions,
+    brand: [],
+    mountingType: [],
+    stripType: [],
+    ledVoltage: [],
+    lightColor: [],
   });
 
   const { addItem } = useCartStore();
   const { isAuthenticated } = useB2BAuthStore();
   const location = useLocation();
+  const latestRequestIdRef = useRef(0);
+  const activeRequestAbortRef = useRef<AbortController | null>(null);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  const prefetchedProductIdsRef = useRef<Set<number>>(new Set());
+  const preloadedLcpImageRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetchB2BSettings();
-    loadFilters();
+    loadCategories();
   }, []);
 
-  const loadFilters = async () => {
+  useEffect(() => {
+    loadFilters(selectedCategory !== 'Toate Produsele' ? selectedCategory : undefined);
+  }, [selectedCategory]);
+
+  const loadCategories = async () => {
     try {
-      const [cats, filters] = await Promise.all([b2bApi.getCategories(), b2bApi.getFilters()]);
+      const cats = await b2bApi.getCategories();
 
       if (cats && Array.isArray(cats)) {
         const normalizedCategories = cats
@@ -149,35 +236,92 @@ export const B2BStoreCatalogPage: React.FC = () => {
 
         setAvailableCategories(['Toate Produsele', ...normalizedCategories]);
       }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
 
-      if (filters) {
-        setAvailableFilters({
-          kelvin: filters.kelvin || kelvinOptions,
-          ip: filters.ip || ipOptions,
-        });
+  const loadFilters = async (category?: string) => {
+    try {
+      const filters = await b2bApi.getFilters({ category });
+
+      if (!filters) {
+        return;
       }
+
+      setAvailableFilters({
+        kelvin: Array.isArray(filters.kelvin) && filters.kelvin.length > 0 ? filters.kelvin : [],
+        ip: Array.isArray(filters.ip) && filters.ip.length > 0 ? filters.ip : [],
+        brand: Array.isArray(filters.brand) ? filters.brand : [],
+        mountingType: Array.isArray(filters.mountingType) ? filters.mountingType : [],
+        stripType: Array.isArray(filters.stripType) ? filters.stripType : [],
+        ledVoltage: Array.isArray(filters.ledVoltage) ? filters.ledVoltage : [],
+        lightColor: Array.isArray(filters.lightColor) ? filters.lightColor : [],
+      });
+
+      setSelectedKelvin((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.kelvin) ? filters.kelvin : []).some(
+            (opt: any) => String(opt.value) === value,
+          ),
+        ),
+      );
+      setSelectedIp((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.ip) ? filters.ip : []).some(
+            (opt: any) => String(opt.value).toUpperCase() === value.toUpperCase(),
+          ),
+        ),
+      );
+      setSelectedBrand((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.brand) ? filters.brand : []).some(
+            (opt: any) => String(opt.value) === value,
+          ),
+        ),
+      );
+      setSelectedMountingType((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.mountingType) ? filters.mountingType : []).some(
+            (opt: any) => String(opt.value) === value,
+          ),
+        ),
+      );
+      setSelectedStripType((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.stripType) ? filters.stripType : []).some(
+            (opt: any) => String(opt.value).toLowerCase() === value.toLowerCase(),
+          ),
+        ),
+      );
+      setSelectedLedVoltage((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.ledVoltage) ? filters.ledVoltage : []).some(
+            (opt: any) => String(opt.value) === value,
+          ),
+        ),
+      );
+      setSelectedLightColor((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.lightColor) ? filters.lightColor : []).some(
+            (opt: any) => String(opt.value).toLowerCase() === value.toLowerCase(),
+          ),
+        ),
+      );
     } catch (err) {
       console.error('Failed to fetch filters:', err);
       // Fallback to defaults already in state
     }
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProducts();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [
-    searchQuery,
-    selectedCategory,
-    selectedKelvin,
-    selectedIp,
-    priceMin,
-    priceMax,
-    sortBy,
-    stockFilter,
-    isAuthenticated,
-  ]);
+  const isAbortLikeError = (error: unknown): boolean => {
+    const maybeError = error as { name?: string; code?: string; message?: string };
+    return (
+      maybeError?.name === 'AbortError' ||
+      maybeError?.code === 'ERR_CANCELED' ||
+      maybeError?.message === 'canceled'
+    );
+  };
 
   const fetchB2BSettings = async () => {
     try {
@@ -217,21 +361,47 @@ export const B2BStoreCatalogPage: React.FC = () => {
       1,
     );
 
+    trackAddToCart({
+      id: product.id,
+      sku: product.sku,
+      name: product.name,
+      category: product.category,
+      quantity: 1,
+      price: product.price,
+      currency: product.currency || 'RON',
+    });
+
     // Show success feedback
     setAddedToCart(product.id);
     setTimeout(() => setAddedToCart(null), 2000);
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async (pageToLoad = 1, append = false) => {
+    const requestId = ++latestRequestIdRef.current;
+    activeRequestAbortRef.current?.abort();
+    const abortController = new AbortController();
+    activeRequestAbortRef.current = abortController;
+
     try {
-      setLoading(true);
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setError('');
+      }
       const params = {
-        page: 1,
-        limit: 100,
+        page: pageToLoad,
+        limit: PAGE_SIZE,
+        compact: true,
         search: searchQuery || undefined,
         category: selectedCategory !== 'Toate Produsele' ? selectedCategory : undefined,
         kelvin: selectedKelvin.length > 0 ? selectedKelvin : undefined,
         ip: selectedIp.length > 0 ? selectedIp : undefined,
+        brand: selectedBrand.length > 0 ? selectedBrand : undefined,
+        mountingType: selectedMountingType.length > 0 ? selectedMountingType : undefined,
+        stripType: selectedStripType.length > 0 ? selectedStripType : undefined,
+        ledVoltage: selectedLedVoltage.length > 0 ? selectedLedVoltage : undefined,
+        lightColor: selectedLightColor.length > 0 ? selectedLightColor : undefined,
         min_price: priceMin ? parseFloat(priceMin) : undefined,
         max_price: priceMax ? parseFloat(priceMax) : undefined,
         sort: sortBy,
@@ -239,9 +409,13 @@ export const B2BStoreCatalogPage: React.FC = () => {
       };
 
       let response: any;
+      let nextProducts: Product[] = [];
+      let pagination: any = null;
+
       if (isAuthenticated) {
-        response = await b2bApi.getProducts(params);
-        setProducts(response.products || []);
+        response = await b2bApi.getProducts(params, { signal: abortController.signal });
+        nextProducts = Array.isArray(response?.products) ? response.products : [];
+        pagination = response?.pagination || null;
       } else {
         const queryParams = new URLSearchParams();
         Object.entries(params).forEach(([key, value]) => {
@@ -259,6 +433,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
 
         const response = await fetch(`/api/v1/b2b/products?${queryParams.toString()}`, {
           credentials: 'include',
+          signal: abortController.signal,
         });
 
         if (!response.ok) {
@@ -267,91 +442,132 @@ export const B2BStoreCatalogPage: React.FC = () => {
 
         const payload = await response.json();
         const data = payload?.data ?? payload;
-        setProducts(data.products || []);
+        nextProducts = Array.isArray(data?.products) ? data.products : [];
+        pagination = data?.pagination || null;
       }
+
+      if (requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
+      setProducts((prev) => (append ? [...prev, ...nextProducts] : nextProducts));
+      setCurrentPage(pageToLoad);
+      setTotalPages(Math.max(1, Number(pagination?.total_pages || 1)));
+      setTotalProducts(Number(pagination?.total || nextProducts.length));
     } catch (err) {
+      if (isAbortLikeError(err)) {
+        return;
+      }
+
+      if (requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
       console.error('Failed to fetch products:', err);
       setError('Nu s-a putut încărca catalogul.');
     } finally {
-      setLoading(false);
+      if (requestId === latestRequestIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+
+      if (activeRequestAbortRef.current === abortController) {
+        activeRequestAbortRef.current = null;
+      }
     }
-  };
-
-  const filteredProducts = useMemo(() => {
-    let filtered = [...products];
-
-    // Search
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          (p.description && p.description.toLowerCase().includes(q)),
-      );
-    }
-
-    // Category
-    if (selectedCategory !== 'Toate Produsele') {
-      filtered = filtered.filter((p) =>
-        p.category?.toLowerCase().includes(selectedCategory.toLowerCase()),
-      );
-    }
-
-    // Stock
-    if (stockFilter === 'local') {
-      filtered = filtered.filter((p) => p.stock_local > 0);
-    } else if (stockFilter === 'supplier') {
-      filtered = filtered.filter((p) => p.stock_supplier > 0);
-    }
-
-    // Price
-    if (priceMin) filtered = filtered.filter((p) => p.price >= parseFloat(priceMin));
-    if (priceMax) filtered = filtered.filter((p) => p.price <= parseFloat(priceMax));
-
-    // Kelvin
-    if (selectedKelvin.length > 0) {
-      filtered = filtered.filter((p) => {
-        const specs = parseSpecs(p);
-        return specs.kelvin && selectedKelvin.includes(specs.kelvin);
-      });
-    }
-
-    // IP
-    if (selectedIp.length > 0) {
-      filtered = filtered.filter((p) => {
-        const specs = parseSpecs(p);
-        return specs.ip && selectedIp.includes(specs.ip);
-      });
-    }
-
-    // Sort
-    switch (sortBy) {
-      case 'price_asc':
-        filtered.sort((a, b) => a.price - b.price);
-        break;
-      case 'price_desc':
-        filtered.sort((a, b) => b.price - a.price);
-        break;
-      case 'name_asc':
-        filtered.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      default:
-        break;
-    }
-
-    return filtered;
   }, [
-    products,
-    searchQuery,
-    selectedCategory,
-    stockFilter,
-    priceMin,
+    PAGE_SIZE,
+    isAuthenticated,
     priceMax,
-    sortBy,
-    selectedKelvin,
+    priceMin,
+    searchQuery,
+    selectedBrand,
+    selectedCategory,
     selectedIp,
+    selectedKelvin,
+    selectedLedVoltage,
+    selectedLightColor,
+    selectedMountingType,
+    selectedStripType,
+    sortBy,
+    stockFilter,
   ]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProducts(1, false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchProducts]);
+
+  const filteredProducts = products;
+
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || currentPage >= totalPages) {
+      return;
+    }
+    fetchProducts(currentPage + 1, true);
+  }, [currentPage, fetchProducts, loadingMore, totalPages]);
+
+  const prefetchProductDetails = useCallback((productId: number) => {
+    if (!Number.isFinite(productId) || prefetchedProductIdsRef.current.has(productId)) {
+      return;
+    }
+
+    prefetchedProductIdsRef.current.add(productId);
+    fetch(`/api/v1/b2b/products/${productId}`, { credentials: 'include' }).catch(() => {
+      prefetchedProductIdsRef.current.delete(productId);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      activeRequestAbortRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    const firstImageUrl = products[0]?.image_url;
+    if (!firstImageUrl || firstImageUrl === preloadedLcpImageRef.current) {
+      return;
+    }
+
+    const preloadSelector = 'link[data-catalog-lcp="true"]';
+    const existing = document.querySelector(preloadSelector);
+    if (existing) {
+      existing.remove();
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = firstImageUrl;
+    link.setAttribute('fetchpriority', 'high');
+    link.setAttribute('data-catalog-lcp', 'true');
+    document.head.appendChild(link);
+    preloadedLcpImageRef.current = firstImageUrl;
+  }, [products]);
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return;
+        }
+
+        handleLoadMore();
+      },
+      { root: null, rootMargin: AUTO_LOAD_ROOT_MARGIN, threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [AUTO_LOAD_ROOT_MARGIN, handleLoadMore]);
 
   const toggleKelvin = (val: string) => {
     setSelectedKelvin((prev) =>
@@ -363,11 +579,46 @@ export const B2BStoreCatalogPage: React.FC = () => {
     setSelectedIp((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]));
   };
 
+  const toggleBrand = (val: string) => {
+    setSelectedBrand((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleMountingType = (val: string) => {
+    setSelectedMountingType((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleStripType = (val: string) => {
+    setSelectedStripType((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleLedVoltage = (val: string) => {
+    setSelectedLedVoltage((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleLightColor = (val: string) => {
+    setSelectedLightColor((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedCategory('Toate Produsele');
     setSelectedKelvin([]);
     setSelectedIp([]);
+    setSelectedBrand([]);
+    setSelectedMountingType([]);
+    setSelectedStripType([]);
+    setSelectedLedVoltage([]);
+    setSelectedLightColor([]);
     setPriceMin('');
     setPriceMax('');
     setStockFilter('all');
@@ -382,8 +633,8 @@ export const B2BStoreCatalogPage: React.FC = () => {
       >
         <div className="text-center max-w-md p-8">
           <Package size={64} className="mx-auto mb-6" style={{ color: '#daa520' }} />
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">Catalog Temporar Indisponibil</h2>
-          <p className="text-gray-500 mb-6">
+          <h2 className="text-2xl font-bold text-text-primary mb-3">Catalog Temporar Indisponibil</h2>
+          <p className="text-text-tertiary mb-6">
             Catalogul nostru este momentan în mentenanță. Vă rugăm reveniți în curând.
           </p>
           <Link
@@ -407,8 +658,8 @@ export const B2BStoreCatalogPage: React.FC = () => {
         >
           <div className="text-center max-w-md p-8">
             <Shield size={64} className="mx-auto mb-6" style={{ color: '#daa520' }} />
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Acces Restricționat</h2>
-            <p className="text-gray-500 mb-6">
+            <h2 className="text-2xl font-bold text-text-primary mb-3">Acces Restricționat</h2>
+            <p className="text-text-tertiary mb-6">
               Catalogul este disponibil doar pentru clienții autentificați. Vă rugăm
               autentificați-vă pentru a vedea produsele.
             </p>
@@ -461,9 +712,9 @@ export const B2BStoreCatalogPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Catalog Produse</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Catalog Produse</h1>
               <p className="text-sm mt-1" style={{ color: '#6b7280' }}>
-                {filteredProducts.length} produse disponibile
+                {totalProducts} produse disponibile
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -514,7 +765,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-gray-900 text-sm mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center gap-2">
                 <Package size={14} style={{ color: '#daa520' }} />
                 Categorii
               </h3>
@@ -537,6 +788,94 @@ export const B2BStoreCatalogPage: React.FC = () => {
             </div>
 
             {/* Color Temperature */}
+            {availableFilters.stripType.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center gap-2">
+                  <Zap size={14} style={{ color: '#daa520' }} />
+                  Tip LED
+                </h3>
+                <div className="space-y-2">
+                  {availableFilters.stripType.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStripType.includes(opt.value)}
+                        onChange={() => toggleStripType(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {availableFilters.ledVoltage.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4">Voltaj</h3>
+                <div className="space-y-2">
+                  {availableFilters.ledVoltage.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedLedVoltage.includes(opt.value)}
+                        onChange={() => toggleLedVoltage(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {availableFilters.lightColor.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4">Temperatura / Culoare</h3>
+                <div className="space-y-2">
+                  {availableFilters.lightColor.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedLightColor.includes(opt.value)}
+                        onChange={() => toggleLightColor(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Color Temperature */}
             <div
               className="rounded-2xl p-5"
               style={{
@@ -544,7 +883,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-gray-900 text-sm mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center gap-2">
                 <Thermometer size={14} style={{ color: '#daa520' }} />
                 Temperatură Culoare
               </h3>
@@ -586,7 +925,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-gray-900 text-sm mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center gap-2">
                 <Droplets size={14} style={{ color: '#daa520' }} />
                 Grad Protecție (IP)
               </h3>
@@ -608,6 +947,64 @@ export const B2BStoreCatalogPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Manufacturer */}
+            {availableFilters.brand.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4">Producator</h3>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {availableFilters.brand.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedBrand.includes(opt.value)}
+                        onChange={() => toggleBrand(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mounting Type */}
+            {availableFilters.mountingType.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4">Montaj</h3>
+                <div className="space-y-2">
+                  {availableFilters.mountingType.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedMountingType.includes(opt.value)}
+                        onChange={() => toggleMountingType(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Price Range */}
             <div
               className="rounded-2xl p-5"
@@ -616,7 +1013,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-gray-900 text-sm mb-4">Preț (RON)</h3>
+              <h3 className="font-semibold text-text-primary text-sm mb-4">Preț (RON)</h3>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -654,10 +1051,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
                 border: '1px solid #e5e7eb',
               }}
             >
-              <h3 className="font-semibold text-gray-900 text-sm mb-4">Disponibilitate</h3>
+              <h3 className="font-semibold text-text-primary text-sm mb-4">Disponibilitate</h3>
               <div className="space-y-2">
                 {[
                   { label: 'Toate', value: 'all' as const },
+                  { label: 'Stoc', value: 'stock' as const },
                   { label: 'Stoc Local', value: 'local' as const },
                   { label: 'Stoc Furnizor', value: 'supplier' as const },
                 ].map((opt) => (
@@ -747,7 +1145,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
               <div className="text-center py-16">
                 <p style={{ color: '#ef4444' }}>{error}</p>
                 <Button
-                  onClick={fetchProducts}
+                  onClick={() => fetchProducts(1, false)}
                   className="mt-4"
                   style={{ background: '#daa520', color: '#000' }}
                 >
@@ -760,7 +1158,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
             {!error && filteredProducts.length === 0 && (
               <div className="text-center py-20">
                 <Package size={48} className="mx-auto mb-4" style={{ color: '#9ca3af' }} />
-                <p className="text-lg font-medium text-gray-900 mb-2">Niciun produs găsit</p>
+                <p className="text-lg font-medium text-text-primary mb-2">Niciun produs găsit</p>
                 <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
                   Încercați alte criterii de căutare.
                 </p>
@@ -777,8 +1175,9 @@ export const B2BStoreCatalogPage: React.FC = () => {
             {/* Grid View */}
             {viewMode === 'grid' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredProducts.map((product) => {
+                {filteredProducts.map((product, index) => {
                   const specs = parseSpecs(product);
+                  const shouldPrioritizeImage = currentPage === 1 && index < 2;
                   return (
                     <div
                       key={product.id}
@@ -786,6 +1185,8 @@ export const B2BStoreCatalogPage: React.FC = () => {
                       style={{
                         background: '#ffffff',
                         border: '1px solid #e5e7eb',
+                        contentVisibility: 'auto',
+                        containIntrinsicSize: '430px',
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = 'rgba(218,165,32,0.2)';
@@ -800,9 +1201,14 @@ export const B2BStoreCatalogPage: React.FC = () => {
                         style={{ background: '#f3f4f6' }}
                       >
                         {product.image_url ? (
-                          <img
+                          <ResponsiveImage
                             src={product.image_url}
                             alt={product.name}
+                            loading={shouldPrioritizeImage ? 'eager' : 'lazy'}
+                            fetchPriority={shouldPrioritizeImage ? 'high' : 'low'}
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            width={640}
+                            height={520}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
                         ) : (
@@ -842,9 +1248,14 @@ export const B2BStoreCatalogPage: React.FC = () => {
                         >
                           {product.category || 'LED'}
                         </p>
-                        <Link to={`/b2b-store/product/${product.id}`}>
+                        <Link
+                          to={`/b2b-store/product/${product.id}`}
+                          onMouseEnter={() => prefetchProductDetails(product.id)}
+                          onFocus={() => prefetchProductDetails(product.id)}
+                          onTouchStart={() => prefetchProductDetails(product.id)}
+                        >
                           <h3
-                            className="font-bold text-gray-900 mb-1 line-clamp-2 hover:underline cursor-pointer leading-snug"
+                            className="font-bold text-text-primary mb-1 line-clamp-2 hover:underline cursor-pointer leading-snug"
                             title={product.name}
                           >
                             {product.name}
@@ -853,6 +1264,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
                         <p className="text-xs mb-3" style={{ color: '#6b7280' }}>
                           SKU: {product.sku}
                         </p>
+                        {getManufacturer(product) && (
+                          <p className="text-xs mb-3" style={{ color: '#6b7280' }}>
+                            Producator: {getManufacturer(product)}
+                          </p>
+                        )}
 
                         {/* Spec Badges */}
                         <div className="flex flex-wrap gap-1.5 mb-4">
@@ -932,17 +1348,16 @@ export const B2BStoreCatalogPage: React.FC = () => {
                                 Fără stoc local
                               </span>
                             )}
-                            {product.stock_supplier > 0 && (
+                            {getSupplierStockDisplay(product) && (
                               <span
                                 className="flex items-center gap-1.5"
-                                style={{ color: '#4f8eff' }}
+                                style={{ color: getSupplierStockDisplay(product)!.color }}
                               >
                                 <span
                                   className="w-1.5 h-1.5 rounded-full"
-                                  style={{ background: '#4f8eff' }}
+                                  style={{ background: getSupplierStockDisplay(product)!.dot }}
                                 />
-                                Furnizor: {product.stock_supplier} buc ({product.supplier_lead_time}{' '}
-                                zile)
+                                {getSupplierStockDisplay(product)!.label}
                               </span>
                             )}
                             <span
@@ -1009,8 +1424,9 @@ export const B2BStoreCatalogPage: React.FC = () => {
             {/* List View */}
             {viewMode === 'list' && (
               <div className="space-y-3">
-                {filteredProducts.map((product) => {
+                {filteredProducts.map((product, index) => {
                   const specs = parseSpecs(product);
+                  const shouldPrioritizeImage = currentPage === 1 && index < 2;
                   return (
                     <div
                       key={product.id}
@@ -1018,6 +1434,8 @@ export const B2BStoreCatalogPage: React.FC = () => {
                       style={{
                         background: '#ffffff',
                         border: '1px solid #e5e7eb',
+                        contentVisibility: 'auto',
+                        containIntrinsicSize: '220px',
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = 'rgba(218,165,32,0.2)';
@@ -1032,9 +1450,14 @@ export const B2BStoreCatalogPage: React.FC = () => {
                         style={{ background: '#f3f4f6' }}
                       >
                         {product.image_url ? (
-                          <img
+                          <ResponsiveImage
                             src={product.image_url}
                             alt={product.name}
+                            loading={shouldPrioritizeImage ? 'eager' : 'lazy'}
+                            fetchPriority={shouldPrioritizeImage ? 'high' : 'low'}
+                            sizes="(max-width: 640px) 100vw, 40vw"
+                            width={480}
+                            height={360}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -1052,11 +1475,21 @@ export const B2BStoreCatalogPage: React.FC = () => {
                           >
                             {product.category || 'LED'} · {product.sku}
                           </p>
-                          <Link to={`/b2b-store/product/${product.id}`}>
-                            <h3 className="font-bold text-gray-900 mb-2 hover:underline">
+                          <Link
+                            to={`/b2b-store/product/${product.id}`}
+                            onMouseEnter={() => prefetchProductDetails(product.id)}
+                            onFocus={() => prefetchProductDetails(product.id)}
+                            onTouchStart={() => prefetchProductDetails(product.id)}
+                          >
+                            <h3 className="font-bold text-text-primary mb-2 hover:underline">
                               {product.name}
                             </h3>
                           </Link>
+                          {getManufacturer(product) && (
+                            <p className="text-xs mb-2" style={{ color: '#6b7280' }}>
+                              Producator: {getManufacturer(product)}
+                            </p>
+                          )}
                           <div className="flex flex-wrap gap-1.5 mb-2">
                             {specs.watt && (
                               <span
@@ -1098,10 +1531,9 @@ export const B2BStoreCatalogPage: React.FC = () => {
                                   ● Stoc Local: {product.stock_local}
                                 </span>
                               )}
-                              {product.stock_supplier > 0 && (
-                                <span style={{ color: '#4f8eff' }}>
-                                  ● Furnizor: {product.stock_supplier} ({product.supplier_lead_time}
-                                  z)
+                              {getSupplierStockDisplay(product) && (
+                                <span style={{ color: getSupplierStockDisplay(product)!.color }}>
+                                  ● {getSupplierStockDisplay(product)!.label}
                                 </span>
                               )}
                               <span style={{ color: '#6b7280' }}>
@@ -1153,16 +1585,22 @@ export const B2BStoreCatalogPage: React.FC = () => {
             )}
 
             {/* Pagination */}
-            {filteredProducts.length > 0 && (
+            {filteredProducts.length > 0 && currentPage < totalPages && (
               <div className="mt-10 flex justify-center">
                 <Button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
                   variant="outline"
                   className="rounded-full px-8"
                   style={{ borderColor: 'rgba(218,165,32,0.2)', color: '#daa520' }}
                 >
-                  Încarcă Mai Multe
+                  {loadingMore ? 'Se incarca...' : 'Incarca Mai Multe'}
                 </Button>
               </div>
+            )}
+
+            {!loading && filteredProducts.length > 0 && currentPage < totalPages && (
+              <div ref={loadMoreSentinelRef} className="h-1 w-full" aria-hidden="true" />
             )}
           </div>
         </div>
@@ -1187,9 +1625,14 @@ export const B2BStoreCatalogPage: React.FC = () => {
               {/* Image */}
               <div className="w-full md:w-1/2 h-64 md:h-auto" style={{ background: '#f3f4f6' }}>
                 {quickViewProduct.image_url ? (
-                  <img
+                  <ResponsiveImage
                     src={quickViewProduct.image_url}
                     alt={quickViewProduct.name}
+                    loading="eager"
+                    fetchPriority="high"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    width={960}
+                    height={640}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -1208,10 +1651,15 @@ export const B2BStoreCatalogPage: React.FC = () => {
                     >
                       {quickViewProduct.category || 'LED'}
                     </p>
-                    <h2 className="text-2xl font-bold text-gray-900">{quickViewProduct.name}</h2>
+                    <h2 className="text-2xl font-bold text-text-primary">{quickViewProduct.name}</h2>
                     <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
                       SKU: {quickViewProduct.sku}
                     </p>
+                    {getManufacturer(quickViewProduct) && (
+                      <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
+                        Producator: {getManufacturer(quickViewProduct)}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => setQuickViewProduct(null)}
@@ -1297,11 +1745,16 @@ export const B2BStoreCatalogPage: React.FC = () => {
                         Fără stoc local
                       </span>
                     )}
-                    {quickViewProduct.stock_supplier > 0 && (
-                      <span className="flex items-center gap-2" style={{ color: '#4f8eff' }}>
-                        <span className="w-2 h-2 rounded-full" style={{ background: '#4f8eff' }} />
-                        Furnizor: {quickViewProduct.stock_supplier} buc (
-                        {quickViewProduct.supplier_lead_time} zile)
+                    {getSupplierStockDisplay(quickViewProduct) && (
+                      <span
+                        className="flex items-center gap-2"
+                        style={{ color: getSupplierStockDisplay(quickViewProduct)!.color }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ background: getSupplierStockDisplay(quickViewProduct)!.dot }}
+                        />
+                        {getSupplierStockDisplay(quickViewProduct)!.label}
                       </span>
                     )}
                     <span className="flex items-center gap-2" style={{ color: '#6b7280' }}>

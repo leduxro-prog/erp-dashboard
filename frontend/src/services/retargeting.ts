@@ -1,3 +1,5 @@
+import { resolveRuntimeBranding } from '../utils/runtime-branding';
+
 type CurrencyCode = string;
 
 export interface ProductEventItem {
@@ -96,6 +98,19 @@ const shouldInitScripts = (): boolean => {
   }
 
   return Boolean(META_PIXEL_ID || GA4_ID || GOOGLE_ADS_ID);
+};
+
+const shouldTrackRuntime = (path?: string, hostname?: string): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const runtimeBranding = resolveRuntimeBranding({
+    hostname: hostname || window.location.hostname,
+    pathname: path || window.location.pathname,
+  });
+
+  return runtimeBranding.identity === 'b2b';
 };
 
 const canTrack = (): boolean => shouldInitScripts() && Boolean(window.gtag || window.fbq);
@@ -261,7 +276,11 @@ export const setRetargetingConsent = (granted: boolean): void => {
   }
 };
 
-export const initRetargeting = (): void => {
+export const initRetargeting = (path?: string, hostname?: string): void => {
+  if (!shouldTrackRuntime(path, hostname)) {
+    return;
+  }
+
   if (!shouldInitScripts()) {
     return;
   }
@@ -275,12 +294,16 @@ export const initRetargeting = (): void => {
   window.__retargetingInitDone = true;
 };
 
-export const trackPageView = (path: string): void => {
+export const trackPageView = (path: string, hostname?: string): void => {
+  if (!shouldTrackRuntime(path, hostname)) {
+    return;
+  }
+
   if (!shouldInitScripts()) {
     return;
   }
 
-  initRetargeting();
+  initRetargeting(path, hostname);
 
   if (!canTrack()) {
     return;

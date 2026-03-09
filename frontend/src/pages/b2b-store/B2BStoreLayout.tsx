@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   Menu,
@@ -13,11 +13,15 @@ import {
   Globe,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { B2BChatWidget } from '../../components/Chat/B2BChatWidget';
 import { useGlobalLanguage } from '../../hooks/useLanguage';
 import { translations, t } from '../../i18n/translations';
 import { useCartStore } from '../../stores/cart.store';
 import { useB2BAuthStore } from '../../stores/b2b/b2b-auth.store';
+import { resolveB2BStorePath } from '../../utils/runtime-branding';
+
+const B2BChatWidget = lazy(() =>
+  import('../../components/Chat/B2BChatWidget').then((m) => ({ default: m.B2BChatWidget })),
+);
 
 export const B2BStoreLayout: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -30,7 +34,7 @@ export const B2BStoreLayout: React.FC = () => {
     companyName: 'Ledux.ro',
     taxId: '',
     address: 'România',
-    phone: '+40 XXX XXX XXX',
+    phone: '',
     email: 'b2b@ledux.ro',
   });
 
@@ -56,7 +60,7 @@ export const B2BStoreLayout: React.FC = () => {
           companyName: settings.general.companyName || 'Ledux.ro',
           taxId: settings.general.taxId || '',
           address: settings.general.address || 'România',
-          phone: settings.general.phone || '+40 XXX XXX XXX',
+          phone: settings.general.phone || '',
           email: settings.general.email || 'b2b@ledux.ro',
         });
       }
@@ -65,11 +69,14 @@ export const B2BStoreLayout: React.FC = () => {
     }
   };
 
+  const hostname = typeof window === 'undefined' ? '' : window.location.hostname;
+  const storePath = (pathname: string) => resolveB2BStorePath(pathname, hostname);
+
   const navLinks = [
-    { name: t(L.nav.home, language), path: '/b2b-store' },
-    { name: t(L.nav.catalog, language), path: '/b2b-store/catalog' },
-    { name: t(L.nav.about, language), path: '/b2b-store/about' },
-    { name: t(L.nav.contact, language), path: '/b2b-store/contact' },
+    { name: t(L.nav.home, language), path: storePath('/') },
+    { name: t(L.nav.catalog, language), path: storePath('/catalog') },
+    { name: t(L.nav.about, language), path: storePath('/about') },
+    { name: t(L.nav.contact, language), path: storePath('/contact') },
   ];
 
   const categories = [
@@ -91,7 +98,7 @@ export const B2BStoreLayout: React.FC = () => {
         style={{ background: 'linear-gradient(90deg, #b8860b 0%, #daa520 50%, #b8860b 100%)' }}
       >
         <span className="font-semibold">{t(L.announcement.text, language)}</span>{' '}
-        <Link to="/b2b-store/register" className="underline font-bold hover:text-gray-100 ml-1">
+        <Link to={storePath('/register')} className="underline font-bold hover:text-gray-100 ml-1">
           {t(L.announcement.cta, language)}
         </Link>
       </div>
@@ -109,14 +116,14 @@ export const B2BStoreLayout: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex-shrink-0 flex items-center gap-2.5">
-              <Link to="/b2b-store" className="flex items-center gap-2.5">
+              <Link to={storePath('/')} className="flex items-center gap-2.5">
                 <img
                   src="/images/ledux-logo-header.png"
                   alt="Ledux.ro"
                   className="h-10 w-auto"
                   style={{ maxHeight: '40px' }}
                 />
-                <span className="text-xl font-bold tracking-tight text-gray-800">
+                <span className="text-xl font-bold tracking-tight text-text-primary">
                   <span style={{ color: '#daa520' }}>B2B</span>
                 </span>
               </Link>
@@ -160,7 +167,7 @@ export const B2BStoreLayout: React.FC = () => {
               </button>
 
               <Link
-                to="/b2b-store/checkout"
+                to={storePath('/checkout')}
                 className="relative hover:opacity-80 transition-opacity"
                 style={{ color: '#6b7280' }}
               >
@@ -188,7 +195,7 @@ export const B2BStoreLayout: React.FC = () => {
                   </Button>
                 </Link>
               ) : (
-                <Link to="/b2b-store/login">
+                <Link to={storePath('/login')}>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -216,7 +223,7 @@ export const B2BStoreLayout: React.FC = () => {
                   </Button>
                 </Link>
               ) : (
-                <Link to="/b2b-store/register">
+                <Link to={storePath('/register')}>
                   <Button
                     size="sm"
                     className="gap-1 text-black font-semibold"
@@ -284,7 +291,7 @@ export const B2BStoreLayout: React.FC = () => {
                 className="border-t my-4 pt-4 flex flex-col gap-3 px-3"
                 style={{ borderColor: '#e5e7eb' }}
               >
-                <Link to="/b2b-store/login" onClick={() => setIsMenuOpen(false)}>
+                <Link to={storePath('/login')} onClick={() => setIsMenuOpen(false)}>
                   <Button
                     variant="outline"
                     className="w-full justify-center"
@@ -293,7 +300,7 @@ export const B2BStoreLayout: React.FC = () => {
                     {t(L.auth.login, language)}
                   </Button>
                 </Link>
-                <Link to="/b2b-store/register" onClick={() => setIsMenuOpen(false)}>
+                <Link to={storePath('/register')} onClick={() => setIsMenuOpen(false)}>
                   <Button
                     className="w-full justify-center text-black font-semibold"
                     style={{
@@ -315,7 +322,9 @@ export const B2BStoreLayout: React.FC = () => {
         <Outlet />
       </main>
 
-      <B2BChatWidget />
+      <Suspense fallback={null}>
+        <B2BChatWidget />
+      </Suspense>
 
       {/* Footer */}
       <footer style={{ background: '#1f2937', borderTop: '1px solid #374151' }} className="py-14">
@@ -365,7 +374,7 @@ export const B2BStoreLayout: React.FC = () => {
                 {categories.map((cat) => (
                   <li key={cat}>
                     <Link
-                      to="/b2b-store/catalog"
+                      to={storePath('/catalog')}
                       className="transition-colors hover:text-white"
                       style={{ color: '#9ca3af' }}
                     >
@@ -387,7 +396,7 @@ export const B2BStoreLayout: React.FC = () => {
               <ul className="space-y-2.5 text-sm">
                 <li>
                   <Link
-                    to="/b2b-store/about"
+                      to={storePath('/about')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -396,7 +405,7 @@ export const B2BStoreLayout: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    to="/b2b-store/contact"
+                      to={storePath('/contact')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -405,7 +414,7 @@ export const B2BStoreLayout: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    to="/b2b-store/how-to-order"
+                      to={storePath('/how-to-order')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -414,7 +423,7 @@ export const B2BStoreLayout: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    to="/b2b-store/shipping"
+                      to={storePath('/shipping')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -423,7 +432,7 @@ export const B2BStoreLayout: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    to="/b2b-store/partner"
+                      to={storePath('/partner')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -432,7 +441,7 @@ export const B2BStoreLayout: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    to="/b2b-store/led-guide"
+                      to={storePath('/led-guide')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -441,7 +450,7 @@ export const B2BStoreLayout: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    to="/b2b-store/request-quote"
+                      to={storePath('/request-quote')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -462,7 +471,7 @@ export const B2BStoreLayout: React.FC = () => {
               <ul className="space-y-2.5 text-sm">
                 <li>
                   <Link
-                    to="/b2b-store/privacy"
+                      to={storePath('/privacy')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -471,7 +480,7 @@ export const B2BStoreLayout: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    to="/b2b-store/terms"
+                      to={storePath('/terms')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >
@@ -480,7 +489,7 @@ export const B2BStoreLayout: React.FC = () => {
                 </li>
                 <li>
                   <Link
-                    to="/b2b-store/cookies"
+                      to={storePath('/cookies')}
                     className="transition-colors hover:text-white"
                     style={{ color: '#9ca3af' }}
                   >

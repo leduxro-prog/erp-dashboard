@@ -1,10 +1,16 @@
-import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
+import { Suspense, lazy, useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
+import RuntimeHead from './components/seo/RuntimeHead';
 import { LoadingSkeleton } from './components/ui/LoadingSkeleton';
 import { apiClient } from './services/api';
+import { useAuthStore } from './stores/auth.store';
+import { isB2BPublicStorePath, isDedicatedB2BHost } from './utils/runtime-branding';
+import ErrorBoundary from './components/ErrorBoundary';
+
+type ReactQueryModule = typeof import('@tanstack/react-query');
+type ReactQueryClient = InstanceType<ReactQueryModule['QueryClient']>;
+type ReactHotToastModule = typeof import('react-hot-toast');
 
 // Lazy load pages
 const DashboardPage = lazy(() =>
@@ -164,8 +170,7 @@ const ResetPasswordPage = lazy(() =>
   import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
 );
 
-// Setup React Query
-const queryClient = new QueryClient({
+const queryClientOptions = {
   defaultOptions: {
     queries: {
       staleTime: 60000,
@@ -173,56 +178,352 @@ const queryClient = new QueryClient({
       retry: 1,
     },
   },
-});
+};
 
 // Loading fallback
 const PageLoadingFallback = () => <LoadingSkeleton />;
 
-const hasErpSession = () => Boolean(apiClient.getToken());
+function PrivateQueryProvider({ children }: { children: React.ReactNode }) {
+  const [reactQueryModule, setReactQueryModule] = useState<ReactQueryModule | null>(null);
+  const [queryClient, setQueryClient] = useState<ReactQueryClient | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    import('@tanstack/react-query').then((module) => {
+      if (!isActive) {
+        return;
+      }
+
+      setReactQueryModule(module);
+      setQueryClient(
+        (currentClient: ReactQueryClient | null) =>
+          currentClient ?? new module.QueryClient(queryClientOptions),
+      );
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  if (!reactQueryModule || !queryClient) {
+    return <PageLoadingFallback />;
+  }
+
+  const QueryClientProvider = reactQueryModule.QueryClientProvider;
+
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
+
+/**
+ * Reactive route guard for ERP routes.
+ * Subscribes to Zustand auth store so it re-renders when logout clears the session.
+ * Also checks apiClient token as fallback for sessions created before store integration.
+ */
+function ProtectedRoute() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasToken = Boolean(apiClient.getToken());
+
+  if (!isAuthenticated && !hasToken) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return (
+    <PrivateQueryProvider>
+      <AppLayout />
+    </PrivateQueryProvider>
+  );
+}
+
+/**
+ * Reactive guard for the login page.
+ * Redirects to dashboard if the user is already authenticated.
+ */
+function LoginRoute() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasToken = Boolean(apiClient.getToken());
+
+  if (isAuthenticated || hasToken) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return (
+    <Suspense fallback={<PageLoadingFallback />}>
+      <LoginPage />
+    </Suspense>
+  );
+}
+
+function RetargetingBridge() {
+  const location = useLocation();
+  const path = `${location.pathname}${location.search || ''}`;
+
+  useEffect(() => {
+    let isActive = true;
+
+    import('./services/retargeting').then(({ initRetargeting, trackPageView }) => {
+      if (!isActive) {
+        return;
+      }
+
+      initRetargeting(path);
+      trackPageView(path);
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [path]);
+
+  return null;
+}
+
+function RuntimeToaster() {
+  const { pathname } = useLocation();
+  const [toastModule, setToastModule] = useState<ReactHotToastModule | null>(null);
+  const hostname = typeof window === 'undefined' ? '' : window.location.hostname;
+
+  const isPublicShell =
+    pathname === '/login' ||
+    pathname === '/forgot-password' ||
+    pathname === '/reset-password' ||
+    isB2BPublicStorePath(pathname, hostname);
+
+  useEffect(() => {
+    if (isPublicShell) {
+      return;
+    }
+
+    let isActive = true;
+
+    import('react-hot-toast').then((module) => {
+      if (isActive) {
+        setToastModule(module);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isPublicShell]);
+
+  if (isPublicShell || !toastModule) {
+    return null;
+  }
+
+  const Toaster = toastModule.Toaster;
+
+  return <Toaster position="top-right" reverseOrder={false} />;
+}
 
 export default function App() {
+  const hostname = typeof window === 'undefined' ? '' : window.location.hostname;
+  const dedicatedB2BHost = isDedicatedB2BHost(hostname);
+
+  const b2bStoreRoutes = (
+    <>
+      <Route
+        index
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BStoreLandingPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="register"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BRegistrationPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="login"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BLoginPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="forgot-password"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BForgotPasswordPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="reset-password"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BResetPasswordPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="catalog"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BStoreCatalogPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="checkout"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BCheckoutPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="product/:id"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BProductDetailPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="about"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BAboutPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="contact"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BContactPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="how-to-order"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BHowToOrderPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="shipping"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BShippingPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="partner"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BPartnerPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="led-guide"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BLedGuidePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="request-quote"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BRequestQuotePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="privacy"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BPrivacyPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="terms"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BTermsPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="cookies"
+        element={
+          <Suspense fallback={<PageLoadingFallback />}>
+            <B2BCookiesPage />
+          </Suspense>
+        }
+      />
+    </>
+  );
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <Toaster position="top-right" reverseOrder={false} />
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            hasErpSession() ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <LoginPage />
-              </Suspense>
-            )
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <Suspense fallback={<PageLoadingFallback />}>
-              <ForgotPasswordPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <Suspense fallback={<PageLoadingFallback />}>
-              <ResetPasswordPage />
-            </Suspense>
-          }
-        />
+    <>
+      <RuntimeToaster />
+      <RuntimeHead />
+      <RetargetingBridge />
+      <ErrorBoundary>
+        <Routes>
+        {!dedicatedB2BHost ? (
+          <>
+            <Route path="/login" element={<LoginRoute />} />
+            <Route
+              path="/forgot-password"
+              element={
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <ForgotPasswordPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/reset-password"
+              element={
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <ResetPasswordPage />
+                </Suspense>
+              }
+            />
+          </>
+        ) : null}
 
         {/* Public routes */}
-        <Route
-          path="checkout"
-          element={
-            <Suspense fallback={<PageLoadingFallback />}>
-              <B2BPublicCheckoutPage />
-            </Suspense>
-          }
-        />
+        {!dedicatedB2BHost ? (
+          <Route
+            path="checkout"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <B2BPublicCheckoutPage />
+              </Suspense>
+            }
+          />
+        ) : null}
+
+        {dedicatedB2BHost ? (
+          <Route
+            path="/"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <B2BStoreLayout />
+              </Suspense>
+            }
+          >
+            {b2bStoreRoutes}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        ) : null}
 
         {/* Public B2B Store Routes */}
         <Route
@@ -233,150 +534,7 @@ export default function App() {
             </Suspense>
           }
         >
-          <Route
-            index
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BStoreLandingPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="register"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BRegistrationPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="login"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BLoginPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="forgot-password"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BForgotPasswordPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="reset-password"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BResetPasswordPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="catalog"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BStoreCatalogPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="checkout"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BCheckoutPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="product/:id"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BProductDetailPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="about"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BAboutPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="contact"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BContactPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="how-to-order"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BHowToOrderPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="shipping"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BShippingPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="partner"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BPartnerPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="led-guide"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BLedGuidePage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="request-quote"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BRequestQuotePage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="privacy"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BPrivacyPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="terms"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BTermsPage />
-              </Suspense>
-            }
-          />
-          <Route
-            path="cookies"
-            element={
-              <Suspense fallback={<PageLoadingFallback />}>
-                <B2BCookiesPage />
-              </Suspense>
-            }
-          />
+          {b2bStoreRoutes}
         </Route>
 
         {/* B2B Portal - Authenticated Customer Routes */}
@@ -472,10 +630,7 @@ export default function App() {
         </Route>
 
         {/* Protected routes with layout */}
-        <Route
-          path="/"
-          element={hasErpSession() ? <AppLayout /> : <Navigate to="/login" replace />}
-        >
+        {!dedicatedB2BHost ? <Route path="/" element={<ProtectedRoute />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
 
           {/* Principal */}
@@ -674,8 +829,9 @@ export default function App() {
 
           {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Route>
-      </Routes>
-    </QueryClientProvider>
+        </Route> : null}
+        </Routes>
+      </ErrorBoundary>
+    </>
   );
 }
