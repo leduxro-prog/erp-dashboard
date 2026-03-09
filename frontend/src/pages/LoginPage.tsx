@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Shield, KeyRound } from 'lucide-react';
 import { authService } from '../services/auth.service';
+import { resolveGoogleLoginClientId } from './loginPage.google-config';
 
-const BUILD_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 type GoogleAuthModule = typeof import('@react-oauth/google');
 
 async function trackSuccessfulLogin(method: 'email' | 'google' | '2fa' | 'backup_code') {
@@ -27,7 +27,7 @@ const LoginPage: React.FC = () => {
   const [twofaToken, setTwofaToken] = useState('');
   const [useBackupCode, setUseBackupCode] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleClientId, setGoogleClientId] = useState(BUILD_GOOGLE_CLIENT_ID);
+  const [googleClientId, setGoogleClientId] = useState('');
   const [googleConfigLoaded, setGoogleConfigLoaded] = useState(false);
   const [googleAuthModule, setGoogleAuthModule] = useState<GoogleAuthModule | null>(null);
 
@@ -36,22 +36,18 @@ const LoginPage: React.FC = () => {
 
     const loadGoogleConfig = async () => {
       try {
-        const config = await authService.getGoogleAuthConfig();
+        const clientId = await resolveGoogleLoginClientId(() => authService.getGoogleAuthConfig());
         if (!mounted) {
           return;
         }
 
-        if (config.enabled && config.clientId) {
-          setGoogleClientId(config.clientId);
-        } else if (!config.enabled) {
-          setGoogleClientId('');
-        }
+        setGoogleClientId(clientId);
       } catch {
         if (!mounted) {
           return;
         }
 
-        setGoogleClientId(BUILD_GOOGLE_CLIENT_ID);
+        setGoogleClientId('');
       } finally {
         if (mounted) {
           setGoogleConfigLoaded(true);
