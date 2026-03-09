@@ -27,7 +27,7 @@ function mapBackendUser(backendUser: any): void {
     id: String(backendUser.id),
     email: backendUser.email,
     name,
-    avatar: backendUser.avatar,
+    avatar: backendUser.avatar_url ?? backendUser.avatar,
     role,
     permissions: backendUser.permissions || [],
   });
