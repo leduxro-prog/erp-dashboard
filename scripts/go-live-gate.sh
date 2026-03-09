@@ -5,12 +5,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-APP_CONTAINER="${APP_CONTAINER:-cypher-erp-app-1}"
-REDIS_CONTAINER="${REDIS_CONTAINER:-cypher-erp-redis}"
-DB_CONTAINER="${DB_CONTAINER:-cypher-erp-db}"
+APP_CONTAINER="${APP_CONTAINER:-}"
+FRONTEND_CONTAINER="${FRONTEND_CONTAINER:-}"
+REDIS_CONTAINER="${REDIS_CONTAINER:-}"
+DB_CONTAINER="${DB_CONTAINER:-}"
+RABBITMQ_CONTAINER="${RABBITMQ_CONTAINER:-}"
 DB_USER="${DB_USER:-cypher_user}"
 DB_NAME="${DB_NAME:-cypher_erp}"
 BACKUP_DIR="${BACKUP_DIR:-$PROJECT_ROOT/backups}"
+BACKUP_ENABLED="${BACKUP_ENABLED:-true}"
 SINCE_WINDOW="${SINCE_WINDOW:-30m}"
 WATCH_CHECKPOINTS="${WATCH_CHECKPOINTS:-3}"
 WATCH_INTERVAL_SEC="${WATCH_INTERVAL_SEC:-600}"
@@ -40,8 +43,51 @@ require_command() {
   fi
 }
 
+resolve_container_name() {
+  current_name="$1"
+  service_name="$2"
+  shift 2
+
+  if [ -n "$current_name" ] && docker inspect "$current_name" >/dev/null 2>&1; then
+    printf '%s\n' "$current_name"
+    return 0
+  fi
+
+  while IFS= read -r candidate; do
+    if [ -n "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done < <(docker ps -a --filter "label=com.docker.compose.service=$service_name" --format '{{.Names}}')
+
+  for candidate in "$@"; do
+    if [ -n "$candidate" ] && docker inspect "$candidate" >/dev/null 2>&1; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  printf '[ERROR] Unable to resolve container for service: %s\n' "$service_name"
+  exit 1
+}
+
+resolve_runtime_containers() {
+  APP_CONTAINER="$(resolve_container_name "$APP_CONTAINER" app cypher-erp-app-1 cypher-erp-app cypher-staging_app.1)"
+  FRONTEND_CONTAINER="$(resolve_container_name "$FRONTEND_CONTAINER" frontend cypher-erp-frontend-1 cypher-erp-frontend cypher-staging_frontend.1)"
+  DB_CONTAINER="$(resolve_container_name "$DB_CONTAINER" db cypher-erp-db cypher-staging_db.1)"
+  REDIS_CONTAINER="$(resolve_container_name "$REDIS_CONTAINER" redis cypher-erp-redis cypher-staging_redis.1)"
+  RABBITMQ_CONTAINER="$(resolve_container_name "$RABBITMQ_CONTAINER" rabbitmq cypher-rabbitmq cypher-staging_rabbitmq.1)"
+}
+
 run_prelaunch_backup() {
   section "Prelaunch Backup"
+
+  case "${BACKUP_ENABLED,,}" in
+    0|false|no|off)
+      ok "Backup skipped (BACKUP_ENABLED=$BACKUP_ENABLED)"
+      return
+      ;;
+  esac
 
   mkdir -p "$BACKUP_DIR"
   ts="$(date -u +%Y%m%dT%H%M%SZ)"
@@ -69,6 +115,22 @@ run_t0_gate() {
   fi
 }
 
+run_launch_smoke() {
+  section "Launch Smoke"
+
+  if API_BASE_URL="${API_BASE_URL:-http://localhost:3000}" \
+    WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:8080}" \
+    ERP_WEB_BASE_URL="${ERP_WEB_BASE_URL:-${WEB_BASE_URL:-http://127.0.0.1:8080}}" \
+    B2B_WEB_BASE_URL="${B2B_WEB_BASE_URL:-${WEB_BASE_URL:-http://127.0.0.1:8080}}" \
+    AUTH_TOKEN="${AUTH_TOKEN:-}" \
+    ALLOW_INSECURE="${ALLOW_INSECURE:-0}" \
+    bash "$SCRIPT_DIR/tests/launch-smoke.sh"; then
+    ok "Launch smoke passed"
+  else
+    bad "Launch smoke failed"
+  fi
+}
+
 run_checkpoint() {
   idx="$1"
   total="$2"
@@ -78,7 +140,7 @@ run_checkpoint() {
   snapshot="$(docker ps --format '{{.Names}}\t{{.Status}}')"
   printf '%s\n' "$snapshot" | tee -a "$WATCH_LOG_FILE"
 
-  for svc in cypher-erp-frontend-1 "$APP_CONTAINER" "$REDIS_CONTAINER" cypher-erp-db cypher-rabbitmq; do
+  for svc in "$FRONTEND_CONTAINER" "$APP_CONTAINER" "$REDIS_CONTAINER" "$DB_CONTAINER" "$RABBITMQ_CONTAINER"; do
     line="$(printf '%s\n' "$snapshot" | grep -E "^${svc}[[:space:]]" || true)"
     if [ -n "$line" ] && printf '%s' "$line" | grep -q '(healthy)'; then
       ok "checkpoint $idx: $svc healthy"
@@ -161,12 +223,14 @@ main() {
   require_command docker
   require_command curl
   require_command python3
+  resolve_runtime_containers
 
   section "Go-Live Gate"
   printf 'Time: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
   run_prelaunch_backup
   run_t0_gate
+  run_launch_smoke
   run_postlaunch_watch
 
   section "Decision"

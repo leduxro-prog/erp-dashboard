@@ -109,11 +109,19 @@ export interface SitemapSection {
 export interface SitemapStatus {
   enabled: boolean;
   autoRegenerate: boolean;
+  regenerateFrequency?: 'daily' | 'weekly' | 'monthly';
+  priorityRules?: Record<string, number>;
+  changeFrequency?: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
   lastGeneratedAt?: string;
   sections: SitemapSection[];
   totalUrls: number;
   submittedToSearchEngines: boolean;
   submittedEngines: ('google' | 'bing' | 'yandex')[];
+  submittedAt?: string | null;
+  totalSitemaps?: number;
+  sitemaps?: SitemapSection[];
+  lastUpdated?: string | null;
+  generationMode?: 'persisted' | 'runtime_snapshot';
 }
 
 export interface SitemapGenerateOptions {
@@ -268,7 +276,7 @@ class SEOService {
    */
   async runBulkAudit(productIds: string[]): Promise<{ jobId: string; totalProducts: number }> {
     const response = await apiClient.post<ApiResponse<{ jobId: string; totalProducts: number }>>(
-      '/seo/audits/bulk',
+      '/seo/bulk/audit',
       { productIds },
     );
     return unwrapData(response);
@@ -373,11 +381,19 @@ class SEOService {
    * Bulk update metadata
    */
   async bulkUpdateMetadata(updates: Array<{ productId: string; data: Partial<SEOData> }>): Promise<{ success: number; failed: number }> {
-    const response = await apiClient.put<ApiResponse<{ success: number; failed: number }>>(
-      '/seo/metadata/bulk',
-      { updates },
-    );
-    return unwrapData(response);
+    let success = 0;
+    let failed = 0;
+
+    for (const update of updates) {
+      try {
+        await this.updateSeoMetadata(update.productId, update.data);
+        success += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+
+    return { success, failed };
   }
 
   // ============================================================
@@ -470,21 +486,40 @@ class SEOService {
    * Get product structured data
    */
   async getProductStructuredData(productId: string): Promise<Record<string, any>> {
-    const response = await apiClient.get<ApiResponse<Record<string, any>>>(
-      `/seo/structured-data/product/${productId}`,
+    const response = await apiClient.get<ApiResponse<{
+      productId: string;
+      schemas: Array<Record<string, any>>;
+      count: number;
+    }>>(
+      `/seo/structured-data/${productId}`,
     );
-    return unwrapData(response);
+    const payload = unwrapData(response);
+    return {
+      productId: payload.productId,
+      schemas: payload.schemas,
+      count: payload.count,
+    };
   }
 
   /**
    * Update product structured data
    */
   async updateProductStructuredData(productId: string, schema: Record<string, any>): Promise<{ valid: boolean; errors?: string[] }> {
-    const response = await apiClient.put<ApiResponse<{ valid: boolean; errors?: string[] }>>(
-      `/seo/structured-data/product/${productId}`,
-      { schema },
+    const inferredSchemaType = String(schema?.['@type'] || 'Product');
+    const response = await apiClient.put<ApiResponse<Record<string, any>>>(
+      `/seo/structured-data/${productId}`,
+      {
+        schema_type: inferredSchemaType,
+        data: schema,
+        validate: true,
+      },
     );
-    return unwrapData(response);
+    const payload = unwrapData(response);
+    return {
+      valid: true,
+      errors: [],
+      ...payload,
+    };
   }
 
   /**
@@ -531,17 +566,14 @@ class SEOService {
    * Connect search console
    */
   async connectSearchConsole(): Promise<{ authorizationUrl: string }> {
-    const response = await apiClient.post<ApiResponse<{ authorizationUrl: string }>>(
-      '/seo/search-console/connect',
-    );
-    return unwrapData(response);
+    throw new Error('Search Console connect endpoint is not available in current backend router');
   }
 
   /**
    * Disconnect search console
    */
   async disconnectSearchConsole(): Promise<void> {
-    await apiClient.post('/seo/search-console/disconnect');
+    throw new Error('Search Console disconnect endpoint is not available in current backend router');
   }
 
   // ============================================================
@@ -552,32 +584,46 @@ class SEOService {
    * Get robots.txt content
    */
   async getRobotsTxt(): Promise<RobotsTxtContent> {
-    const response = await apiClient.get<ApiResponse<RobotsTxtContent>>(
-      '/seo/robots.txt',
-    );
-    return unwrapData(response);
+    const baseUrl = import.meta.env.VITE_API_URL || '/api/v1';
+    const url = `${baseUrl}/seo/robots.txt`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiClient.getToken() || ''}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch robots.txt');
+    }
+
+    const text = await response.text();
+    const sitemapLine = text
+      .split('\n')
+      .map((line) => line.trim())
+      .find((line) => line.toLowerCase().startsWith('sitemap:'));
+
+    return {
+      rules: [{ userAgent: '*', allow: ['/'], disallow: ['/api/'] }],
+      sitemapUrl: sitemapLine ? sitemapLine.replace(/^sitemap:\s*/i, '') : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
   }
 
   /**
    * Update robots.txt
    */
   async updateRobotsTxt(content: Partial<RobotsTxtContent>): Promise<RobotsTxtContent> {
-    const response = await apiClient.put<ApiResponse<RobotsTxtContent>>(
-      '/seo/robots.txt',
-      content,
-    );
-    return unwrapData(response);
+    void content;
+    throw new Error('Robots.txt update endpoint is not available in current backend router');
   }
 
   /**
    * Validate robots.txt
    */
   async validateRobotsTxt(url: string): Promise<{ valid: boolean; errors?: string[] }> {
-    const response = await apiClient.post<ApiResponse<{ valid: boolean; errors?: string[] }>>(
-      '/seo/robots.txt/validate',
-      { url },
-    );
-    return unwrapData(response);
+    void url;
+    throw new Error('Robots.txt validation endpoint is not available in current backend router');
   }
 
   // ============================================================
@@ -588,21 +634,17 @@ class SEOService {
    * Get page speed insights
    */
   async getPageSpeedInsights(productId: string): Promise<PageSpeedInsight> {
-    const response = await apiClient.get<ApiResponse<PageSpeedInsight>>(
-      `/seo/page-speed/${productId}`,
-    );
-    return unwrapData(response);
+    void productId;
+    throw new Error('PageSpeed endpoint is not available in current backend router');
   }
 
   /**
    * Run page speed analysis
    */
   async runPageSpeedAnalysis(productId: string, strategy?: 'mobile' | 'desktop'): Promise<PageSpeedInsight> {
-    const response = await apiClient.post<ApiResponse<PageSpeedInsight>>(
-      `/seo/page-speed/${productId}/analyze`,
-      { strategy },
-    );
-    return unwrapData(response);
+    void productId;
+    void strategy;
+    throw new Error('PageSpeed analysis endpoint is not available in current backend router');
   }
 
   // ============================================================
@@ -623,20 +665,8 @@ class SEOService {
     startedAt: string;
     completedAt?: string;
   }> {
-    const response = await apiClient.get<ApiResponse<{
-      id: string;
-      status: 'pending' | 'running' | 'completed' | 'failed';
-      progress: number;
-      total: number;
-      processed: number;
-      error?: string;
-      result?: any;
-      startedAt: string;
-      completedAt?: string;
-    }>>(
-      `/seo/jobs/${jobId}`,
-    );
-    return unwrapData(response);
+    void jobId;
+    throw new Error('SEO jobs endpoint is not available in current backend router');
   }
 }
 
