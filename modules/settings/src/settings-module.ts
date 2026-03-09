@@ -8,6 +8,7 @@ import {
 import { createModuleLogger } from '@shared/utils/logger';
 import { SettingsService } from './application/services/SettingsService';
 import { SettingsController } from './api/controllers/SettingsController';
+import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 
 const logger = createModuleLogger('settings');
 
@@ -50,10 +51,17 @@ export default class SettingsModule implements ICypherModule {
     }
 
     private setupRoutes(): void {
-        this.router.get('/', this.settingsController.getSettings);
-        this.router.put('/', this.settingsController.updateSettings);
-        // Add health check for this module
         this.router.get('/health', (req, res) => res.json({ status: 'ok' }));
+        this.router.get('/', this.settingsController.getSettings);
+        this.router.get('/brand/shortlist', this.settingsController.getBrandVisualShortlist);
+
+        this.router.use(authenticate);
+        this.router.use(requireRole(['admin']));
+
+        this.router.get('/private', this.settingsController.getPrivateSettings);
+        this.router.get('/brand', this.settingsController.getBrandStrategy);
+        this.router.put('/brand/direction', this.settingsController.updateBrandDirection);
+        this.router.put('/', this.settingsController.updateSettings);
     }
 
     async start(): Promise<void> {

@@ -1,10 +1,11 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
 
-// Global API rate limiter: configurable, default 100 requests per 15 minutes per IP
+// Global API rate limiter: configurable, default 5000 requests per 15 minutes per IP
+// An ERP app makes 10-20 API calls per page load, so 100 was far too restrictive
 export const globalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_GLOBAL_MAX || '100', 10),
+  max: parseInt(process.env.RATE_LIMIT_GLOBAL_MAX || '5000', 10),
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -13,16 +14,24 @@ export const globalApiLimiter = rateLimit({
   },
   // Uses default ipKeyGenerator which handles IPv6 normalization correctly
   skip: (req: Request) => {
-    // Skip rate limiting for health checks
-    return req.path === '/health' || req.path === '/api/v1/health';
+    // Skip rate limiting for health checks and file import/upload endpoints
+    return (
+      req.path === '/health' ||
+      req.path === '/api/v1/health' ||
+      req.path.includes('/import-prices') ||
+      req.path.includes('/images/auto-search') ||
+      req.path.includes('/images/upload') ||
+      req.path.includes('/images/bulk-import')
+    );
   },
 });
 
-// B2B Portal rate limiter: higher limit for business customers browsing catalog
-// Default 300 requests per 15 minutes (3x global) — configurable via RATE_LIMIT_B2B_MAX
+// B2B Portal rate limiter: generous limit for business customers browsing catalog
+// Each page load triggers 5-6 simultaneous API calls (products, categories, filters, settings, credit)
+// Default 3000 requests per 15 minutes — configurable via RATE_LIMIT_B2B_MAX
 export const b2bApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_B2B_MAX || '300', 10),
+  max: parseInt(process.env.RATE_LIMIT_B2B_MAX || '3000', 10),
   standardHeaders: true,
   legacyHeaders: false,
   message: {

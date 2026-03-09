@@ -2,6 +2,11 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { Logger } from '@shared/utils/logger';
+import {
+  BrandStrategySettings,
+  getDefaultBrandStrategy,
+  resolveBrandStrategyFromSettings,
+} from '@shared/utils/brand-strategy';
 
 export interface AppSettings {
   general: {
@@ -173,6 +178,13 @@ export interface AppSettings {
       alertEmail: string;
     };
   };
+  brandStrategy: BrandStrategySettings;
+}
+
+export interface PublicAppSettings {
+  general: AppSettings['general'];
+  b2b: AppSettings['b2b'];
+  brandStrategy: BrandStrategySettings;
 }
 
 export class SettingsService {
@@ -188,11 +200,41 @@ export class SettingsService {
     return this.settings!;
   }
 
+  async getPublicSettings(): Promise<PublicAppSettings> {
+    const settings = await this.getSettings();
+
+    return {
+      general: settings.general,
+      b2b: settings.b2b,
+      brandStrategy: settings.brandStrategy,
+    };
+  }
+
   async updateSettings(newSettings: Partial<AppSettings>): Promise<AppSettings> {
     const current = await this.getSettings();
-    this.settings = this.deepMerge(current, newSettings) as AppSettings;
+    const merged = this.deepMerge(current, newSettings as Record<string, any>) as AppSettings;
+    merged.brandStrategy = resolveBrandStrategyFromSettings(merged as unknown as Record<string, unknown>);
+    this.settings = merged;
     await this.saveSettings();
     return this.settings;
+  }
+
+  async getBrandStrategy(): Promise<BrandStrategySettings> {
+    const settings = await this.getSettings();
+    return settings.brandStrategy;
+  }
+
+  async updateBrandDirection(direction: BrandStrategySettings['selectedDirection']): Promise<BrandStrategySettings> {
+    const current = await this.getSettings();
+    const next = this.deepMerge(current, {
+      brandStrategy: {
+        selectedDirection: direction,
+      },
+    }) as AppSettings;
+    next.brandStrategy = resolveBrandStrategyFromSettings(next as unknown as Record<string, unknown>);
+    this.settings = next;
+    await this.saveSettings();
+    return this.settings.brandStrategy;
   }
 
   /**
@@ -221,7 +263,10 @@ export class SettingsService {
   private async loadSettings(): Promise<void> {
     try {
       const data = await fs.readFile(this.configPath, 'utf-8');
-      this.settings = JSON.parse(data);
+      const parsed = JSON.parse(data);
+      const merged = this.deepMerge(this.getDefaultSettings(), parsed as Partial<AppSettings>) as AppSettings;
+      merged.brandStrategy = resolveBrandStrategyFromSettings(merged as unknown as Record<string, unknown>);
+      this.settings = merged;
     } catch (error) {
       this.logger.warn('Settings file not found, using defaults', { error });
       this.settings = this.getDefaultSettings();
@@ -254,7 +299,7 @@ export class SettingsService {
         woocommerce: { url: '', consumerKey: '', consumerSecret: '' },
       },
                   b2b: {
-                      catalogVisibility: 'login_only',
+                      catalogVisibility: 'public',
                       approvalMode: 'manual',
                       showPrices: true,        showStock: true,
         allowRegistration: false,
@@ -397,6 +442,7 @@ export class SettingsService {
           alertEmail: '',
         },
       },
+      brandStrategy: getDefaultBrandStrategy('LEDUX', 'https://ledux.ro'),
     };
   }
 }
