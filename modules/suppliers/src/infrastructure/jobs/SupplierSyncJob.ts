@@ -1,7 +1,7 @@
 import { Queue, Worker, Job, QueueOptions } from 'bullmq';
 import Redis from 'ioredis';
-import { ScrapeSupplierStock } from '../../application';
-import { ISupplierRepository } from '../../domain';
+import { ScrapeSupplierStock, SyncInnproFromIof } from '../../application';
+import { ISupplierRepository, SupplierCode } from '../../domain';
 import { ScraperFactory } from '../scrapers/ScraperFactory';
 import { createModuleLogger } from '@shared/utils/logger';
 
@@ -87,6 +87,7 @@ export class SupplierSyncJob {
   constructor(
     private repository: ISupplierRepository,
     redisConfig?: { host: string; port: number; password?: string },
+    private readonly innproIofSyncUseCase?: SyncInnproFromIof,
   ) {
     const redis = redisConfig || { host: 'localhost', port: 6379 };
     this.supplierLockTtlMs = this.parsePositiveIntEnv('SUPPLIER_SYNC_LOCK_TTL_MS', 25 * 60 * 1000);
@@ -440,6 +441,15 @@ export class SupplierSyncJob {
         this.repository,
         scraperFactory as any,
       );
+      const innproIofSyncUseCase = this.innproIofSyncUseCase || new SyncInnproFromIof(this.repository);
+
+      const syncSupplier = async (supplierId: number, supplierCode: string) => {
+        if (supplierCode === SupplierCode.INNPRO) {
+          return innproIofSyncUseCase.execute(supplierId);
+        }
+
+        return scrapeUseCase.execute(supplierId);
+      };
 
       if (job.data.syncAll) {
         // Sync all active suppliers
@@ -491,7 +501,7 @@ export class SupplierSyncJob {
           }
 
           try {
-            const scrapeResult = await scrapeUseCase.execute(supplier.id);
+            const scrapeResult = await syncSupplier(supplier.id, String(supplier.code || ''));
             const smartbillOverlap = await this.recordSupplierSyncReport({
               supplierId: supplier.id,
               supplierName: supplier.name,
@@ -607,7 +617,7 @@ export class SupplierSyncJob {
         }
 
         try {
-          const scrapeResult = await scrapeUseCase.execute(supplier.id);
+          const scrapeResult = await syncSupplier(supplier.id, String(supplier.code || ''));
           const smartbillOverlap = await this.recordSupplierSyncReport({
             supplierId: supplier.id,
             supplierName: supplier.name,

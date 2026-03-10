@@ -3,6 +3,7 @@ export { ScrapeSupplierStock, type ScrapedProduct } from './use-cases/ScrapeSupp
 export { MapSku } from './use-cases/MapSku';
 export { PlaceSupplierOrder, type OrderItem } from './use-cases/PlaceSupplierOrder';
 export { GetSupplierProducts } from './use-cases/GetSupplierProducts';
+export { SyncInnproFromIof } from './use-cases/SyncInnproFromIof';
 
 // DTOs
 export {

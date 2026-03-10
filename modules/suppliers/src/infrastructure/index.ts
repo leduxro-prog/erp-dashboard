@@ -4,6 +4,7 @@
 export { SkuMappingEntityDb } from './entities/SkuMappingEntityDb';
 export { SupplierEntityDb } from './entities/SupplierEntityDb';
 export { SupplierOrderEntityDb } from './entities/SupplierOrderEntityDb';
+export { SupplierPricingRuleEntityDb } from './entities/SupplierPricingRuleEntityDb';
 export { SupplierProductEntityDb } from './entities/SupplierProductEntityDb';
 
 // Jobs

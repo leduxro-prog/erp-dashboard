@@ -1,15 +1,5 @@
 import { BaseScraper } from './BaseScraper';
-import { AcaLightingScraper } from './AcaLightingScraper';
-import { MasterledScraper } from './MasterledScraper';
-import { AreluxScraper } from './AreluxScraper';
-import { BraytronScraper } from './BraytronScraper';
-import { FslScraper } from './FslScraper';
-import { MplPowerScraper } from './MplPowerScraper';
-import { AzzardoXmlScraper } from './AzzardoXmlScraper';
-import { LedProfilesScraper } from './LedProfilesScraper';
-import { VipelectroScraper } from './VipelectroScraper';
-import { BusinessCentralScraper } from './BusinessCentralScraper';
-import { SampleSupplierApiScraper } from './SampleSupplierApiScraper';
+import { InnproScraper } from './InnproScraper';
 import { SupplierCode } from '../../domain';
 
 export class ScraperFactory {
@@ -19,40 +9,43 @@ export class ScraperFactory {
     this.browser = browser;
   }
 
-  getScraper(supplierCode: string): BaseScraper {
+  getScraper(supplierCode: SupplierCode): BaseScraper {
     switch (supplierCode) {
+      case SupplierCode.INNPRO:
+        return new InnproScraper(this.browser);
+
       case SupplierCode.ACA_LIGHTING:
-        return new AcaLightingScraper(this.browser);
+        return new (require('./AcaLightingScraper').AcaLightingScraper)(this.browser);
 
       case SupplierCode.MASTERLED:
-        return new MasterledScraper(this.browser);
+        return new (require('./MasterledScraper').MasterledScraper)(this.browser);
 
       case SupplierCode.ARELUX:
-        return new AreluxScraper(this.browser);
+        return new (require('./AreluxScraper').AreluxScraper)(this.browser);
 
       case SupplierCode.BRAYTRON:
-        return new BraytronScraper(this.browser);
+        return new (require('./BraytronScraper').BraytronScraper)(this.browser);
 
       case SupplierCode.FSL:
-        return new FslScraper(this.browser);
+        return new (require('./FslScraper').FslScraper)(this.browser);
 
       case SupplierCode.MPL_POWER:
-        return new MplPowerScraper(this.browser);
+        return new (require('./MplPowerScraper').MplPowerScraper)(this.browser);
 
       case SupplierCode.AZZARDO:
-        return new AzzardoXmlScraper(this.browser);
+        return new (require('./AzzardoXmlScraper').AzzardoXmlScraper)(this.browser);
 
       case SupplierCode.LED_PROFILES:
-        return new LedProfilesScraper(this.browser);
+        return new (require('./LedProfilesScraper').LedProfilesScraper)(this.browser);
 
       case SupplierCode.VIPELECTRO:
-        return new VipelectroScraper(this.browser);
+        return new (require('./VipelectroScraper').VipelectroScraper)(this.browser);
 
       case SupplierCode.BUSINESS_CENTRAL:
-        return new BusinessCentralScraper(this.browser);
+        return new (require('./BusinessCentralScraper').BusinessCentralScraper)(this.browser);
 
       case SupplierCode.EXAMPLE_API:
-        return new SampleSupplierApiScraper(this.browser);
+        return new (require('./SampleSupplierApiScraper').SampleSupplierApiScraper)(this.browser);
 
       default:
         throw new Error(`Unknown supplier code: ${supplierCode}`);

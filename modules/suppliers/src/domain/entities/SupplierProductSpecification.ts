@@ -1,0 +1,38 @@
+export interface SupplierProductSpecification {
+  productId: number;
+  supplierId: number;
+  supplierSku: string;
+  brand?: string;
+  manufacturer?: string;
+  countryOfOrigin?: string;
+  eanCode?: string;
+  wattage?: number;
+  lumens?: number;
+  colorTemperature?: number;
+  cri?: number;
+  beamAngle?: number;
+  ipRating?: string;
+  efficacy?: number;
+  dimmable?: boolean;
+  dimmingType?: string;
+  voltageInput?: string;
+  voltageOutput?: string;
+  powerFactor?: number;
+  frequency?: string;
+  mountingType?: string;
+  material?: string;
+  color?: string;
+  lifespanHours?: number;
+  warrantyYears?: number;
+  certificationCe?: boolean;
+  certificationRohs?: boolean;
+  certificationUl?: boolean;
+  certificationEtl?: boolean;
+  certificationEnec?: boolean;
+  energyClass?: string;
+  datasheetUrl?: string;
+  iesFileUrl?: string;
+  installationGuideUrl?: string;
+  customSpecs?: Record<string, unknown>;
+  sourceUpdatedAt: Date;
+}

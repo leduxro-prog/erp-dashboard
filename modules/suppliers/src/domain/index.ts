@@ -5,6 +5,7 @@ export {
   SupplierProductEntity,
   type PriceHistoryEntry,
 } from './entities/SupplierProduct';
+export { type SupplierProductSpecification } from './entities/SupplierProductSpecification';
 export { SkuMapping, SkuMappingEntity } from './entities/SkuMapping';
 export {
   SupplierOrder,
@@ -17,4 +18,9 @@ export {
 export { SkuMappingService } from './services/SkuMappingService';
 
 // Repositories
-export { ISupplierRepository, type BulkUpsertResult } from './repositories/ISupplierRepository';
+export {
+  ISupplierRepository,
+  type BulkUpsertResult,
+  type SupplierPricingRule,
+  type UpsertSupplierPricingRuleInput,
+} from './repositories/ISupplierRepository';

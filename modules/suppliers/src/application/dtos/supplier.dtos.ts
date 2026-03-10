@@ -17,6 +17,8 @@ export interface ScrapeResult {
   productsFound: number;
   productsUpdated: number;
   productsCreated: number;
+  specificationsDetected: number;
+  specificationsUpdated: number;
   priceChanges: PriceChangeAlert[];
   significantPriceChanges: PriceChangeAlert[];
   errors: string[];

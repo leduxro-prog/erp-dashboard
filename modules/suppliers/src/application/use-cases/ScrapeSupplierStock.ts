@@ -20,6 +20,10 @@ import {
   SupplierNotActiveError,
 } from '../errors/supplier.errors';
 import { ScrapeResult, PriceChangeAlert } from '../dtos/supplier.dtos';
+import {
+  SupplierPricingResolution,
+  SupplierPricingService,
+} from '../services/SupplierPricingService';
 
 const logger = createModuleLogger('scrape-supplier-stock');
 
@@ -32,6 +36,7 @@ export class ScrapeSupplierStock {
   constructor(
     private repository: ISupplierRepository,
     private scraperFactory: IScraperFactory,
+    private supplierPricingService: SupplierPricingService = new SupplierPricingService(repository),
   ) {
     this.eventEmitter = new EventEmitter();
     const rawBatchSize = Number(process.env.SUPPLIER_UPSERT_BATCH_SIZE);
@@ -258,7 +263,7 @@ export class ScrapeSupplierStock {
   }
 
   private normalizeCustomSpecs(
-    attributes: Record<string, string | number | boolean> | undefined,
+    attributes: Record<string, unknown> | undefined,
     customSpecs: Record<string, unknown> | undefined,
   ): Record<string, unknown> | undefined {
     const merged: Record<string, unknown> = {};
@@ -539,6 +544,7 @@ export class ScrapeSupplierStock {
         // Process scraped products
         const productsToUpsert = new Map<string, SupplierProductEntity>();
         const specsToUpsert: SupplierProductSpecification[] = [];
+        const pricingResolutions = new Map<string, SupplierPricingResolution>();
 
         const flushBatch = async (): Promise<void> => {
           if (productsToUpsert.size === 0) {
@@ -550,6 +556,18 @@ export class ScrapeSupplierStock {
         };
 
         for (const scrapedProduct of scrapedProducts) {
+          const pricingCacheKey = `${supplier.code}:${
+            this.supplierPricingService.normalizeCategoryKey(scrapedProduct.category) || '__fallback__'
+          }`;
+          let pricingResolution = pricingResolutions.get(pricingCacheKey);
+          if (!pricingResolution) {
+            pricingResolution = await this.supplierPricingService.resolveMarkup(
+              supplier.code,
+              scrapedProduct.category,
+            );
+            pricingResolutions.set(pricingCacheKey, pricingResolution);
+          }
+
           const normalizedCurrency = (scrapedProduct.currency || '').toUpperCase();
           const sourceCurrency =
             normalizedCurrency || (supplier.code === SupplierCode.ACA_LIGHTING ? 'EUR' : 'RON');
@@ -574,6 +592,10 @@ export class ScrapeSupplierStock {
             // Update existing product
             productEntity = new SupplierProductEntity(existingProduct);
             const nextPrice = convertedPrice > 0 ? convertedPrice : productEntity.price;
+            const nextSellingPrice = this.supplierPricingService.applyMarkup(
+              nextPrice,
+              pricingResolution.markupPercentage,
+            );
 
             // Check for price changes
             if (convertedPrice > 0 && productEntity.hasPriceChanged(nextPrice)) {
@@ -601,6 +623,8 @@ export class ScrapeSupplierStock {
             productEntity.price = nextPrice;
             productEntity.currency = priceCurrency;
             productEntity.stockQuantity = scrapedProduct.stockQuantity;
+            productEntity.markupPercentage = pricingResolution.markupPercentage;
+            productEntity.sellingPrice = Number.isFinite(nextSellingPrice) ? nextSellingPrice : null;
             if (preferredImageUrl) {
               productEntity.imageUrl = preferredImageUrl;
             }
@@ -617,8 +641,11 @@ export class ScrapeSupplierStock {
               currency: priceCurrency,
               stockQuantity: scrapedProduct.stockQuantity,
               lastScraped: new Date(),
-              markupPercentage: null,
-              sellingPrice: null,
+              markupPercentage: pricingResolution.markupPercentage,
+              sellingPrice: this.supplierPricingService.applyMarkup(
+                convertedPrice,
+                pricingResolution.markupPercentage,
+              ),
               imageUrl: preferredImageUrl,
               priceHistory: [
                 {

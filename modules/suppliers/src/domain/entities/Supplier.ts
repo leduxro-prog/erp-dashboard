@@ -6,6 +6,7 @@ export interface SupplierCredentials {
 }
 
 export enum SupplierCode {
+  INNPRO = 'innpro',
   ACA_LIGHTING = 'aca-lighting',
   MASTERLED = 'masterled',
   ARELUX = 'arelux',
@@ -80,6 +81,16 @@ export class SupplierEntity implements Supplier {
 
 // Known suppliers constants
 export const KNOWN_SUPPLIERS: Record<SupplierCode, Partial<Supplier>> = {
+  [SupplierCode.INNPRO]: {
+    name: 'Innpro',
+    code: SupplierCode.INNPRO,
+    website: 'https://innpro.ro',
+    contactEmail: 'office@innpro.ro',
+    contactPhone: '',
+    whatsappNumber: '',
+    productCount: 0,
+    syncFrequency: 4,
+  },
   [SupplierCode.ACA_LIGHTING]: {
     name: 'Aca Lighting',
     code: SupplierCode.ACA_LIGHTING,

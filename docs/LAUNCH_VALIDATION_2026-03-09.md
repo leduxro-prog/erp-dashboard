@@ -49,3 +49,17 @@ Validated at: `2026-03-09T21:48:34Z` (UTC)
 - Persistent config ownership: `ls -ln /opt/cypher-erp/config/` -> `settings.json` owned by `1001:65533`
 - Smoke: `bash scripts/tests/image-search-smoke.sh` -> `PASS` (`503` controlled fallback)
 - Smoke response evidence: `{"success":false,"error":"Image search unavailable","message":"Image embedding service not configured"}`
+
+## Innpro IOF + Pricing Rules Validation (Task 7/8)
+
+Validated at: `2026-03-10T10:06:28Z` (UTC)
+
+- `npm test -- --runTestsByPath frontend/src/services/__tests__/suppliers.pricing-rules.test.ts` -> PASS (4/4)
+- `npm test -- --runTestsByPath modules/suppliers/tests/api/SupplierPricingRulesController.test.ts` -> PASS (6/6)
+- `bash scripts/smoke/innpro-sync-smoke.sh` -> FAIL (expected without Innpro env: missing `INNPRO_IOF_GATEWAY_URL`, `INNPRO_IOF_TOKEN`, `INNPRO_B2B_LOGIN`, `INNPRO_B2B_PASSWORD`, `INNPRO_DEFAULT_MARKUP`)
+- `INNPRO_IOF_GATEWAY_URL=... INNPRO_IOF_TOKEN=... INNPRO_B2B_LOGIN=... INNPRO_B2B_PASSWORD=... INNPRO_DEFAULT_MARKUP=60 API_BASE_URL=http://65.108.255.104/health bash scripts/smoke/innpro-sync-smoke.sh` -> PASS
+
+Launch readiness note:
+
+- Innpro smoke now enforces explicit env contract before launch.
+- Smoke preflight checks env shape + API health and provides actionable fail output.

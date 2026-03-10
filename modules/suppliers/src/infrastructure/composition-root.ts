@@ -4,12 +4,16 @@ import { DataSource } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
 
 import { createSupplierRoutes } from '../api/routes/supplier.routes';
+import { ISupplierRepository } from '../domain';
 import { SupplierEntityDb } from './entities/SupplierEntityDb';
 import { SupplierOrderEntityDb } from './entities/SupplierOrderEntityDb';
 import { SupplierProductEntityDb } from './entities/SupplierProductEntityDb';
 import { SkuMappingEntityDb } from './entities/SkuMappingEntityDb';
 import { SupplierSyncJob } from './jobs/SupplierSyncJob';
+import { InnproIofClient } from './iof/InnproIofClient';
+import { InnproIofParser } from './iof/InnproIofParser';
 import { TypeOrmSupplierRepository } from './repositories/TypeOrmSupplierRepository';
+import { SyncInnproFromIof } from '../application';
 
 /**
  * Composition Root for Suppliers Module
@@ -25,7 +29,7 @@ export function createSuppliersRouter(dataSource: DataSource): Router {
   const supplierOrderRepo = dataSource.getRepository(SupplierOrderEntityDb);
 
   // Instantiate TypeORM repository with all required repositories
-  const supplierRepository = new TypeOrmSupplierRepository(
+  const supplierRepository: ISupplierRepository = new TypeOrmSupplierRepository(
     supplierRepo,
     supplierProductRepo,
     skuMappingRepo,
@@ -39,7 +43,12 @@ export function createSuppliersRouter(dataSource: DataSource): Router {
     port: Number(process.env.REDIS_PORT || 6379),
     password: process.env.REDIS_PASSWORD || undefined,
   };
-  const supplierSyncJob = new SupplierSyncJob(supplierRepository, redisConfig);
+  const innproIofSyncUseCase = new SyncInnproFromIof(
+    supplierRepository,
+    new InnproIofClient(),
+    new InnproIofParser(),
+  );
+  const supplierSyncJob = new SupplierSyncJob(supplierRepository, redisConfig, innproIofSyncUseCase);
 
   const supplierSyncAutorun = String(process.env.SUPPLIER_SYNC_AUTORUN ?? 'true').toLowerCase();
   const shouldScheduleSupplierSync = supplierSyncAutorun !== '0' && supplierSyncAutorun !== 'false';

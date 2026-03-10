@@ -6,7 +6,7 @@ const config: Config = {
   maxWorkers: process.env.JEST_MAX_WORKERS || '50%',
   workerIdleMemoryLimit: '512MB',
   setupFiles: ['<rootDir>/tests/jest-setup.ts'],
-  roots: ['<rootDir>/shared', '<rootDir>/modules', '<rootDir>/tests', '<rootDir>/src'],
+  roots: ['<rootDir>/shared', '<rootDir>/modules', '<rootDir>/tests', '<rootDir>/src', '<rootDir>/frontend'],
   testMatch: ['**/*.test.ts', '**/*.spec.ts', '**/*SmokeTests.ts', '**/RollbackDrillTests.ts'],
   moduleNameMapper: {
     '^@shared/(.*)$': '<rootDir>/shared/$1',

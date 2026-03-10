@@ -28,6 +28,8 @@ describe('ScrapeSupplierStock', () => {
       password: 'test',
     },
     syncFrequency: 4,
+    defaultMarkupPercentage: 60,
+    markupType: 'percentage',
     lastSync: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -60,6 +62,9 @@ describe('ScrapeSupplierStock', () => {
       listSuppliers: jest
         .fn<ISupplierRepository['listSuppliers']>()
         .mockImplementation(async () => [mockSupplier]),
+      getSupplierPricingRule: jest
+        .fn<ISupplierRepository['getSupplierPricingRule']>()
+        .mockImplementation(async () => null),
     } as unknown as jest.Mocked<ISupplierRepository>;
 
     mockScraperFactory = {
@@ -99,6 +104,41 @@ describe('ScrapeSupplierStock', () => {
     expect(result.productsFound).toBe(1);
     expect(result.productsCreated).toBe(1);
     expect(result.productsUpdated).toBe(0);
+
+    const upsertedProducts = mockRepository.bulkUpsertProducts.mock.calls[0]?.[0];
+    expect(upsertedProducts?.[0]?.markupPercentage).toBe(60);
+    expect(upsertedProducts?.[0]?.sellingPrice).toBe(16);
+  });
+
+  it('applies active category pricing rule instead of fallback', async () => {
+    mockRepository.getSupplierPricingRule.mockImplementationOnce(async () => ({
+      supplierCode: SupplierCode.ACA_LIGHTING,
+      categoryKey: 'lighting',
+      markupPercent: 30,
+      active: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    mockScraperFactory.getScraper.mockImplementationOnce(() => ({
+      scrapeProducts: async () => [
+        {
+          supplierSku: 'TEST-001',
+          name: 'Test Product',
+          price: 10,
+          currency: 'RON',
+          stockQuantity: 100,
+          category: 'lighting',
+        },
+      ],
+      scrapeStock: async () => [],
+    }));
+
+    await useCase.execute(1);
+
+    const upsertedProducts = mockRepository.bulkUpsertProducts.mock.calls[0]?.[0];
+    expect(upsertedProducts?.[0]?.markupPercentage).toBe(30);
+    expect(upsertedProducts?.[0]?.sellingPrice).toBe(13);
   });
 
   it('detects updates for already known supplier SKUs', async () => {

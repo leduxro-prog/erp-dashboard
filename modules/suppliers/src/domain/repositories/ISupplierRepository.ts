@@ -2,10 +2,27 @@ import { Supplier } from '../entities/Supplier';
 import { SupplierProduct } from '../entities/SupplierProduct';
 import { SkuMapping } from '../entities/SkuMapping';
 import { SupplierOrder } from '../entities/SupplierOrder';
+import { SupplierProductSpecification } from '../entities/SupplierProductSpecification';
 
 export interface BulkUpsertResult {
   updated: number;
   created: number;
+}
+
+export interface SupplierPricingRule {
+  supplierCode: string;
+  categoryKey: string;
+  markupPercent: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpsertSupplierPricingRuleInput {
+  supplierCode: string;
+  categoryKey: string;
+  markupPercent: number;
+  active?: boolean;
 }
 
 export interface ISupplierRepository {
@@ -24,6 +41,13 @@ export interface ISupplierRepository {
   bulkUpsertProducts(
     products: SupplierProduct[],
   ): Promise<BulkUpsertResult>;
+  upsertProductSpecifications(
+    specifications: SupplierProductSpecification[],
+    options?: {
+      conflictPolicy?: 'overwrite' | 'merge_non_empty';
+      source?: string;
+    },
+  ): Promise<number>;
 
   // SKU Mapping operations
   getSkuMapping(
@@ -48,4 +72,19 @@ export interface ISupplierRepository {
   // Sync tracking
   updateLastSync(supplierId: number, syncTime: Date): Promise<void>;
   getLastSync(supplierId: number): Promise<Date | null>;
+
+  // Supplier Pricing Rule operations
+  listSupplierPricingRules(supplierCode: string): Promise<SupplierPricingRule[]>;
+  getSupplierPricingRule(
+    supplierCode: string,
+    categoryKey: string,
+  ): Promise<SupplierPricingRule | null>;
+  upsertSupplierPricingRule(
+    input: UpsertSupplierPricingRuleInput,
+  ): Promise<SupplierPricingRule>;
+  updateSupplierPricingRuleActive(
+    supplierCode: string,
+    categoryKey: string,
+    active: boolean,
+  ): Promise<SupplierPricingRule | null>;
 }

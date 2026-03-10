@@ -13,6 +13,24 @@ export interface BulkUpsertResult {
   created: number;
 }
 
+export interface CategoryMarkup {
+  id: number;
+  supplierId: number;
+  categoryId: number;
+  categoryName: string;
+  markupPercentage: number;
+  isActive: boolean;
+}
+
+export interface ManufacturerMarkup {
+  id: number;
+  supplierId: number;
+  manufacturerId: number;
+  manufacturerName: string;
+  markupPercentage: number;
+  isActive: boolean;
+}
+
 /**
  * Port interface for Supplier data access
  * Abstracts the data persistence layer from business logic

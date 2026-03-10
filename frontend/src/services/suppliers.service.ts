@@ -1,4 +1,8 @@
 import { apiClient } from './api';
+import {
+  SupplierPricingRule,
+  UpsertSupplierPricingRuleInput,
+} from '../types/supplier-pricing-rule';
 
 // Types
 export interface Supplier {
@@ -59,6 +63,15 @@ export interface SupplierOrder {
 }
 
 class SuppliersService {
+  private unwrapData<T>(response: { data?: T } | T): T {
+    if (response && typeof response === 'object' && 'data' in (response as object)) {
+      const envelope = response as { data?: T };
+      return (envelope.data ?? (response as T)) as T;
+    }
+
+    return response as T;
+  }
+
   // Suppliers
   async getSuppliers(activeOnly = false): Promise<Supplier[]> {
     const params = new URLSearchParams();
@@ -73,6 +86,44 @@ class SuppliersService {
 
   async getSupplierStatistics(id: string | number): Promise<SupplierStatistics> {
     return apiClient.get<SupplierStatistics>(`/suppliers/${id}/statistics`);
+  }
+
+  // Supplier Pricing Rules (Task 6 API)
+  async getSupplierPricingRules(supplierCode: string): Promise<SupplierPricingRule[]> {
+    const response = await apiClient.get<{ data?: SupplierPricingRule[] } | SupplierPricingRule[]>(
+      `/pricing-rules/${encodeURIComponent(supplierCode)}`,
+    );
+    const data = this.unwrapData<SupplierPricingRule[]>(response);
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createSupplierPricingRule(input: UpsertSupplierPricingRuleInput): Promise<SupplierPricingRule> {
+    const response = await apiClient.post<{ data?: SupplierPricingRule } | SupplierPricingRule>('/pricing-rules', input);
+    return this.unwrapData<SupplierPricingRule>(response);
+  }
+
+  async upsertSupplierPricingRuleByKey(
+    supplierCode: string,
+    categoryKey: string,
+    input: Pick<UpsertSupplierPricingRuleInput, 'markupPercent' | 'active'>,
+  ): Promise<SupplierPricingRule> {
+    const response = await apiClient.put<{ data?: SupplierPricingRule } | SupplierPricingRule>(
+      `/pricing-rules/${encodeURIComponent(supplierCode)}/${encodeURIComponent(categoryKey)}`,
+      input,
+    );
+    return this.unwrapData<SupplierPricingRule>(response);
+  }
+
+  async setSupplierPricingRuleActive(
+    supplierCode: string,
+    categoryKey: string,
+    active: boolean,
+  ): Promise<SupplierPricingRule> {
+    const response = await apiClient.patch<{ data?: SupplierPricingRule } | SupplierPricingRule>(
+      `/pricing-rules/${encodeURIComponent(supplierCode)}/${encodeURIComponent(categoryKey)}/active`,
+      { active },
+    );
+    return this.unwrapData<SupplierPricingRule>(response);
   }
 
   // Products
@@ -97,8 +148,8 @@ class SuppliersService {
   }
 
   // Sync
-  async triggerSync(id: string | number): Promise<any> {
-    return apiClient.post<any>(`/suppliers/${id}/sync`);
+  async triggerSync(id: string | number): Promise<{ jobId?: string; status?: string }> {
+    return apiClient.post<{ jobId?: string; status?: string }>(`/suppliers/${id}/sync`);
   }
 
   async triggerSyncAll(): Promise<{ jobId: string }> {

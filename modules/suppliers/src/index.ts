@@ -28,6 +28,7 @@ export { createSupplierRoutes } from './api/routes/supplier.routes';
 
 // TypeORM entities
 export { SupplierEntityDb } from './infrastructure/entities/SupplierEntityDb';
+export { SupplierPricingRuleEntityDb } from './infrastructure/entities/SupplierPricingRuleEntityDb';
 export { SupplierProductEntityDb } from './infrastructure/entities/SupplierProductEntityDb';
 export { SkuMappingEntityDb } from './infrastructure/entities/SkuMappingEntityDb';
 export { SupplierOrderEntityDb } from './infrastructure/entities/SupplierOrderEntityDb';

@@ -9,6 +9,7 @@ import {
   Plus,
   X,
   Briefcase,
+  Truck,
   Lock,
   Server,
   FileText,
@@ -18,12 +19,15 @@ import {
 } from 'lucide-react';
 import { API_URL } from '../config';
 import { apiClient } from '../services/api';
+import { suppliersService } from '../services/suppliers.service';
+import { SupplierPricingRule } from '../types/supplier-pricing-rule';
 
 const API_URI = `${API_URL}/settings`;
 
 type SettingsTab =
   | 'general'
   | 'users'
+  | 'suppliers'
   | 'integrations'
   | 'security'
   | 'notifications'
@@ -54,14 +58,34 @@ interface AppSettings {
     minOrderValue: string;
     defaultCreditLimit: string;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
+interface SettingsUser {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  role?: string;
+  isActive?: boolean;
+}
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: string }).message;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message;
+    }
+  }
+
+  return fallback;
+};
+
 export const SettingsPage: React.FC = () => {
-  // Default to dark mode or detect from system/local storage if needed.
-  // For now, hardcoding to dark to match the cyber/dark aesthetic of Cypher,
-  // or we could add a hook later.
-  const isDark = true;
+  const isDark =
+    typeof document !== 'undefined'
+      ? document.documentElement.classList.contains('dark')
+      : false;
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState<AppSettings>({
@@ -94,7 +118,7 @@ export const SettingsPage: React.FC = () => {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // User Management State
-  const [usersList, setUsersList] = useState([]);
+  const [usersList, setUsersList] = useState<SettingsUser[]>([]);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     first_name: '',
@@ -103,6 +127,12 @@ export const SettingsPage: React.FC = () => {
     password: '',
     role: 'sales',
   });
+
+  const [pricingRulesLoading, setPricingRulesLoading] = useState(false);
+  const [pricingRulesSaving, setPricingRulesSaving] = useState(false);
+  const [supplierPricingRules, setSupplierPricingRules] = useState<SupplierPricingRule[]>([]);
+  const [ruleForm, setRuleForm] = useState({ categoryKey: '', markupPercent: '', active: true });
+  const [editingCategoryKey, setEditingCategoryKey] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -123,8 +153,8 @@ export const SettingsPage: React.FC = () => {
       setIsUserModalOpen(false);
       setNewUser({ first_name: '', last_name: '', email: '', password: '', role: 'sales' });
       fetchUsers();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to create user.' });
+    } catch (error: unknown) {
+      setMessage({ type: 'error', text: getErrorMessage(error, 'Failed to create user.') });
     } finally {
       setSaving(false);
       setTimeout(() => setMessage(null), 3000);
@@ -137,16 +167,109 @@ export const SettingsPage: React.FC = () => {
       await apiClient.delete(`/users/${id}`);
       fetchUsers();
       setMessage({ type: 'success', text: 'User deleted.' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setMessage({ type: 'error', text: error.message || 'Failed to delete user.' });
+      setMessage({ type: 'error', text: getErrorMessage(error, 'Failed to delete user.') });
       setTimeout(() => setMessage(null), 3000);
     }
+  };
+
+  const fetchSupplierPricingRules = async () => {
+    setPricingRulesLoading(true);
+    try {
+      const rules = await suppliersService.getSupplierPricingRules('innpro');
+      setSupplierPricingRules(rules);
+    } catch (error: unknown) {
+      setSupplierPricingRules([]);
+      setMessage({
+        type: 'error',
+        text: getErrorMessage(error, 'Nu s-au putut încărca regulile de preț pentru Innpro.'),
+      });
+      setTimeout(() => setMessage(null), 3000);
+    } finally {
+      setPricingRulesLoading(false);
+    }
+  };
+
+  const resetRuleForm = () => {
+    setRuleForm({ categoryKey: '', markupPercent: '', active: true });
+    setEditingCategoryKey(null);
+  };
+
+  const runSaveSupplierPricingRule = async () => {
+    const categoryKey = ruleForm.categoryKey.trim().toLowerCase();
+    const markupPercent = Number(ruleForm.markupPercent);
+
+    if (!categoryKey || Number.isNaN(markupPercent)) {
+      setMessage({ type: 'error', text: 'Categoria și markup-ul sunt obligatorii.' });
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
+    setPricingRulesSaving(true);
+    try {
+      if (editingCategoryKey) {
+        await suppliersService.upsertSupplierPricingRuleByKey('innpro', editingCategoryKey, {
+          markupPercent,
+          active: ruleForm.active,
+        });
+      } else {
+        await suppliersService.createSupplierPricingRule({
+          supplierCode: 'innpro',
+          categoryKey,
+          markupPercent,
+          active: ruleForm.active,
+        });
+      }
+
+      await fetchSupplierPricingRules();
+      resetRuleForm();
+      setMessage({ type: 'success', text: 'Regula de preț a fost salvată.' });
+    } catch (error: unknown) {
+      setMessage({
+        type: 'error',
+        text: getErrorMessage(error, 'Nu s-a putut salva regula de preț.'),
+      });
+    } finally {
+      setPricingRulesSaving(false);
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
+
+  const runToggleSupplierPricingRule = async (rule: SupplierPricingRule) => {
+    try {
+      const updated = await suppliersService.setSupplierPricingRuleActive(
+        'innpro',
+        rule.categoryKey,
+        !rule.active,
+      );
+      setSupplierPricingRules((prev) =>
+        prev.map((item) => (item.categoryKey === updated.categoryKey ? updated : item)),
+      );
+    } catch (error: unknown) {
+      setMessage({
+        type: 'error',
+        text: getErrorMessage(error, 'Nu s-a putut actualiza statusul regulii.'),
+      });
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
+
+  const startEditSupplierPricingRule = (rule: SupplierPricingRule) => {
+    setEditingCategoryKey(rule.categoryKey);
+    setRuleForm({
+      categoryKey: rule.categoryKey,
+      markupPercent: String(rule.markupPercent),
+      active: rule.active,
+    });
   };
 
   useEffect(() => {
     if (activeTab === 'users') {
       fetchUsers();
+    }
+    if (activeTab === 'suppliers') {
+      fetchSupplierPricingRules();
     }
   }, [activeTab]);
 
@@ -154,6 +277,7 @@ export const SettingsPage: React.FC = () => {
     { id: 'general', label: 'General', icon: Building },
     { id: 'b2b', label: 'Portal B2B', icon: Briefcase },
     { id: 'users', label: 'Utilizatori', icon: Users },
+    { id: 'suppliers', label: 'Furnizori', icon: Truck },
     { id: 'integrations', label: 'Integrări', icon: Globe },
     { id: 'security', label: 'Securitate', icon: Shield },
     { id: 'notifications', label: 'Notificări', icon: Bell },
@@ -206,7 +330,7 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const handleChange = (section: string, field: string, value: any, subsection?: string) => {
+  const handleChange = (section: string, field: string, value: unknown, subsection?: string) => {
     setSettings((prev) => {
       if (subsection) {
         return {
@@ -772,7 +896,7 @@ export const SettingsPage: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    usersList.map((user: any) => (
+                    usersList.map((user) => (
                       <tr
                         key={user.id}
                         className={`group ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}`}
@@ -839,6 +963,162 @@ export const SettingsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        );
+
+      case 'suppliers':
+        return (
+          <div className="space-y-6">
+            <div
+              className={`p-6 rounded-xl border ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}
+            >
+              <h3 className={`text-lg font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                Reguli preț categorii Innpro
+              </h3>
+              <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Configurează markup-ul pe categorie pentru supplier-ul innpro.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2">
+                  <label
+                    htmlFor="innpro-category-key"
+                    className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                  >
+                    Categorie
+                  </label>
+                  <input
+                    id="innpro-category-key"
+                    type="text"
+                    value={ruleForm.categoryKey}
+                    onChange={(e) => setRuleForm((prev) => ({ ...prev, categoryKey: e.target.value }))}
+                    disabled={Boolean(editingCategoryKey)}
+                    placeholder="ex: audio"
+                    className={`w-full p-2 rounded-lg border ${isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200'} focus:ring-2 focus:ring-blue-500 outline-none`}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="innpro-markup-percent"
+                    className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                  >
+                    Markup (%)
+                  </label>
+                  <input
+                    id="innpro-markup-percent"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={ruleForm.markupPercent}
+                    onChange={(e) =>
+                      setRuleForm((prev) => ({ ...prev, markupPercent: e.target.value }))
+                    }
+                    className={`w-full p-2 rounded-lg border ${isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200'} focus:ring-2 focus:ring-blue-500 outline-none`}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={runSaveSupplierPricingRule}
+                    disabled={pricingRulesSaving}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {pricingRulesSaving ? 'Se salvează...' : editingCategoryKey ? 'Actualizează' : 'Adaugă'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={ruleForm.active}
+                    onChange={(e) => setRuleForm((prev) => ({ ...prev, active: e.target.checked }))}
+                  />
+                  Activ
+                </label>
+
+                {editingCategoryKey && (
+                  <button
+                    onClick={resetRuleForm}
+                    className="text-xs px-3 py-1 rounded border border-gray-600 text-gray-300 hover:bg-gray-700"
+                  >
+                    Renunță editare
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div
+              className={`rounded-xl border overflow-hidden ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}
+            >
+              <table className="w-full">
+                <thead className={`${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Categorie
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Markup
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Acțiuni
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                  {pricingRulesLoading ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                        Se încarcă regulile...
+                      </td>
+                    </tr>
+                  ) : supplierPricingRules.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                        Nu există reguli pentru Innpro.
+                      </td>
+                    </tr>
+                  ) : (
+                    supplierPricingRules.map((rule) => (
+                      <tr key={`${rule.supplierCode}-${rule.categoryKey}`}>
+                        <td className={`px-6 py-4 text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{rule.categoryKey}</td>
+                        <td className={`px-6 py-4 text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{rule.markupPercent}%</td>
+                        <td className="px-6 py-4 text-sm">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${rule.active ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}`}
+                          >
+                            {rule.active ? 'Activ' : 'Inactiv'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <button
+                            onClick={() => startEditSupplierPricingRule(rule)}
+                            className="text-blue-500 hover:text-blue-400 text-sm"
+                          >
+                            Editează
+                          </button>
+                          <button
+                            onClick={() => runToggleSupplierPricingRule(rule)}
+                            className={`text-sm ${isDark ? 'text-amber-400 hover:text-amber-300' : 'text-amber-700 hover:text-amber-800'}`}
+                          >
+                            {rule.active ? 'Dezactivează' : 'Activează'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {message && (
+              <span className={`text-sm ${message.type === 'success' ? 'text-green-500' : 'text-red-500'}`}>
+                {message.text}
+              </span>
+            )}
           </div>
         );
 

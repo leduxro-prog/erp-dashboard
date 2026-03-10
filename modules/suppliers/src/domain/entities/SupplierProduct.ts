@@ -15,6 +15,9 @@ export interface SupplierProduct {
   minOrderQuantity?: number;
   leadTimeDays?: number;
   isActive?: boolean;
+  markupPercentage?: number | null;
+  sellingPrice?: number | null;
+  imageUrl?: string | null;
   lastScraped: Date;
   priceHistory: PriceHistoryEntry[];
   createdAt: Date;
@@ -24,11 +27,15 @@ export interface SupplierProduct {
 export class SupplierProductEntity implements SupplierProduct {
   id!: number;
   supplierId!: number;
+  productId?: number;
   supplierSku!: string;
   name!: string;
   price!: number;
   currency!: string;
   stockQuantity!: number;
+  markupPercentage?: number | null;
+  sellingPrice?: number | null;
+  imageUrl?: string | null;
   lastScraped!: Date;
   priceHistory!: PriceHistoryEntry[];
   createdAt!: Date;

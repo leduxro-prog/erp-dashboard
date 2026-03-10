@@ -6,3 +6,4 @@ export * from './inventory';
 export * from './pos';
 export * from './crm';
 export * from './analytics';
+export * from './supplier-pricing-rule';
