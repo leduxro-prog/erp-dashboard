@@ -263,6 +263,44 @@ describe('SyncInnproFromIof', () => {
     expect(mockRepository.bulkUpsertProducts).toHaveBeenCalled();
   });
 
+  it('uses gateway payload as full feed when gateway URLs are unavailable', async () => {
+    innproSupplier.credentials = {
+      ...innproSupplier.credentials,
+      customHeader: {
+        apiEndpoint:
+          'https://b2b.innpro.ro/edi/export-offer.php?client=ledux&language=rum&token=test&shop=16&type=full&format=xml&iof_3_0',
+      },
+    };
+
+    mockClient.readGateway.mockImplementationOnce(async () => '<offer><products><product><sku>SKU-DIRECT</sku><name>Direct Feed Product</name><price>99</price><currency>RON</currency><stock>3</stock></product></products></offer>');
+    mockParser.parseGateway.mockImplementationOnce(() => ({}));
+    mockParser.parseProducts.mockImplementation((raw: string) => {
+      if (raw.includes('<offer>')) {
+        return [
+          {
+            supplierSku: 'SKU-DIRECT',
+            name: 'Direct Feed Product',
+            price: 99,
+            currency: 'RON',
+            stockQuantity: 3,
+            category: 'Lighting',
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    const result = await useCase.execute(innproSupplier.id);
+
+    expect(result.success).toBe(true);
+    expect(result.productsFound).toBe(1);
+    expect(mockRepository.bulkUpsertProducts).toHaveBeenCalled();
+    const feedUrls = mockClient.readFeed.mock.calls.map((call) => call[0]);
+    expect(feedUrls.some((url) => String(url).includes('type=light'))).toBe(true);
+    expect(feedUrls.some((url) => String(url).includes('type=full_change'))).toBe(true);
+  });
+
   it('runs targeted fallback scraping only for affected SKUs and merges fallback fields', async () => {
     mockParser.parseProducts.mockImplementation((raw: string) => {
       if (raw.includes('full.xml')) {

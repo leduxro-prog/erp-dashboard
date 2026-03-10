@@ -92,7 +92,14 @@ export class SyncInnproFromIof {
       try {
         const gatewayRaw = await this.iofClient.readGateway(supplier.credentials);
         const feeds = this.iofParser.parseGateway(gatewayRaw);
-        const mergedProducts = await this.readAndMergeFeedProducts(feeds, supplier.credentials);
+        const directFullProducts = !feeds.full
+          ? this.iofParser.parseProducts(gatewayRaw)
+          : [];
+        const mergedProducts = await this.readAndMergeFeedProducts(
+          feeds,
+          supplier.credentials,
+          directFullProducts,
+        );
 
         result.productsFound = mergedProducts.length;
 
@@ -263,13 +270,33 @@ export class SyncInnproFromIof {
   private async readAndMergeFeedProducts(
     feeds: InnproIofGatewayFeeds,
     credentials: { username: string; password: string; apiKey?: string; customHeader?: Record<string, string> },
+    directFullProducts: ScrapedProduct[] = [],
   ): Promise<MergedIofProduct[]> {
-    if (!feeds.full) {
+    const hasDirectFullProducts = Array.isArray(directFullProducts) && directFullProducts.length > 0;
+    const gatewayUrl = this.resolveGatewayUrlFromCredentials(credentials);
+
+    const resolvedFeeds: InnproIofGatewayFeeds = {
+      full: feeds.full,
+      light: feeds.light,
+      fullChange: feeds.fullChange,
+    };
+
+    if (!resolvedFeeds.light && gatewayUrl) {
+      resolvedFeeds.light = this.deriveFeedUrlByType(gatewayUrl, 'light');
+    }
+
+    if (!resolvedFeeds.fullChange && gatewayUrl) {
+      resolvedFeeds.fullChange = this.deriveFeedUrlByType(gatewayUrl, 'full_change');
+    }
+
+    if (!resolvedFeeds.full && !hasDirectFullProducts) {
       throw new Error('Innpro IOF gateway does not provide a full feed URL');
     }
 
-    const fullRaw = await this.iofClient.readFeed(feeds.full, credentials);
-    const fullProducts = this.iofParser.parseProducts(fullRaw);
+    const fullProducts = hasDirectFullProducts
+      ? directFullProducts
+      : this.iofParser.parseProducts(await this.iofClient.readFeed(resolvedFeeds.full!, credentials));
+
 
     const merged = new Map<string, MergedIofProduct>();
 
@@ -362,8 +389,8 @@ export class SyncInnproFromIof {
       }
     };
 
-    await mergeOptionalFeed('light', feeds.light);
-    await mergeOptionalFeed('fullChange', feeds.fullChange);
+    await mergeOptionalFeed('light', resolvedFeeds.light);
+    await mergeOptionalFeed('fullChange', resolvedFeeds.fullChange);
 
     await this.applyTargetedFallbackForMissingFields(merged, credentials);
 
@@ -375,6 +402,33 @@ export class SyncInnproFromIof {
     }
 
     return Array.from(merged.values());
+  }
+
+  private resolveGatewayUrlFromCredentials(
+    credentials: { apiKey?: string; customHeader?: Record<string, string> },
+  ): string | undefined {
+    const candidates = [credentials.customHeader?.apiEndpoint, credentials.apiKey];
+    for (const candidate of candidates) {
+      const normalized = String(candidate || '').trim();
+      if (/^https?:\/\//i.test(normalized)) {
+        return normalized;
+      }
+    }
+    return undefined;
+  }
+
+  private deriveFeedUrlByType(baseUrl: string, feedType: 'light' | 'full_change'): string | undefined {
+    try {
+      const url = new URL(baseUrl);
+      if (url.searchParams.has('type')) {
+        url.searchParams.set('type', feedType);
+      } else {
+        url.searchParams.append('type', feedType);
+      }
+      return url.toString();
+    } catch {
+      return undefined;
+    }
   }
 
   private async applyTargetedFallbackForMissingFields(
