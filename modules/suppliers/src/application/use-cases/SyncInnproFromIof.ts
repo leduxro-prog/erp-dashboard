@@ -1,11 +1,13 @@
 import { EventEmitter } from 'events';
 
 import { createModuleLogger } from '@shared/utils/logger';
+import { translateSupplierProductName } from '@shared/utils/product-name-translator';
 
 import {
   ISupplierRepository,
   SupplierCode,
   SupplierProductEntity,
+  SupplierProductSpecification,
 } from '../../domain';
 import {
   InnproIofClient,
@@ -34,6 +36,12 @@ type MergedIofProduct = {
   stockQuantity?: number;
   category?: string;
   imageUrl?: string;
+  images?: string[];
+  brand?: string;
+  manufacturer?: string;
+  ean?: string;
+  specifications?: ScrapedProduct['specifications'];
+  sourceUpdatedAt?: ScrapedProduct['sourceUpdatedAt'];
 };
 
 export class SyncInnproFromIof {
@@ -94,6 +102,7 @@ export class SyncInnproFromIof {
         );
 
         const productsToUpsert: SupplierProductEntity[] = [];
+        const specificationsToUpsert: SupplierProductSpecification[] = [];
         const pricingResolutions = new Map<string, SupplierPricingResolution>();
 
         for (const mergedProduct of mergedProducts) {
@@ -137,7 +146,7 @@ export class SyncInnproFromIof {
               entity.recordPriceChange(nextPrice);
             }
 
-            entity.name = mergedProduct.name || mergedProduct.supplierSku;
+            entity.name = translateSupplierProductName(mergedProduct.name || mergedProduct.supplierSku);
             entity.price = nextPrice;
             entity.currency = mergedProduct.currency;
             if (typeof mergedProduct.stockQuantity === 'number') {
@@ -145,10 +154,20 @@ export class SyncInnproFromIof {
             }
             entity.markupPercentage = pricingResolution.markupPercentage;
             entity.sellingPrice = Number.isFinite(nextSellingPrice) ? nextSellingPrice : null;
-            if (mergedProduct.imageUrl) {
-              entity.imageUrl = mergedProduct.imageUrl;
+            const preferredImageUrl = this.resolvePrimaryImage(mergedProduct);
+            if (preferredImageUrl) {
+              entity.imageUrl = preferredImageUrl;
             }
             entity.lastScraped = new Date();
+
+            const specification = this.buildProductSpecification(
+              supplier.id,
+              mergedProduct,
+              entity.productId,
+            );
+            if (specification) {
+              specificationsToUpsert.push(specification);
+            }
 
             result.productsUpdated++;
             productsToUpsert.push(entity);
@@ -160,7 +179,7 @@ export class SyncInnproFromIof {
               id: 0,
               supplierId: supplier.id,
               supplierSku: mergedProduct.supplierSku,
-              name: mergedProduct.name || mergedProduct.supplierSku,
+              name: translateSupplierProductName(mergedProduct.name || mergedProduct.supplierSku),
               price: mergedProduct.price,
               currency: mergedProduct.currency,
               stockQuantity: typeof mergedProduct.stockQuantity === 'number' ? mergedProduct.stockQuantity : 0,
@@ -170,16 +189,36 @@ export class SyncInnproFromIof {
                 mergedProduct.price,
                 pricingResolution.markupPercentage,
               ),
-              imageUrl: mergedProduct.imageUrl,
+              imageUrl: this.resolvePrimaryImage(mergedProduct),
               priceHistory: [{ price: mergedProduct.price, date: new Date() }],
               createdAt: new Date(),
               updatedAt: new Date(),
             }),
           );
+
+          const specification = this.buildProductSpecification(
+            supplier.id,
+            mergedProduct,
+            0,
+          );
+          if (specification) {
+            specificationsToUpsert.push(specification);
+          }
+
           result.productsCreated++;
         }
 
         await this.repository.bulkUpsertProducts(productsToUpsert);
+        if (specificationsToUpsert.length > 0) {
+          result.specificationsDetected = specificationsToUpsert.length;
+          result.specificationsUpdated = await this.repository.upsertProductSpecifications(
+            specificationsToUpsert,
+            {
+              conflictPolicy: 'merge_non_empty',
+              source: `supplier:${supplier.code}`,
+            },
+          );
+        }
         await this.repository.updateLastSync(supplier.id, new Date());
 
         this.eventEmitter.emit('sync:complete', {
@@ -247,6 +286,12 @@ export class SyncInnproFromIof {
         stockQuantity: this.toOptionalStock(product.stockQuantity),
         category: product.category,
         imageUrl: product.imageUrl,
+        images: product.images,
+        brand: product.brand,
+        manufacturer: product.manufacturer,
+        ean: product.ean,
+        specifications: product.specifications,
+        sourceUpdatedAt: product.sourceUpdatedAt,
       });
     }
 
@@ -273,6 +318,12 @@ export class SyncInnproFromIof {
             stockQuantity: this.toOptionalStock(product.stockQuantity),
             category: product.category,
             imageUrl: product.imageUrl,
+            images: product.images,
+            brand: product.brand,
+            manufacturer: product.manufacturer,
+            ean: product.ean,
+            specifications: product.specifications,
+            sourceUpdatedAt: product.sourceUpdatedAt,
           });
           continue;
         }
@@ -286,6 +337,12 @@ export class SyncInnproFromIof {
           stockQuantity: this.toOptionalStock(product.stockQuantity) ?? current.stockQuantity,
           category: String(product.category || '').trim() || current.category,
           imageUrl: String(product.imageUrl || '').trim() || current.imageUrl,
+          images: this.mergeImageCollections(current.images, product.images, product.imageUrl),
+          brand: String(product.brand || '').trim() || current.brand,
+          manufacturer: String(product.manufacturer || '').trim() || current.manufacturer,
+          ean: String(product.ean || '').trim() || current.ean,
+          specifications: product.specifications || current.specifications,
+          sourceUpdatedAt: product.sourceUpdatedAt || current.sourceUpdatedAt,
         });
       }
     };
@@ -382,7 +439,130 @@ export class SyncInnproFromIof {
           : fallbackStock,
       category: product.category || fallback.category,
       imageUrl: product.imageUrl || fallback.imageUrl,
+      images: this.mergeImageCollections(product.images, fallback.images, fallback.imageUrl),
+      brand: product.brand || fallback.brand,
+      manufacturer: product.manufacturer || fallback.manufacturer,
+      ean: product.ean || fallback.ean,
+      specifications: product.specifications || fallback.specifications,
+      sourceUpdatedAt: product.sourceUpdatedAt || fallback.sourceUpdatedAt,
     };
+  }
+
+  private buildProductSpecification(
+    supplierId: number,
+    product: MergedIofProduct,
+    productId: number | undefined,
+  ): SupplierProductSpecification | null {
+    const normalizedSku = String(product.supplierSku || '').trim();
+    if (!normalizedSku) {
+      return null;
+    }
+
+    const specs = product.specifications;
+    const hasSpecPayload = specs && Object.keys(specs).length > 0;
+    const hasLooseFields = Boolean(product.brand || product.manufacturer || product.ean);
+
+    if (!hasSpecPayload && !hasLooseFields) {
+      return null;
+    }
+
+    const normalizedProductId = typeof productId === 'number' && Number.isFinite(productId) && productId > 0
+      ? productId
+      : 0;
+
+    const customSpecs: Record<string, unknown> = {
+      ...(specs?.customSpecs || {}),
+    };
+
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      customSpecs.imageGallery = product.images;
+    }
+
+    return {
+      productId: normalizedProductId,
+      supplierId,
+      supplierSku: normalizedSku,
+      brand: product.brand,
+      manufacturer: product.manufacturer,
+      eanCode: product.ean,
+      countryOfOrigin: specs?.countryOfOrigin,
+      wattage: specs?.wattage,
+      lumens: specs?.lumens,
+      colorTemperature: specs?.colorTemperature,
+      cri: specs?.cri,
+      beamAngle: specs?.beamAngle,
+      ipRating: specs?.ipRating,
+      efficacy: specs?.efficacy,
+      dimmable: specs?.dimmable,
+      dimmingType: specs?.dimmingType,
+      voltageInput: specs?.voltageInput,
+      voltageOutput: specs?.voltageOutput,
+      powerFactor: specs?.powerFactor,
+      frequency: specs?.frequency,
+      mountingType: specs?.mountingType,
+      material: specs?.material,
+      color: specs?.color,
+      lifespanHours: specs?.lifespanHours,
+      warrantyYears: specs?.warrantyYears,
+      certificationCe: specs?.certificationCe,
+      certificationRohs: specs?.certificationRohs,
+      certificationUl: specs?.certificationUl,
+      certificationEtl: specs?.certificationEtl,
+      certificationEnec: specs?.certificationEnec,
+      energyClass: specs?.energyClass,
+      datasheetUrl: specs?.datasheetUrl,
+      iesFileUrl: specs?.iesFileUrl,
+      installationGuideUrl: specs?.installationGuideUrl,
+      customSpecs: Object.keys(customSpecs).length > 0 ? customSpecs : undefined,
+      sourceUpdatedAt: product.sourceUpdatedAt ? new Date(product.sourceUpdatedAt) : new Date(),
+    };
+  }
+
+  private resolvePrimaryImage(product: MergedIofProduct): string | undefined {
+    const direct = String(product.imageUrl || '').trim();
+    if (direct.length > 0) {
+      return direct;
+    }
+
+    if (Array.isArray(product.images)) {
+      for (const image of product.images) {
+        const normalized = String(image || '').trim();
+        if (normalized.length > 0) {
+          return normalized;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  private mergeImageCollections(
+    currentImages?: string[],
+    incomingImages?: string[],
+    incomingPrimary?: string,
+  ): string[] | undefined {
+    const merged = new Set<string>();
+
+    if (Array.isArray(currentImages)) {
+      currentImages
+        .map((value) => String(value || '').trim())
+        .filter((value) => value.length > 0)
+        .forEach((value) => merged.add(value));
+    }
+
+    const normalizedPrimary = String(incomingPrimary || '').trim();
+    if (normalizedPrimary.length > 0) {
+      merged.add(normalizedPrimary);
+    }
+
+    if (Array.isArray(incomingImages)) {
+      incomingImages
+        .map((value) => String(value || '').trim())
+        .filter((value) => value.length > 0)
+        .forEach((value) => merged.add(value));
+    }
+
+    return merged.size > 0 ? Array.from(merged.values()) : undefined;
   }
 
   private toOptionalStock(stockQuantity: unknown): number | undefined {

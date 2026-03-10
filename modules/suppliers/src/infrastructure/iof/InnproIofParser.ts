@@ -72,7 +72,13 @@ export class InnproIofParser {
       );
       const currency = this.extractTagValue(block, ['currency']) || 'RON';
       const category = this.extractTagValue(block, ['category', 'category_name']);
-      const imageUrl = this.extractTagValue(block, ['image', 'image_url', 'photo', 'picture']);
+      const images = this.extractImageCollectionFromXml(block);
+      const imageUrl = images[0] || this.extractTagValue(block, ['image', 'image_url', 'photo', 'picture']);
+      const description = this.extractTagValue(block, ['description', 'short_description', 'desc']);
+      const brand = this.extractTagValue(block, ['brand']);
+      const manufacturer = this.extractTagValue(block, ['manufacturer', 'producer']);
+      const ean = this.extractTagValue(block, ['ean', 'ean_code']);
+      const specifications = this.extractSpecifications(block, description);
 
       const product: ScrapedProduct = {
         supplierSku,
@@ -81,6 +87,11 @@ export class InnproIofParser {
         currency,
         category,
         imageUrl,
+        images: images.length > 0 ? images : undefined,
+        brand,
+        manufacturer,
+        ean,
+        specifications,
       };
       if (typeof stockQuantity === 'number') {
         product.stockQuantity = stockQuantity;
@@ -128,7 +139,17 @@ export class InnproIofParser {
       const stockQuantity = indexStock >= 0 ? this.parseInteger(columns[indexStock]) : undefined;
       const currency = indexCurrency >= 0 ? columns[indexCurrency] || 'RON' : 'RON';
       const category = indexCategory >= 0 ? columns[indexCategory] || undefined : undefined;
-      const imageUrl = indexImage >= 0 ? columns[indexImage] || undefined : undefined;
+      const imageCollection = this.extractImageCollectionFromColumns(headers, columns);
+      const imageUrl = imageCollection[0] || (indexImage >= 0 ? columns[indexImage] || undefined : undefined);
+      const indexDescription = this.findHeaderIndex(headers, ['description', 'desc', 'shortdescription']);
+      const indexBrand = this.findHeaderIndex(headers, ['brand']);
+      const indexManufacturer = this.findHeaderIndex(headers, ['manufacturer', 'producer']);
+      const indexEan = this.findHeaderIndex(headers, ['ean', 'eancode']);
+      const description = indexDescription >= 0 ? columns[indexDescription] || undefined : undefined;
+      const brand = indexBrand >= 0 ? columns[indexBrand] || undefined : undefined;
+      const manufacturer = indexManufacturer >= 0 ? columns[indexManufacturer] || undefined : undefined;
+      const ean = indexEan >= 0 ? columns[indexEan] || undefined : undefined;
+      const specifications = this.extractSpecificationsFromColumns(headers, columns, description);
 
       const product: ScrapedProduct = {
         supplierSku,
@@ -137,6 +158,11 @@ export class InnproIofParser {
         currency,
         category,
         imageUrl,
+        images: imageCollection.length > 0 ? imageCollection : undefined,
+        brand,
+        manufacturer,
+        ean,
+        specifications,
       };
       if (typeof stockQuantity === 'number') {
         product.stockQuantity = stockQuantity;
@@ -255,5 +281,135 @@ export class InnproIofParser {
       .replace(/&quot;/gi, '"')
       .replace(/&#39;/gi, "'")
       .replace(/&apos;/gi, "'");
+  }
+
+  private extractSpecifications(rawBlock: string, description?: string): ScrapedProduct['specifications'] {
+    const wattage = this.parseNumber(this.extractTagValue(rawBlock, ['wattage', 'power']));
+    const lumens = this.parseInteger(this.extractTagValue(rawBlock, ['lumens', 'luminous_flux']));
+    const colorTemperature = this.parseInteger(
+      this.extractTagValue(rawBlock, ['color_temperature', 'colour_temperature', 'kelvin']),
+    );
+    const cri = this.parseInteger(this.extractTagValue(rawBlock, ['cri', 'ra']));
+    const beamAngle = this.parseInteger(this.extractTagValue(rawBlock, ['beam_angle', 'beamangle']));
+    const ipRating = this.extractTagValue(rawBlock, ['ip', 'ip_rating']);
+    const voltageInput = this.extractTagValue(rawBlock, ['voltage', 'voltage_input']);
+
+    const customSpecs: Record<string, unknown> = {};
+    if (description && description.trim().length > 0) {
+      customSpecs.description = description.trim();
+    }
+
+    const hasCoreSpec =
+      typeof wattage === 'number'
+      || typeof lumens === 'number'
+      || typeof colorTemperature === 'number'
+      || typeof cri === 'number'
+      || typeof beamAngle === 'number'
+      || Boolean(ipRating)
+      || Boolean(voltageInput);
+
+    if (!hasCoreSpec && Object.keys(customSpecs).length === 0) {
+      return undefined;
+    }
+
+    return {
+      wattage: typeof wattage === 'number' ? wattage : undefined,
+      lumens: typeof lumens === 'number' ? lumens : undefined,
+      colorTemperature: typeof colorTemperature === 'number' ? colorTemperature : undefined,
+      cri: typeof cri === 'number' ? cri : undefined,
+      beamAngle: typeof beamAngle === 'number' ? beamAngle : undefined,
+      ipRating,
+      voltageInput,
+      customSpecs,
+    };
+  }
+
+  private extractSpecificationsFromColumns(
+    headers: string[],
+    columns: string[],
+    description?: string,
+  ): ScrapedProduct['specifications'] {
+    const getByAliases = (aliases: string[]): string | undefined => {
+      for (const alias of aliases) {
+        const index = headers.indexOf(alias);
+        if (index >= 0) {
+          const value = columns[index];
+          if (value && value.trim().length > 0) {
+            return value.trim();
+          }
+        }
+      }
+      return undefined;
+    };
+
+    const wattage = this.parseNumber(getByAliases(['wattage', 'power']));
+    const lumens = this.parseInteger(getByAliases(['lumens', 'luminousflux']));
+    const colorTemperature = this.parseInteger(getByAliases(['colortemperature', 'colourtemperature', 'kelvin']));
+    const cri = this.parseInteger(getByAliases(['cri', 'ra']));
+    const beamAngle = this.parseInteger(getByAliases(['beamangle']));
+    const ipRating = getByAliases(['ip', 'iprating']);
+    const voltageInput = getByAliases(['voltage', 'voltageinput']);
+
+    const customSpecs: Record<string, unknown> = {};
+    if (description && description.trim().length > 0) {
+      customSpecs.description = description.trim();
+    }
+
+    const hasCoreSpec =
+      typeof wattage === 'number'
+      || typeof lumens === 'number'
+      || typeof colorTemperature === 'number'
+      || typeof cri === 'number'
+      || typeof beamAngle === 'number'
+      || Boolean(ipRating)
+      || Boolean(voltageInput);
+
+    if (!hasCoreSpec && Object.keys(customSpecs).length === 0) {
+      return undefined;
+    }
+
+    return {
+      wattage: typeof wattage === 'number' ? wattage : undefined,
+      lumens: typeof lumens === 'number' ? lumens : undefined,
+      colorTemperature: typeof colorTemperature === 'number' ? colorTemperature : undefined,
+      cri: typeof cri === 'number' ? cri : undefined,
+      beamAngle: typeof beamAngle === 'number' ? beamAngle : undefined,
+      ipRating,
+      voltageInput,
+      customSpecs,
+    };
+  }
+
+  private extractImageCollectionFromXml(rawBlock: string): string[] {
+    const urls = new Set<string>();
+
+    const imageTagRegex = /<(image(?:_[0-9]+)?|photo(?:_[0-9]+)?|picture(?:_[0-9]+)?|img(?:_[0-9]+)?)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+    let match: RegExpExecArray | null = imageTagRegex.exec(rawBlock);
+    while (match) {
+      const value = this.decodeXmlEntities(String(match[2] || '')).trim();
+      if (/^https?:\/\//i.test(value)) {
+        urls.add(value);
+      }
+      match = imageTagRegex.exec(rawBlock);
+    }
+
+    return Array.from(urls.values());
+  }
+
+  private extractImageCollectionFromColumns(headers: string[], columns: string[]): string[] {
+    const urls = new Set<string>();
+
+    headers.forEach((header, index) => {
+      if (!/^image\d*$/.test(header) && !/^photo\d*$/.test(header) && !/^picture\d*$/.test(header)) {
+        return;
+      }
+
+      const value = String(columns[index] || '').trim();
+      if (/^https?:\/\//i.test(value)) {
+        urls.add(value);
+      }
+    });
+
+    return Array.from(urls.values());
   }
 }

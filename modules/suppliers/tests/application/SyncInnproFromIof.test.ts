@@ -49,6 +49,9 @@ describe('SyncInnproFromIof', () => {
       getSupplierPricingRule: jest
         .fn<ISupplierRepository['getSupplierPricingRule']>()
         .mockImplementation(async () => null),
+      upsertProductSpecifications: jest
+        .fn<ISupplierRepository['upsertProductSpecifications']>()
+        .mockImplementation(async (specs) => specs.length),
     } as unknown as jest.Mocked<ISupplierRepository>;
 
     mockClient = {
@@ -67,11 +70,23 @@ describe('SyncInnproFromIof', () => {
           return [
             {
               supplierSku: 'SKU-1',
-              name: 'Product One',
+              name: 'zasilacz led 12W',
               price: 110,
               currency: 'RON',
               stockQuantity: 4,
               category: 'Lighting',
+              imageUrl: 'https://cdn.innpro.test/SKU-1-full.jpg',
+              images: [
+                'https://cdn.innpro.test/SKU-1-full.jpg',
+                'https://cdn.innpro.test/SKU-1-full-2.jpg',
+              ],
+              specifications: {
+                wattage: 12,
+                ipRating: 'IP65',
+                customSpecs: {
+                  description: 'Full feed product description',
+                },
+              },
             },
             {
               supplierSku: 'SKU-2',
@@ -88,11 +103,12 @@ describe('SyncInnproFromIof', () => {
           return [
             {
               supplierSku: 'SKU-1',
-              name: 'Product One',
+              name: 'zasilacz led 12W',
               price: 110,
               currency: 'RON',
               stockQuantity: 9,
               category: 'Lighting',
+              imageUrl: 'https://cdn.innpro.test/SKU-1-light.jpg',
             },
           ];
         }
@@ -161,9 +177,25 @@ describe('SyncInnproFromIof', () => {
     const sku2 = upsertPayload.find((row) => row.supplierSku === 'SKU-2');
 
     expect(sku1?.stockQuantity).toBe(9);
+    expect(sku1?.imageUrl).toBe('https://cdn.innpro.test/SKU-1-light.jpg');
+    expect(String(sku1?.name || '')).toContain('sursa de alimentare');
     expect(sku1?.markupPercentage).toBe(60);
     expect(sku1?.sellingPrice).toBe(176);
     expect(sku2?.price).toBe(12);
+
+    expect(mockRepository.upsertProductSpecifications).toHaveBeenCalledTimes(1);
+    const specsPayload = mockRepository.upsertProductSpecifications.mock.calls[0]?.[0] || [];
+    const sku1Spec = specsPayload.find((row) => row.supplierSku === 'SKU-1');
+    expect(sku1Spec?.wattage).toBe(12);
+    expect(sku1Spec?.ipRating).toBe('IP65');
+    expect(sku1Spec?.customSpecs?.description).toBe('Full feed product description');
+    expect(sku1Spec?.customSpecs?.imageGallery).toEqual([
+      'https://cdn.innpro.test/SKU-1-full.jpg',
+      'https://cdn.innpro.test/SKU-1-full-2.jpg',
+      'https://cdn.innpro.test/SKU-1-light.jpg',
+    ]);
+    expect(result.specificationsDetected).toBeGreaterThan(0);
+    expect(result.specificationsUpdated).toBeGreaterThan(0);
   });
 
   it('wraps IOF failures in ScrapeError', async () => {

@@ -38,6 +38,7 @@ export interface ProductSchemaData {
   price: number;
   currency?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   availability?: string;
   brand?: string;
   sku?: string;
@@ -103,13 +104,23 @@ export class StructuredDataGenerator {
    * @returns JSON-LD object for Product schema
    */
   generateProduct(product: ProductSchemaData): Record<string, unknown> {
+    const gallery = Array.isArray(product.imageUrls)
+      ? product.imageUrls
+        .map((url) => String(url || '').trim())
+        .filter((url) => url.length > 0)
+      : [];
+    const uniqueGallery = Array.from(new Set(gallery));
+    const imageField: string | string[] = uniqueGallery.length > 0
+      ? uniqueGallery
+      : (product.imageUrl || `${this.baseUrl}/images/product-placeholder.jpg`);
+
     const schema: Record<string, unknown> = {
       '@context': 'https://schema.org/',
       '@type': 'Product',
       name: product.name,
       description: product.description,
       url: product.url || `${this.baseUrl}/products/${product.id}`,
-      image: product.imageUrl || `${this.baseUrl}/images/product-placeholder.jpg`,
+      image: imageField,
       sku: product.sku || product.id,
       brand: {
         '@type': 'Brand',

@@ -19,6 +19,7 @@ export interface Product {
   categoryId?: string;
   sku?: string;
   image?: string;
+  images?: string[];
   shortDescription?: string;
   features?: string[];
   createdAt?: Date;

@@ -162,6 +162,10 @@ export class GenerateProductSeo {
         product.description ||
         metaDescription ||
         `${brandStrategy.promise} ${brandStrategy.seo.metaDescriptionCta}`;
+      const imageUrls = Array.isArray(product.images)
+        ? product.images.map((value) => String(value || '').trim()).filter((value) => value.length > 0)
+        : [];
+      const primaryImage = imageUrls[0] || product.image;
 
       // Step 4: Generate structured data
       const structuredDataJson = this.structuredDataGenerator.generateProduct({
@@ -170,7 +174,8 @@ export class GenerateProductSeo {
         description: productDescription,
         price: product.price || 0,
         currency: 'RON',
-        imageUrl: product.image,
+        imageUrl: primaryImage,
+        imageUrls,
         brand: brandStrategy.brandName || 'Ledux',
         sku: product.sku,
         category: product.category,
@@ -209,7 +214,7 @@ export class GenerateProductSeo {
         canonicalUrl,
         ogTitle: metaTitle,
         ogDescription: metaDescription,
-        ogImage: product.image,
+        ogImage: primaryImage,
         focusKeyword,
         seoScore: score,
       });
@@ -266,7 +271,7 @@ export class GenerateProductSeo {
             canonicalUrl,
             ogTitle: metaTitle,
             ogDescription: metaDescription,
-            ogImage: product.image,
+            ogImage: primaryImage,
             focusKeyword,
             seoScore: score,
           }),
