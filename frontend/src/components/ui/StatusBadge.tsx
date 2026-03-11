@@ -9,7 +9,6 @@ export type StatusType =
   | 'draft'
   | 'active'
   | 'inactive'
-  // S3 order statuses (lowercase snake_case from DB)
   | 'quote_pending'
   | 'quote_sent'
   | 'quote_accepted'
@@ -22,7 +21,12 @@ export type StatusType =
   | 'delivered'
   | 'invoiced'
   | 'paid'
-  | 'returned';
+  | 'returned'
+  | 'green'
+  | 'yellow'
+  | 'red'
+  | 'blue'
+  | 'gray';
 
 interface StatusBadgeProps {
   status: StatusType | string;
@@ -30,7 +34,6 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  // Generic statuses
   pending: {
     label: 'Pending',
     className: 'bg-accent-warning/15 text-accent-warning',
@@ -63,7 +66,6 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     label: 'Inactive',
     className: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300',
   },
-  // S3 Order statuses
   quote_pending: {
     label: 'Quote Pending',
     className: 'bg-accent-warning/15 text-accent-warning',
@@ -116,16 +118,35 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     label: 'Returned',
     className: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300',
   },
-};
-
-const fallbackConfig = {
-  label: 'Unknown',
-  className: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300',
+  green: {
+    label: 'Success',
+    className: 'bg-accent-success/15 text-accent-success',
+  },
+  yellow: {
+    label: 'Warning',
+    className: 'bg-accent-warning/15 text-accent-warning',
+  },
+  red: {
+    label: 'Error',
+    className: 'bg-accent-danger/15 text-accent-danger',
+  },
+  blue: {
+    label: 'Info',
+    className: 'bg-accent/15 text-accent',
+  },
+  gray: {
+    label: 'Unknown',
+    className: 'bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300',
+  },
 };
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
-  const config = statusConfig[status] || fallbackConfig;
+  const config = statusConfig[status] || statusConfig.gray;
   const displayLabel = label || config.label;
 
-  return <span className={clsx('badge', config.className)}>{displayLabel}</span>;
+  return (
+    <span className={clsx('badge', config.className)}>
+      {displayLabel}
+    </span>
+  );
 }
