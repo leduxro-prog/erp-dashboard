@@ -8,7 +8,7 @@
 import { randomUUID } from 'crypto';
 
 import { B2BCustomer } from '../entities/B2BCustomer';
-import { CreditTransaction, CreditTransactionType } from '../entities/CreditTransaction';
+import { CreditTransaction } from '../entities/CreditTransaction';
 import { InsufficientCreditError } from '../errors/b2b.errors';
 
 /**

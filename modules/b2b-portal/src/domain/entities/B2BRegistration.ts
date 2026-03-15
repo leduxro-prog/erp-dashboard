@@ -6,7 +6,6 @@
  */
 
 import {
-  RegistrationExistsError,
   InvalidCuiError,
   InvalidIbanError,
   InvalidRegistrationStateError,

@@ -3,7 +3,6 @@
  * Handles CSV/Excel import of supplier stock and SmartBill stock sync
  */
 
-import * as http from 'http';
 import * as https from 'https';
 
 import { Router, Request, Response, NextFunction } from 'express';

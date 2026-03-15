@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response';
 
 // Use Request directly - access user via (req as any).user
-type AuthenticatedRequest = Request & { user?: { id: string }; validatedBody?: unknown };
+export type AuthenticatedRequest = Request & { user?: { id: string }; validatedBody?: unknown };
 
 /**
  * Analytics Controller

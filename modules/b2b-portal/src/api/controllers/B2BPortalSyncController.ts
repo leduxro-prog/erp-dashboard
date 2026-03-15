@@ -7,7 +7,6 @@
  * @module B2B Portal - API Controllers
  */
 
-import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
 import { Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 
