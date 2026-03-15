@@ -15,6 +15,8 @@ import { B2BOrderController } from '../api/controllers/B2BOrderController';
 import { B2BPaymentController } from '../api/controllers/B2BPaymentController';
 import { B2BPortalSyncController } from '../api/controllers/B2BPortalSyncController';
 import { B2BPortalWebhookController } from '../api/controllers/B2BPortalWebhookController';
+import { B2BTeamController } from '../api/controllers/B2BTeamController';
+import { B2BProjectController } from '../api/controllers/B2BProjectController';
 import { createB2BRoutes } from '../api/routes/b2b.routes';
 import {
   RegisterB2B,
@@ -190,19 +192,19 @@ export function createB2BPortalRouter(
     dataSource,
   );
 
-  const b2bOrderController = new B2BOrderController(dataSource);
+  const orderController = new B2BOrderController(dataSource);
 
-  const b2bCartController = new B2BCartController(dataSource, customerRepository);
+  const cartController = new B2BCartController(dataSource, customerRepository);
 
-  const b2bCheckoutController = new B2BCheckoutController(dataSource);
+  const checkoutController = new B2BCheckoutController(dataSource);
 
-  const b2bInvoiceController = new B2BInvoiceController(dataSource);
+  const invoiceController = new B2BInvoiceController(dataSource);
 
-  const b2bCustomerController = new B2BCustomerController(dataSource);
+  const customerController = new B2BCustomerController(dataSource);
 
-  const b2bPaymentController = new B2BPaymentController(dataSource);
+  const paymentController = new B2BPaymentController(dataSource);
 
-  const b2bFavoritesController = new B2BFavoritesController(dataSource);
+  const favoritesController = new B2BFavoritesController(dataSource);
 
   // Webhook controller (created if B2B Portal is configured)
   const webhookController = apiClient
@@ -212,17 +214,22 @@ export function createB2BPortalRouter(
   // Sync controller (always available for status queries)
   const syncController = new B2BPortalSyncController(dataSource);
 
+  const teamController = new B2BTeamController(dataSource);
+  const projectController = new B2BProjectController(dataSource);
+
   return createB2BRoutes(
     b2bController,
-    b2bOrderController,
-    b2bCartController,
-    b2bCheckoutController,
-    b2bInvoiceController,
-    b2bCustomerController,
-    b2bPaymentController,
-    b2bFavoritesController,
+    orderController,
+    cartController,
+    checkoutController,
+    invoiceController,
+    customerController,
+    paymentController,
+    favoritesController,
     webhookController,
     syncController,
+    teamController,
+    projectController,
   );
 }
 

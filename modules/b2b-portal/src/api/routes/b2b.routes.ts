@@ -14,6 +14,8 @@ import { B2BOrderController } from '../controllers/B2BOrderController';
 import { B2BPaymentController } from '../controllers/B2BPaymentController';
 import { B2BPortalSyncController } from '../controllers/B2BPortalSyncController';
 import { B2BPortalWebhookController } from '../controllers/B2BPortalWebhookController';
+import { B2BTeamController } from '../controllers/B2BTeamController';
+import { B2BProjectController } from '../controllers/B2BProjectController';
 import {
   createB2BOrderSchema,
   validateStockSchema,
@@ -65,9 +67,50 @@ export function createB2BRoutes(
   paymentController?: B2BPaymentController,
   favoritesController?: B2BFavoritesController,
   webhookController?: B2BPortalWebhookController,
-  syncController?: B2BPortalSyncController
+  syncController?: B2BPortalSyncController,
+  teamController?: B2BTeamController,
+  projectController?: B2BProjectController,
 ): Router {
   const router = Router();
+
+  /**
+   * B2B Team Management
+   */
+  if (teamController) {
+    router.get('/team', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      teamController.listTeam(req, res)
+    ));
+    router.post('/team/invite', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      teamController.inviteMember(req, res)
+    ));
+    router.put('/team/:id', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      teamController.updateMember(req, res)
+    ));
+    router.delete('/team/:id', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      teamController.removeMember(req, res)
+    ));
+  }
+
+  /**
+   * B2B Collaborative Projects
+   */
+  if (projectController) {
+    router.get('/projects', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      projectController.listProjects(req, res)
+    ));
+    router.post('/projects', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      projectController.createProject(req, res)
+    ));
+    router.get('/projects/:id', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      projectController.getProject(req, res)
+    ));
+    router.post('/projects/:id/items', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      projectController.addItem(req, res)
+    ));
+    router.post('/projects/:id/convert', authenticateB2B, asyncHandler((req: any, res: Response) => 
+      projectController.convertToCart(req, res)
+    ));
+  }
 
   /**
    * POST /register
