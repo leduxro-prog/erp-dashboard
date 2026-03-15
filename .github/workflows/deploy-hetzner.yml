@@ -182,7 +182,7 @@ jobs:
           BASE_URL: ${{ secrets.APP_BASE_URL }}
         run: |
           set -euo pipefail
-          bash scripts/smoke-hetzner.sh "$BASE_URL"
+          bash scripts/test/smoke-hetzner.sh "$BASE_URL"
 
   # ============================================================================
   # Rollback on failure

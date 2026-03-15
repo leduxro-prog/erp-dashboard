@@ -53,7 +53,8 @@ describe('GetSalesDashboard Use-Case', () => {
       dashboardRepository,
       orderDataPort,
       pricingDataPort,
-      logger
+      logger,
+      null // No cache manager for this test
     );
   });
 

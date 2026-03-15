@@ -90,9 +90,9 @@ A complete, enterprise-grade modular plugin system has been built for CYPHER ERP
 
 ### 2. Module Generation
 
-#### `/scripts/create-module.ts` (700 lines)
+#### `/scripts/dev/create-module.ts` (700 lines)
 - **Purpose**: CLI tool to scaffold new modules
-- **Usage**: `npx ts-node scripts/create-module.ts --name=shipping --description="Shipping management"`
+- **Usage**: `npx ts-node scripts/dev/create-module.ts --name=shipping --description="Shipping management"`
 - **Creates**:
   - Complete directory structure with all layers
   - Domain layer (entities, repositories, services)

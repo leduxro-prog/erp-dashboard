@@ -107,10 +107,10 @@ All files are referenced with absolute paths for clarity and easy navigation.
 ## Tools
 
 ### Module Generator Script
-**File**: `/sessions/hopeful-wizardly-babbage/mnt/erp/cypher/scripts/create-module.ts`
+**File**: `/sessions/hopeful-wizardly-babbage/mnt/erp/cypher/scripts/dev/create-module.ts`
 - Contains: CLI tool to scaffold new modules
 - Lines: 700
-- Usage: `npx ts-node scripts/create-module.ts --name=MODULE_NAME --description="Description"`
+- Usage: `npx ts-node scripts/dev/create-module.ts --name=MODULE_NAME --description="Description"`
 - Creates:
   - Complete directory structure
   - All necessary files (domain, application, infrastructure, api, tests)
@@ -178,7 +178,7 @@ All files are referenced with absolute paths for clarity and easy navigation.
 
 **Create a new module**
 1. Read: `/sessions/hopeful-wizardly-babbage/mnt/erp/cypher/QUICK_START_MODULES.md`
-2. Run: `npx ts-node /sessions/hopeful-wizardly-babbage/mnt/erp/cypher/scripts/create-module.ts --name=my-module`
+2. Run: `npx ts-node /sessions/hopeful-wizardly-babbage/mnt/erp/cypher/scripts/dev/create-module.ts --name=my-module`
 3. Edit: `/sessions/hopeful-wizardly-babbage/mnt/erp/cypher/modules/my-module/src/my-module-module.ts`
 
 **Understand the module system**

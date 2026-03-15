@@ -213,6 +213,27 @@ export class RedisPool {
   }
 
   /**
+   * Get the internal Redis client options
+   */
+  getClientOptions(): RedisClientOptions {
+    const host = process.env.REDIS_HOST || 'localhost';
+    const port = parseInt(process.env.REDIS_PORT || '6379', 10);
+    const password = process.env.REDIS_PASSWORD;
+    const db = parseInt(process.env.REDIS_DB || '0', 10);
+
+    return {
+      socket: {
+        host,
+        port,
+        connectTimeout: 5000,
+        keepAlive: 30000,
+      },
+      password,
+      database: db,
+    };
+  }
+
+  /**
    * Get primary client (first client, for write operations)
    */
   getPrimaryClient(): ReturnType<typeof createClient> {

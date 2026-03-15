@@ -75,9 +75,11 @@ export function createB2BPortalRouter(
   const bulkOrderRepository: IBulkOrderRepository = new TypeOrmBulkOrderRepository(dataSource);
   const creditTransactionRepository: ICreditTransactionRepository =
     new TypeOrmCreditTransactionRepository(dataSource);
+  /*
   const syncEventRepository: IB2BSyncEventRepository = new TypeOrmB2BSyncEventRepository(
     dataSource,
   );
+  */
 
   const orderPort = new OrderServiceAdapter(dataSource);
   const notificationPort = new NotificationServiceAdapter(dataSource);
@@ -138,14 +140,10 @@ export function createB2BPortalRouter(
     publishEvent,
   );
 
-  // B2B Portal Sync Use Cases
-  let syncOrderStatusFromB2B: SyncOrderStatusFromB2B | undefined;
-  let syncOrderToB2BPortal: SyncOrderToB2BPortal | undefined;
-  let syncInvoiceStatusFromB2B: SyncInvoiceStatusFromB2B | undefined;
-  let syncInvoiceToB2BPortal: SyncInvoiceToB2BPortal | undefined;
-
+  /* 
+  // B2B Portal Sync Use Cases (TODO: wire to controllers)
   if (apiClient) {
-    syncOrderStatusFromB2B = new SyncOrderStatusFromB2B(
+    new SyncOrderStatusFromB2B(
       syncEventRepository,
       apiClient,
       statusMapper,
@@ -153,7 +151,7 @@ export function createB2BPortalRouter(
       publishEvent,
     );
 
-    syncOrderToB2BPortal = new SyncOrderToB2BPortal(
+    new SyncOrderToB2BPortal(
       syncEventRepository,
       apiClient,
       statusMapper,
@@ -161,7 +159,7 @@ export function createB2BPortalRouter(
       publishEvent,
     );
 
-    syncInvoiceStatusFromB2B = new SyncInvoiceStatusFromB2B(
+    new SyncInvoiceStatusFromB2B(
       syncEventRepository,
       apiClient,
       statusMapper,
@@ -169,7 +167,7 @@ export function createB2BPortalRouter(
       publishEvent,
     );
 
-    syncInvoiceToB2BPortal = new SyncInvoiceToB2BPortal(
+    new SyncInvoiceToB2BPortal(
       syncEventRepository,
       apiClient,
       statusMapper,
@@ -177,6 +175,7 @@ export function createB2BPortalRouter(
       publishEvent,
     );
   }
+  */
 
   // Controllers
   const b2bController = new B2BController(

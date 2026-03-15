@@ -1,7 +1,6 @@
 import { createModuleLogger } from '@shared/utils/logger';
 import { Router } from 'express';
-import { DataSource } from 'typeorm';
-// import { Logger } from 'winston';
+import { IModuleContext } from '@shared/module-system/module.interface';
 
 // Domain repositories (interfaces)
 import { AnalyticsController } from '../api/controllers/AnalyticsController';
@@ -20,20 +19,13 @@ import {
   IDashboardRepository,
   IReportRepository,
   IMetricRepository,
-  // IForecastRepository,
 } from '../domain/repositories';
-
-// Use-cases
 
 // Infrastructure repositories (TypeORM implementations)
 import { TypeOrmDashboardRepository } from './repositories/TypeOrmDashboardRepository';
 import { TypeOrmForecastRepository } from './repositories/TypeOrmForecastRepository';
 import { TypeOrmMetricRepository } from './repositories/TypeOrmMetricRepository';
 import { TypeOrmReportRepository } from './repositories/TypeOrmReportRepository';
-
-// Controller
-
-// Routes
 
 // Mock adapters for ports (to be replaced with real adapters)
 const mockOrderDataPort = {} as IOrderDataPort;
@@ -47,23 +39,22 @@ const mockNotificationPort = {} as INotificationPort;
  * Analytics Module Composition Root
  * Orchestrates dependency injection and creates configured Express router
  */
-export function createAnalyticsRouter(dataSource: DataSource): Router {
+export function createAnalyticsRouter(context: IModuleContext): Router {
   const logger = createModuleLogger('analytics');
+  const { dataSource, cacheManager } = context;
 
   // Initialize repositories
   const dashboardRepository: IDashboardRepository = new TypeOrmDashboardRepository(dataSource);
   const reportRepository: IReportRepository = new TypeOrmReportRepository(dataSource);
   const metricRepository: IMetricRepository = new TypeOrmMetricRepository(dataSource);
-  // const forecastRepository: IForecastRepository = new TypeOrmForecastRepository(dataSource);
-  // To shut up TS:
-  new TypeOrmForecastRepository(dataSource);
-
+  
   // Initialize use-cases
   const getSalesDashboard = new GetSalesDashboard(
     dashboardRepository,
     mockOrderDataPort,
     mockPricingDataPort,
-    logger
+    logger as any,
+    cacheManager
   );
 
   const generateReport = new GenerateReport(
@@ -73,7 +64,7 @@ export function createAnalyticsRouter(dataSource: DataSource): Router {
     mockCustomerDataPort,
     mockSupplierDataPort,
     mockNotificationPort,
-    logger
+    logger as any
   );
 
   // Initialize controller

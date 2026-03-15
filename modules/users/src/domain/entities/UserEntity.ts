@@ -7,6 +7,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
 export enum UserRole {
@@ -21,6 +22,9 @@ export enum UserRole {
 }
 
 @Entity('users')
+@Index(['role'])
+@Index(['is_active'])
+@Index(['created_at'])
 export class UserEntity {
   @PrimaryGeneratedColumn('increment')
   id!: number;

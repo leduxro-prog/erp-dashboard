@@ -12,6 +12,7 @@ import { WarehouseEntity } from './WarehouseEntity';
 
 @Entity('stock_items')
 @Index(['product_id', 'warehouse_id'], { unique: true })
+@Index(['product_id'])
 @Index(['warehouse_id'])
 export class StockItemEntity {
   @PrimaryColumn('uuid')

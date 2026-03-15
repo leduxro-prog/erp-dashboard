@@ -124,7 +124,7 @@ export default class AnalyticsModule implements ICypherModule {
       // Cache initialization would happen here
 
       logger.debug('Creating composition root');
-      this.router = createAnalyticsRouter(context.dataSource);
+      this.router = createAnalyticsRouter(context);
 
       logger.info('Analytics module initialized successfully');
     } catch (error) {

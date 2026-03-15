@@ -5,7 +5,7 @@
 ### Create a New Module (2 minutes)
 
 ```bash
-npx ts-node scripts/create-module.ts --name=shipping --description="Shipping management system"
+npx ts-node scripts/dev/create-module.ts --name=shipping --description="Shipping management system"
 ```
 
 This creates:
@@ -418,12 +418,12 @@ curl http://localhost:3000/api/v1/system/modules
 - Module system: `/shared/module-system/`
 - Module templates: `/modules/*/`
 - Server integration: `/src/server.ts`
-- Generator: `/scripts/create-module.ts`
+- Generator: `/scripts/dev/create-module.ts`
 - Documentation: `/shared/module-system/README.md`
 
 ## Next Steps
 
-1. Create your first module: `npx ts-node scripts/create-module.ts --name=YOUR_MODULE`
+1. Create your first module: `npx ts-node scripts/dev/create-module.ts --name=YOUR_MODULE`
 2. Read `/shared/module-system/README.md` for comprehensive guide
 3. Check `/modules/pricing-engine/src/pricing-module.ts` for reference implementation
 4. Write tests in `tests/`

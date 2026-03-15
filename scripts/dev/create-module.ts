@@ -15,8 +15,8 @@ import { execSync } from 'child_process';
  * - Tests (unit, integration)
  *
  * Usage:
- *   npx ts-node scripts/create-module.ts --name=shipping --description="Shipping integration"
- *   npx ts-node scripts/create-module.ts --name=notifications --desc="Send notifications"
+ *   npx ts-node scripts/dev/create-module.ts --name=shipping --description="Shipping integration"
+ *   npx ts-node scripts/dev/create-module.ts --name=notifications --desc="Send notifications"
  *
  * Flags:
  *   --name/-n REQUIRED: Module name in kebab-case (e.g., shipping, order-tracking)
@@ -134,7 +134,7 @@ Creates a new module with standard architecture:
   - Tests
 
 Usage:
-  npx ts-node scripts/create-module.ts --name=shipping --description="Shipping integration"
+  npx ts-node scripts/dev/create-module.ts --name=shipping --description="Shipping integration"
 
 Flags:
   --name, -n REQUIRED           Module name in kebab-case
@@ -144,9 +144,9 @@ Flags:
   --help, -h                    Show this help message
 
 Examples:
-  npx ts-node scripts/create-module.ts -n shipping -d "Shipping management"
-  npx ts-node scripts/create-module.ts -n notifications -d "Send notifications" -a "John Doe"
-  npx ts-node scripts/create-module.ts --name=reports --description="Reporting engine" --version=2.0.0
+  npx ts-node scripts/dev/create-module.ts -n shipping -d "Shipping management"
+  npx ts-node scripts/dev/create-module.ts -n notifications -d "Send notifications" -a "John Doe"
+  npx ts-node scripts/dev/create-module.ts --name=reports --description="Reporting engine" --version=2.0.0
 `);
 }
 
