@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
+import { Logger } from 'winston';
 
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { GetSalesDashboard } from '../../application/use-cases/GetSalesDashboard';
+import { GenerateReport } from '../../application/use-cases/GenerateReport';
+import { IDashboardRepository, IReportRepository, IMetricRepository } from '../../domain/repositories';
 
 // Use Request directly - access user via (req as any).user
 export type AuthenticatedRequest = Request & { user?: { id: string }; validatedBody?: unknown };
@@ -10,28 +14,14 @@ export type AuthenticatedRequest = Request & { user?: { id: string }; validatedB
  * Handles all analytics-related operations including dashboards, reports, metrics, and forecasts
  */
 export class AnalyticsController {
-  private _getSalesDashboardUseCase: any;
-  private _generateReportUseCase: any;
-  private _dashboardRepository: any;
-  private _reportRepository: any;
-  private _metricRepository: any;
-  private _logger: any;
-
   constructor(
-    getSalesDashboard: any,
-    generateReport: any,
-    dashboardRepository: any,
-    reportRepository: any,
-    metricRepository: any,
-    logger: any
-  ) {
-    this._getSalesDashboardUseCase = getSalesDashboard;
-    this._generateReportUseCase = generateReport;
-    this._dashboardRepository = dashboardRepository;
-    this._reportRepository = reportRepository;
-    this._metricRepository = metricRepository;
-    this._logger = logger;
-  }
+    private readonly _getSalesDashboardUseCase: GetSalesDashboard,
+    private readonly _generateReportUseCase: GenerateReport,
+    private readonly _dashboardRepository: IDashboardRepository,
+    private readonly _reportRepository: IReportRepository,
+    private readonly _metricRepository: IMetricRepository,
+    private readonly _logger: Logger
+  ) {}
 
   /**
    * List all dashboards with pagination

@@ -8,8 +8,6 @@ import { createAnalyticsRoutes } from '../api/routes/analytics.routes';
 import { ICustomerDataPort } from '../application/ports/ICustomerDataPort';
 import { IInventoryDataPort } from '../application/ports/IInventoryDataPort';
 import { INotificationPort } from '../application/ports/INotificationPort';
-import { IOrderDataPort } from '../application/ports/IOrderDataPort';
-import { IPricingDataPort } from '../application/ports/IPricingDataPort';
 import { ISupplierDataPort } from '../application/ports/ISupplierDataPort';
 import {
   GetSalesDashboard,
@@ -27,9 +25,11 @@ import { TypeOrmForecastRepository } from './repositories/TypeOrmForecastReposit
 import { TypeOrmMetricRepository } from './repositories/TypeOrmMetricRepository';
 import { TypeOrmReportRepository } from './repositories/TypeOrmReportRepository';
 
+// Adapters
+import { OrderDataAdapter } from './adapters/OrderDataAdapter';
+import { PricingDataAdapter } from './adapters/PricingDataAdapter';
+
 // Mock adapters for ports (to be replaced with real adapters)
-const mockOrderDataPort = {} as IOrderDataPort;
-const mockPricingDataPort = {} as IPricingDataPort;
 const mockInventoryDataPort = {} as IInventoryDataPort;
 const mockCustomerDataPort = {} as ICustomerDataPort;
 const mockSupplierDataPort = {} as ISupplierDataPort;
@@ -48,18 +48,22 @@ export function createAnalyticsRouter(context: IModuleContext): Router {
   const reportRepository: IReportRepository = new TypeOrmReportRepository(dataSource);
   const metricRepository: IMetricRepository = new TypeOrmMetricRepository(dataSource);
   
+  // Initialize adapters
+  const orderDataPort = new OrderDataAdapter(dataSource);
+  const pricingDataPort = new PricingDataAdapter(dataSource);
+
   // Initialize use-cases
   const getSalesDashboard = new GetSalesDashboard(
     dashboardRepository,
-    mockOrderDataPort,
-    mockPricingDataPort,
+    orderDataPort,
+    pricingDataPort,
     logger as any,
     cacheManager
   );
 
   const generateReport = new GenerateReport(
     reportRepository,
-    mockOrderDataPort,
+    orderDataPort,
     mockInventoryDataPort,
     mockCustomerDataPort,
     mockSupplierDataPort,
@@ -74,7 +78,7 @@ export function createAnalyticsRouter(context: IModuleContext): Router {
     dashboardRepository,
     reportRepository,
     metricRepository,
-    logger
+    logger as any
   );
 
   // Create and return configured Express router
