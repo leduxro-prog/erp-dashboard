@@ -39,10 +39,6 @@ on:
         type: boolean
         default: false
 
-  push:
-    branches: [ main ]
-    paths: [ .github/workflows/release-gate.yml ]
-
 env:
   NODE_VERSION: '20.x'
   POSTGRES_VERSION: '15-alpine'
