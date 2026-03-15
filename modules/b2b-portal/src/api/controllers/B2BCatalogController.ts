@@ -4,14 +4,90 @@
  * Supports: product listing, filtering, search, stock visibility, pricing tiers
  */
 
-import { VAT_RATE } from '@shared/constants';
 import { Router, Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
+
+import { VAT_RATE } from '../../../../shared/constants/pricing-tiers';
 import { CatalogPdfGenerator } from '../../infrastructure/pdf/CatalogPdfGenerator';
+import { TierCalculationService } from '../../domain/services/TierCalculationService';
 
 export function createB2BCatalogRouter(dataSource: DataSource): Router {
   const router = Router();
   const pdfGenerator = new CatalogPdfGenerator();
+
+  // ==========================================
+  // GET /products/:id/pricing - Tiered pricing
+  // ==========================================
+  router.get('/products/:id/pricing', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const customerId = (req as any).user?.customerId ?? (req as any).b2bCustomer?.id;
+      
+      if (!customerId) {
+        res.status(401).json({ success: false, error: 'B2B context required' });
+        return;
+      }
+
+      // 1. Get product and customer tier
+      const [product, customer] = await Promise.all([
+        dataSource.query('SELECT base_price, currency_code FROM products WHERE id = $1', [productId]),
+        dataSource.query('SELECT tier FROM b2b_customers WHERE id = $1', [customerId])
+      ]);
+
+      if (product.length === 0) {
+        res.status(404).json({ success: false, error: 'Product not found' });
+        return;
+      }
+
+      const basePrice = parseFloat(product[0].base_price);
+      const tier = customer[0]?.tier || 'STANDARD';
+
+      // 2. Get volume discounts
+      const discounts = await dataSource.query(
+        `SELECT min_quantity, discount_percentage 
+         FROM volume_discounts 
+         WHERE product_id = $1 AND is_active = true 
+         ORDER BY min_quantity ASC`,
+        [productId]
+      );
+
+      // 3. Calculate tier discount
+      const tierService = new TierCalculationService();
+      const tierDiscountPercent = tierService.getDiscountForTier(tier as any) * 100;
+
+      // 4. Build pricing table
+      const pricingTable = [1, 10, 20, 50, 100].map(qty => {
+        // Find applicable volume discount for this qty
+        const volDiscount = discounts
+          .filter((d: any) => qty >= d.min_quantity)
+          .reduce((max: number, d: any) => Math.max(max, parseFloat(d.discount_percentage)), 0);
+
+        const totalDiscount = tierDiscountPercent + volDiscount;
+        const netPrice = basePrice * (1 - totalDiscount / 100);
+
+        return {
+          quantity: qty,
+          base_price: basePrice,
+          tier_discount: tierDiscountPercent,
+          volume_discount: volDiscount,
+          total_discount: totalDiscount,
+          net_price: Math.round(netPrice * 100) / 100
+        };
+      });
+
+      res.json({
+        success: true,
+        data: {
+          product_id: productId,
+          tier,
+          currency: product[0].currency_code || 'RON',
+          pricing_table: pricingTable
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // ==========================================
   // GET /products/:id/datasheet - Product PDF
