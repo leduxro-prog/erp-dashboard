@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledux/contracts/published-asset-ref-v1.schema.json",
+  "title": "PublishedAssetRefV1",
+  "type": "object",
+  "required": [
+    "assetClass",
+    "url",
+    "checksum",
+    "mimeType",
+    "sizeBytes",
+    "version",
+    "access",
+    "origin",
+    "updatedAt"
+  ],
+  "properties": {
+    "assetClass": {
+      "enum": [
+        "primary-image",
+        "gallery-image",
+        "supplier-asset",
+        "datasheet",
+        "certificate",
+        "installation-document",
+        "warranty-document",
+        "compliance-document"
+      ]
+    },
+    "url": { "type": "string", "minLength": 1 },
+    "checksum": { "type": "string", "minLength": 8 },
+    "mimeType": { "type": "string", "minLength": 3 },
+    "sizeBytes": { "type": "integer", "minimum": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "access": { "enum": ["public", "signed"] },
+    "origin": { "enum": ["erp", "supplier", "derived"] },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
