@@ -7,7 +7,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 
-import { VAT_RATE } from '../../../../shared/constants/pricing-tiers';
+import { VAT_RATE } from '../../../../../shared/constants/pricing-tiers';
 import { CatalogPdfGenerator } from '../../infrastructure/pdf/CatalogPdfGenerator';
 import { TierCalculationService } from '../../domain/services/TierCalculationService';
 

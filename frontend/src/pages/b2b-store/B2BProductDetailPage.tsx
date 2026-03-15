@@ -17,6 +17,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { b2bApi } from '../../services/b2b-api';
 
 interface TechnicalSpecs {
   lumens?: number;
@@ -35,6 +36,7 @@ interface TechnicalSpecs {
   ean?: string;
   warrantyYears?: number;
   lifespan?: number;
+  ies_file_url?: string;
 }
 
 interface Product {
@@ -93,10 +95,23 @@ export const B2BProductDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedTab, setSelectedTab] = useState<'specs' | 'pricing' | 'delivery'>('specs');
+  const [pricingTable, setPricingTable] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProduct();
+    fetchPricing();
   }, [id]);
+
+  const fetchPricing = async () => {
+    try {
+      const response = await b2bApi.getProductPricing(id!);
+      if (response.pricing_table) {
+        setPricingTable(response.pricing_table);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pricing:', err);
+    }
+  };
 
   const fetchProduct = async () => {
     try {
@@ -179,18 +194,18 @@ export const B2BProductDetailPage: React.FC = () => {
 
   const specs = parseSpecs(product);
 
-  const tieredPricing = [
-    { range: '1 — 9 buc', price: product.price, discount: '—' },
-    { range: '10 — 49 buc', price: +(product.price * 0.95).toFixed(2), discount: '-5%' },
-    { range: '50 — 99 buc', price: +(product.price * 0.9).toFixed(2), discount: '-10%' },
-    { range: '100+ buc', price: +(product.price * 0.85).toFixed(2), discount: '-15%' },
-  ];
-
   const getCurrentTierPrice = () => {
-    if (quantity >= 100) return tieredPricing[3].price;
-    if (quantity >= 50) return tieredPricing[2].price;
-    if (quantity >= 10) return tieredPricing[1].price;
-    return tieredPricing[0].price;
+    if (pricingTable.length > 0) {
+      // Find the highest quantity match
+      const applicable = [...pricingTable].reverse().find(t => quantity >= t.quantity);
+      return applicable ? applicable.net_price : pricingTable[0].net_price;
+    }
+    
+    // Fallback logic
+    if (quantity >= 100) return product.price * 0.85;
+    if (quantity >= 50) return product.price * 0.9;
+    if (quantity >= 10) return product.price * 0.95;
+    return product.price;
   };
 
   const specRows = [
@@ -278,16 +293,19 @@ export const B2BProductDetailPage: React.FC = () => {
               >
                 <Heart size={16} /> Salvează
               </button>
-              <button
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm transition-all"
-                style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: '#888',
-                }}
-              >
-                <Share2 size={16} /> Distribuie
-              </button>
+              {product.technical?.ies_file_url && (
+                <button
+                  onClick={() => window.open(product.technical?.ies_file_url!, '_blank')}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm transition-all font-bold"
+                  style={{
+                    background: 'rgba(79,142,255,0.1)',
+                    border: '1px solid rgba(79,142,255,0.2)',
+                    color: '#4f8eff',
+                  }}
+                >
+                  <Download size={16} /> Fişier IES
+                </button>
+              )}
               <button
                 onClick={async () => {
                   if (product) {
@@ -616,7 +634,7 @@ export const B2BProductDetailPage: React.FC = () => {
             </div>
           )}
 
-          {/* Pricing Tab */}
+              {/* Pricing Tab */}
           {selectedTab === 'pricing' && (
             <div
               className="rounded-2xl overflow-hidden"
@@ -630,28 +648,32 @@ export const B2BProductDetailPage: React.FC = () => {
                 style={{ color: '#666', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
               >
                 <span>Cantitate</span>
-                <span className="text-center">Preț / Buc</span>
-                <span className="text-right">Discount</span>
+                <span className="text-center">Preț / Buc (Net)</span>
+                <span className="text-right">Discount Total</span>
               </div>
-              {tieredPricing.map((tier, idx) => (
+              {(pricingTable.length > 0 ? pricingTable : [
+                { quantity: 1, net_price: product.price, total_discount: 0 },
+                { quantity: 10, net_price: product.price * 0.95, total_discount: 5 },
+                { quantity: 50, net_price: product.price * 0.90, total_discount: 10 },
+                { quantity: 100, net_price: product.price * 0.85, total_discount: 15 },
+              ]).map((tier, idx) => (
                 <div
-                  key={tier.range}
+                  key={tier.quantity}
                   className="grid grid-cols-3 items-center px-6 py-4"
                   style={{
-                    borderBottom:
-                      idx < tieredPricing.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
                     background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
                   }}
                 >
-                  <span className="text-sm text-white font-medium">{tier.range}</span>
+                  <span className="text-sm text-white font-medium">{tier.quantity}+ buc</span>
                   <span className="text-sm font-bold text-center" style={{ color: '#daa520' }}>
-                    {tier.price.toFixed(2)} {product.currency}
+                    {tier.net_price.toFixed(2)} {product.currency}
                   </span>
                   <span
                     className="text-sm text-right font-semibold"
-                    style={{ color: tier.discount !== '—' ? '#10b981' : '#555' }}
+                    style={{ color: tier.total_discount > 0 ? '#10b981' : '#555' }}
                   >
-                    {tier.discount}
+                    {tier.total_discount > 0 ? `-${tier.total_discount}%` : '—'}
                   </span>
                 </div>
               ))}

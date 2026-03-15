@@ -84,6 +84,12 @@ const B2BCheckoutPage = lazy(() =>
 const B2BProfilePage = lazy(() =>
   import('./pages/b2b-portal/B2BProfilePage').then((m) => ({ default: m.B2BProfilePage })),
 );
+const B2BTeamPage = lazy(() =>
+  import('./pages/b2b-portal/B2BTeamPage').then((m) => ({ default: m.B2BTeamPage })),
+);
+const B2BProjectsPage = lazy(() =>
+  import('./pages/b2b-portal/B2BProjectsPage').then((m) => ({ default: m.B2BProjectsPage })),
+);
 const B2BAddressesPage = lazy(() =>
   import('./pages/b2b-portal/B2BAddressesPage').then((m) => ({ default: m.B2BAddressesPage })),
 );
@@ -429,6 +435,22 @@ export default function App() {
             element={
               <Suspense fallback={<PageLoadingFallback />}>
                 <B2BInvoicesPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="team"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <B2BTeamPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="projects"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <B2BProjectsPage />
               </Suspense>
             }
           />
