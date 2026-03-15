@@ -7,12 +7,12 @@
  * @module whatsapp/application/use-cases
  */
 
-import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
 import {
   WhatsAppTemplate,
   TemplateCategory,
   TemplateLanguage,
 } from '../../domain/entities/WhatsAppTemplate';
+import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
 
 /**
  * Create template request DTO.

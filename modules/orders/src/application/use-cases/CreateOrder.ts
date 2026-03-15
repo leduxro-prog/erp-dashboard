@@ -2,6 +2,8 @@
  * Create Order Use Case
  * Creates a new order with validation, stock reservation, and event publishing
  */
+import { v4 as uuidv4 } from 'uuid';
+
 import {
   Order,
   OrderItem,
@@ -17,7 +19,6 @@ import {
   InsufficientStockError,
   StockReservationError,
 } from '../errors';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Event publisher interface for domain events

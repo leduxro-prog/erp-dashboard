@@ -3,9 +3,10 @@
  * Publishes WooCommerce-derived events to the unified outbox table for replay capability
  */
 
-import pg, { Pool } from 'pg';
-import { ERPDomainEvent } from '../../application/transformers/WebhookEventTransformer';
 import { createModuleLogger } from '@shared/utils/logger';
+import pg, { Pool } from 'pg';
+
+import { ERPDomainEvent } from '../../application/transformers/WebhookEventTransformer';
 
 const logger = createModuleLogger('outbox-event-publisher');
 

@@ -1,4 +1,5 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+
 import { ApInvoiceEntity } from './ApInvoiceEntity';
 
 @Entity('ap_invoice_lines')

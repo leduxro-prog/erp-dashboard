@@ -1,4 +1,5 @@
 import { Logger } from 'winston';
+
 import { Dashboard, DashboardDTO, LayoutType } from '../../domain/entities/Dashboard';
 import { DashboardWidget, WidgetType, DataSourceType } from '../../domain/entities/DashboardWidget';
 import { IDashboardRepository } from '../../domain/repositories/IDashboardRepository';

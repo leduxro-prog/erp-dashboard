@@ -8,6 +8,7 @@
  */
 
 import { Sitemap, SitemapType } from '../entities/Sitemap';
+
 import { PaginatedResult, PaginationParams } from './ISeoMetadataRepository';
 
 /**

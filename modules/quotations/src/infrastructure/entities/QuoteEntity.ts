@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+
 import { QuoteStatus, QuoteItem } from '../../domain/entities/Quote';
 
 @Entity('quotes')

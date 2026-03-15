@@ -1,29 +1,30 @@
-import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
-import { SendMessage } from '../../application/use-cases/SendMessage';
-import { ListMessages } from '../../application/use-cases/ListMessages';
-import { ListConversations } from '../../application/use-cases/ListConversations';
-import { GetConversation } from '../../application/use-cases/GetConversation';
+import { Response, NextFunction } from 'express';
+
 import { AssignConversation } from '../../application/use-cases/AssignConversation';
-import { ResolveConversation } from '../../application/use-cases/ResolveConversation';
-import { ProcessWebhook } from '../../application/use-cases/ProcessWebhook';
-import { ListTemplates } from '../../application/use-cases/ListTemplates';
-import { CreateTemplate } from '../../application/use-cases/CreateTemplate';
 
 // NEW USE CASES IMPORTS
-import { ReopenConversation } from '../../application/use-cases/ReopenConversation';
-import { MarkConversationAsRead } from '../../application/use-cases/MarkConversationAsRead';
 import { UpdateTemplate } from '../../application/use-cases/UpdateTemplate';
 import { DeleteTemplate } from '../../application/use-cases/DeleteTemplate';
 import { GetAgents } from '../../application/use-cases/GetAgents';
 import { SetAgentStatus } from '../../application/use-cases/SetAgentStatus';
 import { GetConnectionStatus } from '../../application/use-cases/GetConnectionStatus';
 import { ConnectWhatsApp } from '../../application/use-cases/ConnectWhatsApp';
+import { CreateTemplate } from '../../application/use-cases/CreateTemplate';
 import { DisconnectWhatsApp } from '../../application/use-cases/DisconnectWhatsApp';
-import { ReconnectWhatsApp } from '../../application/use-cases/ReconnectWhatsApp';
-import { GetTags } from '../../application/use-cases/GetTags';
+import { GetConversation } from '../../application/use-cases/GetConversation';
 import { UpdateConversationTags } from '../../application/use-cases/UpdateConversationTags';
 import { GetStatistics } from '../../application/use-cases/GetStatistics';
+import { GetTags } from '../../application/use-cases/GetTags';
+import { ListConversations } from '../../application/use-cases/ListConversations';
+import { ListMessages } from '../../application/use-cases/ListMessages';
+import { ListTemplates } from '../../application/use-cases/ListTemplates';
+import { MarkConversationAsRead } from '../../application/use-cases/MarkConversationAsRead';
+import { ProcessWebhook } from '../../application/use-cases/ProcessWebhook';
+import { ReconnectWhatsApp } from '../../application/use-cases/ReconnectWhatsApp';
+import { ReopenConversation } from '../../application/use-cases/ReopenConversation';
+import { ResolveConversation } from '../../application/use-cases/ResolveConversation';
+import { SendMessage } from '../../application/use-cases/SendMessage';
 
 /**
  * WhatsApp Controller

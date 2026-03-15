@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
-import { ICypherModule, IModuleContext, IModuleHealth, IModuleMetrics } from '../../../shared/module-system/module.interface';
-import { B2BAdminController } from './api/controllers/B2BAdminController';
+
 import { authenticate } from '../../../shared/middleware/auth.middleware';
+import { ICypherModule, IModuleContext, IModuleHealth, IModuleMetrics } from '../../../shared/module-system/module.interface';
+
+import { B2BAdminController } from './api/controllers/B2BAdminController';
 
 export class B2BAdminModule implements ICypherModule {
   readonly name = 'b2b-admin';

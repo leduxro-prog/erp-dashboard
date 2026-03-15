@@ -1,8 +1,10 @@
-import { Repository, DataSource } from 'typeorm';
 import * as crypto from 'crypto';
 
-import { UserEntity, UserRole } from '../../domain/entities/UserEntity';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Repository, DataSource } from 'typeorm';
+
+import { UserEntity, UserRole } from '../../domain/entities/UserEntity';
+
 
 export class UserService {
   private repository: Repository<UserEntity>;

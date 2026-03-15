@@ -1,3 +1,6 @@
+import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource } from 'typeorm';
+
 import { SmartBillStock } from '../../domain/entities/SmartBillStock';
 import {
   ISmartBillRepository,
@@ -5,8 +8,6 @@ import {
 } from '../../domain/repositories/ISmartBillRepository';
 import { StockSyncResultDto, StockSyncItemResult } from '../dtos/smartbill.dtos';
 import { StockSyncError } from '../errors/smartbill.errors';
-import { DataSource } from 'typeorm';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('smartbill');
 

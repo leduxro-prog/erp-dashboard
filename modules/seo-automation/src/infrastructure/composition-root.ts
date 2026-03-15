@@ -8,44 +8,44 @@
  * @module composition-root
  */
 
-import { Router, Request, Response, NextFunction } from 'express';
-import { DataSource } from 'typeorm';
-import Redis from 'ioredis';
-import { Logger } from 'winston';
+import { IEventBus } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router, Request, Response, NextFunction } from 'express';
+import Redis from 'ioredis';
+import { DataSource } from 'typeorm';
+import { Logger } from 'winston';
 
 // Domain services
-import { SeoScoreCalculator } from '../domain/services/SeoScoreCalculator';
+import { SeoController } from '../api/controllers/SeoController';
+import { ICategoryPort } from '../application/ports/ICategoryPort';
+import { IProductPort } from '../application/ports/IProductPort';
+import { IWooCommercePort } from '../application/ports/IWooCommercePort';
+import { AuditProductSeo } from '../application/use-cases/AuditProductSeo';
+import { GenerateProductSeo } from '../application/use-cases/GenerateProductSeo';
+import { IAuditRepository } from '../domain/repositories/IAuditRepository';
+import { ISeoMetadataRepository } from '../domain/repositories/ISeoMetadataRepository';
 import { MetaTagGenerator } from '../domain/services/MetaTagGenerator';
+import { SeoScoreCalculator } from '../domain/services/SeoScoreCalculator';
 import { SlugGenerator } from '../domain/services/SlugGenerator';
 import { StructuredDataGenerator } from '../domain/services/StructuredDataGenerator';
 
 // Use cases
-import { GenerateProductSeo } from '../application/use-cases/GenerateProductSeo';
-import { AuditProductSeo } from '../application/use-cases/AuditProductSeo';
 
 // Ports
-import { IProductPort } from '../application/ports/IProductPort';
-import { ICategoryPort } from '../application/ports/ICategoryPort';
-import { IWooCommercePort } from '../application/ports/IWooCommercePort';
 
 // Repositories (interfaces)
-import { ISeoMetadataRepository } from '../domain/repositories/ISeoMetadataRepository';
 import { ISitemapRepository } from '../domain/repositories/ISitemapRepository';
 import { IStructuredDataRepository } from '../domain/repositories/IStructuredDataRepository';
-import { IAuditRepository } from '../domain/repositories/IAuditRepository';
 
 // Infrastructure repositories (TypeORM implementations)
+import { TypeOrmAuditRepository } from './repositories/TypeOrmAuditRepository';
 import { TypeOrmSeoMetadataRepository } from './repositories/TypeOrmSeoMetadataRepository';
 import { TypeOrmSitemapRepository } from './repositories/TypeOrmSitemapRepository';
 import { TypeOrmStructuredDataRepository } from './repositories/TypeOrmStructuredDataRepository';
-import { TypeOrmAuditRepository } from './repositories/TypeOrmAuditRepository';
 
 // Controller
-import { SeoController } from '../api/controllers/SeoController';
 
 // Event bus
-import { IEventBus } from '@shared/module-system/module.interface';
 
 /**
  * Composition root service locator

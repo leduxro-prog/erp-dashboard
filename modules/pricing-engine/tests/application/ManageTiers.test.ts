@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { ManageTiers, TierLevel } from '../../src/application/use-cases/ManageTiers';
-import { ITierRepository, CustomerTierRecord } from '../../src/application/ports/ITierRepository';
+
 import { CustomerTierNotFoundError, PricingError } from '../../src/application/errors/pricing.errors';
+import { ITierRepository, CustomerTierRecord } from '../../src/application/ports/ITierRepository';
+import { ManageTiers, TierLevel } from '../../src/application/use-cases/ManageTiers';
 
 const makeCustomerTierRecord = (
   overrides: Partial<CustomerTierRecord> = {}

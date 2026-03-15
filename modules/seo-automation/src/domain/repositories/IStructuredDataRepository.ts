@@ -7,8 +7,9 @@
  * @interface IStructuredDataRepository
  */
 
-import { StructuredData, SchemaType } from '../entities/StructuredData';
 import { SeoEntityType } from '../entities/SeoIssue';
+import { StructuredData, SchemaType } from '../entities/StructuredData';
+
 import { PaginatedResult, PaginationParams } from './ISeoMetadataRepository';
 
 /**

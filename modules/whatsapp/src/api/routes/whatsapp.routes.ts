@@ -1,11 +1,12 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { WhatsAppController } from '../controllers/WhatsAppController';
+import { asyncHandler } from '@shared/middleware/async-handler';
 import {
   authenticate,
   requireRole,
   AuthenticatedRequest,
 } from '@shared/middleware/auth.middleware';
-import { asyncHandler } from '@shared/middleware/async-handler';
+import { Router, Request, Response, NextFunction } from 'express';
+
+import { WhatsAppController } from '../controllers/WhatsAppController';
 import {
   validationMiddleware,
   queryValidationMiddleware,

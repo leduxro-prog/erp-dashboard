@@ -8,8 +8,8 @@
  * - Integration with inventory and pricing modules
  */
 
-import { DataSource, Repository } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource, Repository } from 'typeorm';
 
 const logger = createModuleLogger('high-margin-segmentation');
 

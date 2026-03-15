@@ -8,12 +8,12 @@
  * @module whatsapp/application/use-cases
  */
 
-import { IWebhookRepository } from '../../domain/repositories/IWebhookRepository';
-import { IMessageRepository } from '../../domain/repositories/IMessageRepository';
-import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
-import { WhatsAppWebhookEvent, WebhookEventType } from '../../domain/entities/WhatsAppWebhookEvent';
-import { WhatsAppMessage } from '../../domain/entities/WhatsAppMessage';
 import { WhatsAppConversation } from '../../domain/entities/WhatsAppConversation';
+import { WhatsAppMessage } from '../../domain/entities/WhatsAppMessage';
+import { WhatsAppWebhookEvent, WebhookEventType } from '../../domain/entities/WhatsAppWebhookEvent';
+import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
+import { IMessageRepository } from '../../domain/repositories/IMessageRepository';
+import { IWebhookRepository } from '../../domain/repositories/IWebhookRepository';
 
 /**
  * Process webhook request DTO.

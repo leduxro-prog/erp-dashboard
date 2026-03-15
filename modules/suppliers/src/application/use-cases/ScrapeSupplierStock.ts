@@ -1,9 +1,11 @@
+import { EventEmitter } from 'events';
+
+import { createModuleLogger } from '@shared/utils/logger';
+
 import { ISupplierRepository, SupplierProductEntity } from '../../domain';
 import { IScraperFactory } from '../../domain/ports/IScraper';
-import { ScrapeError, SupplierNotFoundError, SupplierNotActiveError } from '../errors/supplier.errors';
 import { ScrapeResult, PriceChangeAlert } from '../dtos/supplier.dtos';
-import { EventEmitter } from 'events';
-import { createModuleLogger } from '@shared/utils/logger';
+import { ScrapeError, SupplierNotFoundError, SupplierNotActiveError } from '../errors/supplier.errors';
 
 const logger = createModuleLogger('scrape-supplier-stock');
 

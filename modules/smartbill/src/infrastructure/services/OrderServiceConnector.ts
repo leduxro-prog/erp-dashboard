@@ -5,12 +5,12 @@
  * allowing SmartBill to update orders with invoice/proforma information.
  */
 
-import { createModuleLogger } from '@shared/utils/logger';
 import {
   mapSmartBillToPaymentStatus,
   mapSmartBillInvoiceToErp,
   isSmartBillInvoiceFinal,
 } from '@shared/constants/status-mapping';
+import { createModuleLogger } from '@shared/utils/logger';
 import { DataSource, Repository } from 'typeorm';
 
 const logger = createModuleLogger('smartbill-order-connector');

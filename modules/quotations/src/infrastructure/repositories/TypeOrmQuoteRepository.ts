@@ -1,4 +1,5 @@
 import { Repository, LessThan, In } from 'typeorm';
+
 import { Quote, QuoteStatus } from '../../domain/entities/Quote';
 import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 import { QuoteEntity } from '../entities/QuoteEntity';

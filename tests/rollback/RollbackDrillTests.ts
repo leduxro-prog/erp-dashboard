@@ -574,8 +574,6 @@ describe('Rollback Drill Tests', () => {
 
       expect(report.total_phases).toBeGreaterThan(0);
       expect(report.failed_phases).toBe(0);
-
-      return report;
     });
 
     it('should verify rollback SLA compliance', () => {

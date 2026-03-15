@@ -5,6 +5,7 @@
  */
 
 import { Request, Response, NextFunction, Express } from 'express';
+
 import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('metrics-middleware');

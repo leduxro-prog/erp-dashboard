@@ -1,7 +1,8 @@
 import { DataSource } from 'typeorm';
+
 import { Report } from '../../domain/entities/Report';
-import { IReportRepository, ReportFilter } from '../../domain/repositories/IReportRepository';
 import { PaginatedResult } from '../../domain/repositories/IDashboardRepository';
+import { IReportRepository, ReportFilter } from '../../domain/repositories/IReportRepository';
 
 export class TypeOrmReportRepository implements IReportRepository {
   constructor(private _dataSource: DataSource) {

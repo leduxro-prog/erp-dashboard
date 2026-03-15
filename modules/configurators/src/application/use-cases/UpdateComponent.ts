@@ -1,14 +1,15 @@
 import { Logger } from 'winston';
+
 import { ConfiguratorSession } from '../../domain/entities/ConfiguratorSession';
-import { CompatibilityEngine } from '../../domain/services/CompatibilityEngine';
-import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
-import { IRuleRepository } from '../../domain/repositories/IRuleRepository';
 import {
   SessionExpiredError,
   SessionNotFoundError,
   InvalidSessionStatusError,
   IncompatibleComponentError,
 } from '../../domain/errors/configurator.errors';
+import { IRuleRepository } from '../../domain/repositories/IRuleRepository';
+import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
+import { CompatibilityEngine } from '../../domain/services/CompatibilityEngine';
 
 /**
  * UpdateComponent Use-Case

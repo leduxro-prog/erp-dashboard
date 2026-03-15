@@ -2,9 +2,10 @@
  * Analytics API Routes
  * Defines all analytics endpoints including dashboards, reports, metrics, and KPI dashboards
  */
-import { Router, Request, Response, NextFunction } from 'express';
-import { AnalyticsController } from '../controllers/AnalyticsController';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Router, Request, Response, NextFunction } from 'express';
+
+import { AnalyticsController } from '../controllers/AnalyticsController';
 import {
   createDashboardSchema,
   updateDashboardSchema,

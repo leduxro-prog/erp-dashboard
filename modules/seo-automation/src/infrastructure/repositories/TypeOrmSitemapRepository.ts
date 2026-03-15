@@ -1,10 +1,11 @@
 import { DataSource, Repository } from 'typeorm';
+
 import { Sitemap, SitemapType, ChangeFrequency, SitemapEntry } from '../../domain/entities/Sitemap';
-import { ISitemapRepository } from '../../domain/repositories/ISitemapRepository';
 import {
   PaginatedResult,
   PaginationParams,
 } from '../../domain/repositories/ISeoMetadataRepository';
+import { ISitemapRepository } from '../../domain/repositories/ISitemapRepository';
 import { SitemapEntity } from '../entities/SitemapEntity';
 
 /**

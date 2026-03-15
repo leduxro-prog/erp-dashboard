@@ -1,4 +1,5 @@
 import { Logger } from 'winston';
+
 import { ConfiguratorSession } from '../../domain/entities/ConfiguratorSession';
 import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
 

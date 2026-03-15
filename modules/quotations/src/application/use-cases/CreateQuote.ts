@@ -1,8 +1,9 @@
+import { v4 as uuidv4 } from 'uuid';
+
 import { Quote, QuoteItem } from '../../domain/entities/Quote';
 import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 import { CreateQuoteDTO } from '../dtos/CreateQuoteDTO';
 import { InvalidQuoteItemsError } from '../errors/QuoteErrors';
-import { v4 as uuidv4 } from 'uuid';
 
 export class CreateQuote {
   constructor(private quoteRepository: IQuoteRepository) {}

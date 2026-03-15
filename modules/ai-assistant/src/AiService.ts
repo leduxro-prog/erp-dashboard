@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+
 import { createModuleLogger } from '../../../shared/utils/logger';
 
 export class AiService {

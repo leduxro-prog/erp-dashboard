@@ -454,7 +454,7 @@ export class B2BRegistration {
    */
   static isValidCui(cui: string): boolean {
     // Remove whitespace and RO prefix
-    let cleaned = cui.trim().replace(/^RO/i, '');
+    const cleaned = cui.trim().replace(/^RO/i, '');
 
     // Must be 2-10 digits
     if (!/^\d{2,10}$/.test(cleaned)) {

@@ -1,11 +1,12 @@
+
+import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
-import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
-import { SeoModuleCompositionRoot } from '../../infrastructure/composition-root';
 import { SeoEntityType } from '../../domain/entities/SeoIssue';
 import { MetadataEntityType, SeoLocale } from '../../domain/entities/SeoMetadata';
 import { StructuredData, SchemaType } from '../../domain/entities/StructuredData';
+import { SeoModuleCompositionRoot } from '../../infrastructure/composition-root';
 
 /**
  * SEO Automation Controller

@@ -1,5 +1,6 @@
-import { IOrderPort, Order } from '../../application/ports';
 import { DataSource } from 'typeorm';
+
+import { IOrderPort, Order } from '../../application/ports';
 
 export class OrderServiceAdapter implements IOrderPort {
     constructor(private readonly dataSource: DataSource) { }

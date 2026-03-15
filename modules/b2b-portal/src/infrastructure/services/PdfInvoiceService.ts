@@ -1,8 +1,9 @@
-import PDFDocument from 'pdfkit';
-import { PassThrough } from 'stream';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PassThrough } from 'stream';
+
 import { VAT_RATE } from '@shared/constants';
+import PDFDocument from 'pdfkit';
 
 export interface InvoiceCompanyData {
   name: string;

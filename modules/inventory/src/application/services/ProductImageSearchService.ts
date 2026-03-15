@@ -1,6 +1,6 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { createModuleLogger } from '@shared/utils/logger';
 
 interface ImageSearchResult {
   sku: string;

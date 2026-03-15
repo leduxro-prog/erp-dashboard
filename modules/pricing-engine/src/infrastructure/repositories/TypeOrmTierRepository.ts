@@ -1,5 +1,6 @@
-import { DataSource, Repository } from 'typeorm';
 import Redis from 'ioredis';
+import { DataSource, Repository } from 'typeorm';
+
 import { ITierRepository, CustomerTierRecord } from '../../application/ports/ITierRepository';
 import { PriceCache } from '../cache/PriceCache';
 

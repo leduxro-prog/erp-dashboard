@@ -1,6 +1,8 @@
-import { BaseScraper, ScrapedProduct } from './BaseScraper';
-import { SupplierCredentials } from '../../domain';
 import { createModuleLogger } from '@shared/utils/logger';
+
+import { SupplierCredentials } from '../../domain';
+
+import { BaseScraper, ScrapedProduct } from './BaseScraper';
 
 const logger = createModuleLogger('braytron-scraper');
 

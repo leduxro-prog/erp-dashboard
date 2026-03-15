@@ -1,6 +1,6 @@
 import { PurchaseOrder, POStatus, POLine } from '../entities/PurchaseOrder';
-import { IPurchaseOrderRepository } from '../repositories/IPurchaseOrderRepository';
 import { IBudgetRepository } from '../repositories/IBudgetRepository';
+import { IPurchaseOrderRepository } from '../repositories/IPurchaseOrderRepository';
 
 export class PurchaseOrderService {
   constructor(

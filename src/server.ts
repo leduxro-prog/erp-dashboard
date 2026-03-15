@@ -1,15 +1,23 @@
+import http from 'http';
+import path from 'path';
+
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import cors, { CorsOptions } from 'cors';
 import dotenv from 'dotenv';
 import express, { Express, NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
-import http from 'http';
-import path from 'path';
-import { AppDataSource } from './data-source';
-import { validateEnv, ConfigSchema } from './config/env.validation';
-import { buildHostTopology } from './config/host-topology';
+
+import { createMetricsMiddleware, createMetricsEndpoint } from '../shared/metrics';
+import {
+  formatPrometheusMetrics,
+  collectPrometheusMetrics,
+} from '../shared/metrics/prometheus-exporter';
+import { createAuditMiddleware } from '../shared/middleware/audit-trail.middleware';
+import { authenticate, requireRole } from '../shared/middleware/auth.middleware';
+import { createCSRFMiddleware } from '../shared/middleware/csrf.middleware';
+import { registerHealthRoutes } from '../shared/middleware/health.middleware';
 import {
   globalApiLimiter,
   b2bApiLimiter,
@@ -17,26 +25,26 @@ import {
   authLimiter,
   writeOperationLimiter,
 } from '../shared/middleware/rate-limit.middleware';
+
+import { buildHostTopology } from './config/host-topology';
+
 import logger, { createModuleLogger } from '../shared/utils/logger';
 import { getEventBus } from '../shared/utils/event-bus';
 import { createRequestIdMiddleware } from '../shared/middleware/request-id.middleware';
-import { createAuditMiddleware } from '../shared/middleware/audit-trail.middleware';
-import { createCSRFMiddleware } from '../shared/middleware/csrf.middleware';
 import { tracingMiddleware } from '../shared/middleware/tracing.middleware';
 import { sanitizeMiddleware } from '../shared/middleware/sanitize.middleware';
 import { createAuditLogger } from '../shared/utils/audit-logger';
+
 import { registerApiDocsRoutes } from './api-docs/routes';
-import { registerHealthRoutes } from '../shared/middleware/health.middleware';
+
 import { ModuleRegistry, ModuleLoader, IModuleContext } from '../shared/module-system';
-import { createMetricsMiddleware, createMetricsEndpoint } from '../shared/metrics';
-import {
-  formatPrometheusMetrics,
-  collectPrometheusMetrics,
-} from '../shared/metrics/prometheus-exporter';
 import { UnifiedDlqService } from '../shared/services/UnifiedDlqService';
 import { AuditLogService } from '../shared/services/AuditLogService';
+import { validateEnv, ConfigSchema } from './config/env.validation';
+import { AppDataSource } from './data-source';
+
 import authRoutes from './routes/auth.routes';
-import { authenticate, requireRole } from '../shared/middleware/auth.middleware';
+
 
 dotenv.config();
 

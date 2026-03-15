@@ -5,8 +5,9 @@
  * Module exports for both Domain, Application and Infrastructure layers
  */
 
-import { Router } from 'express';
 import { ICypherModule, IModuleContext, IModuleHealth, IModuleMetrics } from '@shared/module-system/module.interface';
+import { Router } from 'express';
+
 import { createOrdersRouter } from './infrastructure/composition-root';
 
 // Export composition root

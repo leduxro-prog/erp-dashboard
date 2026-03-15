@@ -1,8 +1,9 @@
+import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import { Router, Request, Response, NextFunction } from 'express';
-import { SupplierController } from '../controllers/SupplierController';
+
 import { ISupplierRepository } from '../../application/ports/ISupplierRepository';
 import { SupplierSyncJob } from '../../infrastructure/jobs/SupplierSyncJob';
-import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { SupplierController } from '../controllers/SupplierController';
 import * as Validators from '../validators/supplier.validators';
 
 export function createSupplierRoutes(

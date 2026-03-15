@@ -1,5 +1,5 @@
-import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 import { QuoteStatus } from '../../domain/entities/Quote';
+import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 
 export interface IReminderService {
   sendExpirationReminder(

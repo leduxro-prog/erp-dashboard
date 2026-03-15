@@ -2,9 +2,10 @@
  * Marketing API Routes
  * Defines all marketing endpoints including campaigns, discount codes, and email sequences
  */
-import { Router, Request, Response, NextFunction } from 'express';
-import { MarketingController } from '../controllers/MarketingController';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Router, Request, Response, NextFunction } from 'express';
+
+import { MarketingController } from '../controllers/MarketingController';
 import {
   createCampaignSchema,
   updateCampaignSchema,

@@ -1,12 +1,13 @@
-import { Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth.middleware';
-import { CalculatePrice } from '../../application/use-cases/CalculatePrice';
-import { CalculateOrderPricing } from '../../application/use-cases/CalculateOrderPricing';
-import { ManagePromotions } from '../../application/use-cases/ManagePromotions';
-import { GetTierPricing } from '../../application/use-cases/GetTierPricing';
-import { ProductNotFoundError } from '../../domain/errors/ProductNotFoundError';
-import { InvalidMarginError } from '../../domain/errors/InvalidMarginError';
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { Response } from 'express';
+
+import { CalculateOrderPricing } from '../../application/use-cases/CalculateOrderPricing';
+import { CalculatePrice } from '../../application/use-cases/CalculatePrice';
+import { GetTierPricing } from '../../application/use-cases/GetTierPricing';
+import { ManagePromotions } from '../../application/use-cases/ManagePromotions';
+import { InvalidMarginError } from '../../domain/errors/InvalidMarginError';
+import { ProductNotFoundError } from '../../domain/errors/ProductNotFoundError';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 export class PricingController {
   constructor(

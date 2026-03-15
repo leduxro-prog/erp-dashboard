@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { OrderStatus } from '../../src/domain/entities/OrderStatus';
 import { OrderStatusMachine } from '../../src/domain/entities/OrderStatusMachine';
 

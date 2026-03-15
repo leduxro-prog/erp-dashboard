@@ -9,12 +9,12 @@
  * @module OutboxRelay
  */
 
+import { getConfig, Config, BatchConfig, RetryConfig, CircuitBreakerConfig, RelayConfig } from './Config';
+import { OutboxLogger, createAsyncContext } from './logger';
+import { OutboxMetrics } from './Metrics';
 import { OutboxProcessor, BatchResult } from './OutboxProcessor';
 import { OutboxRepository } from './OutboxRepository';
 import { RabbitMQPublisher } from './Publisher';
-import { OutboxLogger, createAsyncContext } from './logger';
-import { OutboxMetrics } from './Metrics';
-import { getConfig, Config, BatchConfig, RetryConfig, CircuitBreakerConfig, RelayConfig } from './Config';
 
 /**
  * Relay status enum

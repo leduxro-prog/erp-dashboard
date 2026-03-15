@@ -7,8 +7,8 @@
  * @module B2B Portal - API Controllers
  */
 
-import { Request, Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 
 export interface SyncStatusResponse {

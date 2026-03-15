@@ -1,11 +1,12 @@
+import { IEventBus } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+
 import { WorkflowInstance } from '../../domain/entities/WorkflowInstance';
-import { IWorkflowTemplateRepository } from '../../domain/repositories/IWorkflowTemplateRepository';
 import { IWorkflowInstanceRepository } from '../../domain/repositories/IWorkflowInstanceRepository';
+import { IWorkflowTemplateRepository } from '../../domain/repositories/IWorkflowTemplateRepository';
 import { WorkflowEngine } from '../../domain/services/WorkflowEngine';
 import { CreateInstanceDTO } from '../dtos/CreateInstanceDTO';
 import { TemplateNotFoundError } from '../errors/WorkflowError';
-import { IEventBus } from '@shared/module-system/module.interface';
 
 export class CreateInstanceUseCase {
   private logger = createModuleLogger('CreateInstanceUseCase');

@@ -41,7 +41,7 @@ export class CalculatePrice {
       throw new ProductNotFoundError(productId);
     }
 
-    let basePrice = productPrice.price;
+    const basePrice = productPrice.price;
     let tierDiscount = 0;
     let tierDiscountPercentage = 0;
     let appliedTierLevel: string | undefined;

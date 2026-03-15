@@ -1,5 +1,6 @@
-import Redis from 'ioredis';
 import { createModuleLogger } from '@shared/utils/logger';
+import Redis from 'ioredis';
+
 import { StockLevel } from '../../domain/ports/IInventoryRepository';
 
 export class StockCache {

@@ -1,12 +1,12 @@
 import {
-  ThreeWayMatch,
-  MatchException,
-} from '../../domain/entities/ThreeWayMatch';
-import {
   ThreeWayMatchResponseDTO,
   MatchExceptionResponseDTO,
   VarianceResponseDTO,
 } from '../../application/dtos/MatchDTOs';
+import {
+  ThreeWayMatch,
+  MatchException,
+} from '../../domain/entities/ThreeWayMatch';
 
 export class MatchMapper {
   static toDTO(match: ThreeWayMatch): ThreeWayMatchResponseDTO {

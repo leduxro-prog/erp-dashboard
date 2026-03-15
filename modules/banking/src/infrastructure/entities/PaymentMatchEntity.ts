@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+
 import { BankTransactionEntity } from './BankTransactionEntity';
 
 @Entity('payment_matches')

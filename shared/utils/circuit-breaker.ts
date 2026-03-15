@@ -1,5 +1,6 @@
-import { createModuleLogger } from './logger';
 import { ServiceUnavailableError } from '../errors/BaseError';
+
+import { createModuleLogger } from './logger';
 
 const logger = createModuleLogger('circuit-breaker');
 

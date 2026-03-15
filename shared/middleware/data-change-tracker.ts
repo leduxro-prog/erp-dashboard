@@ -6,8 +6,9 @@
  * @module shared/middleware/data-change-tracker
  */
 
-import { createModuleLogger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
+
+import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('data-change-tracker');
 

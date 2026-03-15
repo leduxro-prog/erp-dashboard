@@ -1,11 +1,12 @@
 import { DataSource, Repository } from 'typeorm';
-import { SeoMetadata, SeoLocale, MetadataEntityType } from '../../domain/entities/SeoMetadata';
+
 import {
   SeoIssue,
   SeoIssueType,
   SeoIssueSeverity,
   SeoEntityType,
 } from '../../domain/entities/SeoIssue';
+import { SeoMetadata, SeoLocale, MetadataEntityType } from '../../domain/entities/SeoMetadata';
 import {
   ISeoMetadataRepository,
   PaginationParams,

@@ -1,7 +1,7 @@
 import { JournalEntry } from '../../domain/entities/JournalEntry';
-import { IJournalEntryRepository } from '../../domain/repositories/IJournalEntryRepository';
 import { IChartOfAccountRepository } from '../../domain/repositories/IChartOfAccountRepository';
 import { IFiscalPeriodRepository } from '../../domain/repositories/IFiscalPeriodRepository';
+import { IJournalEntryRepository } from '../../domain/repositories/IJournalEntryRepository';
 import { CreateJournalEntryDTO, JournalEntryResponseDTO } from '../dtos/JournalEntryDTO';
 import { AccountNotFoundError, FinancialAccountingError } from '../errors/FinancialAccountingError';
 

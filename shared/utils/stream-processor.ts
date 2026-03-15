@@ -7,7 +7,9 @@
  */
 
 import { Transform, Writable, Readable, TransformCallback } from 'stream';
+
 import { SelectQueryBuilder, DataSource, ObjectLiteral } from 'typeorm';
+
 import { createModuleLogger } from './logger';
 
 const logger = createModuleLogger('stream-processor');

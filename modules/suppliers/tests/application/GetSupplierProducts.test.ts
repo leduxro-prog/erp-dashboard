@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+import { GetSupplierProductsOptions } from '../../src/application/dtos/supplier.dtos';
+import { SupplierNotFoundError } from '../../src/application/errors/supplier.errors';
 import { GetSupplierProducts } from '../../src/application/use-cases/GetSupplierProducts';
 import {
   ISupplierRepository,
@@ -6,8 +9,6 @@ import {
   type Supplier,
   type SupplierProduct,
 } from '../../src/domain';
-import { SupplierNotFoundError } from '../../src/application/errors/supplier.errors';
-import { GetSupplierProductsOptions } from '../../src/application/dtos/supplier.dtos';
 
 describe('GetSupplierProducts Use Case', () => {
   let useCase: GetSupplierProducts;

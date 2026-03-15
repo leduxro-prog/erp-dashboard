@@ -1,15 +1,16 @@
+import { createModuleLogger } from '@shared/utils/logger';
+import { successResponse, errorResponse } from '@shared/utils/response';
 import { Request, Response } from 'express';
 import { DataSource } from 'typeorm';
-import { createModuleLogger } from '@shared/utils/logger';
-import { CheckStock } from '../../application/use-cases/CheckStock';
-import { ReserveStock } from '../../application/use-cases/ReserveStock';
-import { ReleaseStock } from '../../application/use-cases/ReleaseStock';
+
+import { ProductImageSearchService } from '../../application/services/ProductImageSearchService';
 import { AdjustStock } from '../../application/use-cases/AdjustStock';
+import { CheckStock } from '../../application/use-cases/CheckStock';
 import { GetLowStockAlerts } from '../../application/use-cases/GetLowStockAlerts';
 import { GetMovementHistory } from '../../application/use-cases/GetMovementHistory';
 import { GetWarehouses } from '../../application/use-cases/GetWarehouses';
-import { successResponse, errorResponse } from '@shared/utils/response';
-import { ProductImageSearchService } from '../../application/services/ProductImageSearchService';
+import { ReleaseStock } from '../../application/use-cases/ReleaseStock';
+import { ReserveStock } from '../../application/use-cases/ReserveStock';
 
 export class InventoryController {
   private logger = createModuleLogger('InventoryController');

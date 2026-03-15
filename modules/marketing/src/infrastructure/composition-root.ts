@@ -6,46 +6,47 @@
  * @module marketing/infrastructure/composition-root
  */
 
+import { IEventBus } from '@shared/module-system/module.interface';
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
 import { Logger } from 'winston';
-import { IEventBus } from '@shared/module-system/module.interface';
 
 // Domain repositories
+import { ActivateCampaign } from '../application/use-cases/ActivateCampaign';
+import { AddCampaignStep } from '../application/use-cases/AddCampaignStep';
+import { ApplyDiscountCode } from '../application/use-cases/ApplyDiscountCode';
+import { CreateCampaign } from '../application/use-cases/CreateCampaign';
+import { CreateDiscountCode } from '../application/use-cases/CreateDiscountCode';
+import { CreateEmailSequence } from '../application/use-cases/CreateEmailSequence';
+import { GenerateDiscountCodes } from '../application/use-cases/GenerateDiscountCodes';
+import { ValidateDiscountCode } from '../application/use-cases/ValidateDiscountCode';
+import { IAttributionEventRepository } from '../domain/repositories/IAttributionEventRepository';
+import { IAudienceSegmentRepository } from '../domain/repositories/IAudienceSegmentRepository';
 import { ICampaignRepository } from '../domain/repositories/ICampaignRepository';
 import { IDiscountCodeRepository } from '../domain/repositories/IDiscountCodeRepository';
 import { ISequenceRepository } from '../domain/repositories/ISequenceRepository';
 import { IMarketingEventRepository } from '../domain/repositories/IMarketingEventRepository';
 import { ICampaignStepRepository } from '../domain/repositories/ICampaignStepRepository';
-import { IAudienceSegmentRepository } from '../domain/repositories/IAudienceSegmentRepository';
 import { IChannelDeliveryRepository } from '../domain/repositories/IChannelDeliveryRepository';
 import { ICustomerConsentRepository } from '../domain/repositories/ICustomerConsentRepository';
-import { IAttributionEventRepository } from '../domain/repositories/IAttributionEventRepository';
 import { ICampaignAuditLogRepository } from '../domain/repositories/ICampaignAuditLogRepository';
 
 // Infrastructure repositories
+import { TypeOrmAttributionEventRepository } from './repositories/TypeOrmAttributionEventRepository';
+import { TypeOrmAudienceSegmentRepository } from './repositories/TypeOrmAudienceSegmentRepository';
 import { TypeOrmCampaignRepository } from './repositories/TypeOrmCampaignRepository';
 import { TypeOrmDiscountCodeRepository } from './repositories/TypeOrmDiscountCodeRepository';
 import { TypeOrmMarketingEventRepository } from './repositories/TypeOrmMarketingEventRepository';
 import { TypeOrmCampaignStepRepository } from './repositories/TypeOrmCampaignStepRepository';
-import { TypeOrmAudienceSegmentRepository } from './repositories/TypeOrmAudienceSegmentRepository';
 import { TypeOrmChannelDeliveryRepository } from './repositories/TypeOrmChannelDeliveryRepository';
 import { TypeOrmCampaignAuditLogRepository } from './repositories/TypeOrmCampaignAuditLogRepository';
-import { TypeOrmAttributionEventRepository } from './repositories/TypeOrmAttributionEventRepository';
 
 // Domain services
 import { AudienceSegmentationService } from '../domain/services/AudienceSegmentationService';
 import { DiscountCalculationService } from '../domain/services/DiscountCalculationService';
 
 // Use cases (existing)
-import { CreateCampaign } from '../application/use-cases/CreateCampaign';
-import { ActivateCampaign } from '../application/use-cases/ActivateCampaign';
-import { ValidateDiscountCode } from '../application/use-cases/ValidateDiscountCode';
-import { ApplyDiscountCode } from '../application/use-cases/ApplyDiscountCode';
-import { CreateDiscountCode } from '../application/use-cases/CreateDiscountCode';
-import { GenerateDiscountCodes } from '../application/use-cases/GenerateDiscountCodes';
 import { GetCampaignAnalytics } from '../application/use-cases/GetCampaignAnalytics';
-import { AddCampaignStep } from '../application/use-cases/AddCampaignStep';
 import { PreviewAudience } from '../application/use-cases/PreviewAudience';
 import { ScheduleCampaign } from '../application/use-cases/ScheduleCampaign';
 import { GetDeliveries } from '../application/use-cases/GetDeliveries';
@@ -53,7 +54,6 @@ import { GetAttributionAnalytics } from '../application/use-cases/GetAttribution
 import { GetFunnelAnalytics } from '../application/use-cases/GetFunnelAnalytics';
 
 // Use cases (NEW - Email Sequences)
-import { CreateEmailSequence } from '../application/use-cases/CreateEmailSequence';
 import { ListEmailSequences } from '../application/use-cases/ListEmailSequences';
 import { GetEmailSequenceDetails } from '../application/use-cases/GetEmailSequenceDetails';
 import { UpdateEmailSequence } from '../application/use-cases/UpdateEmailSequence';

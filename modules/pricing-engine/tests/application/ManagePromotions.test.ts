@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { ManagePromotions } from '../../src/application/use-cases/ManagePromotions';
-import {
-  IPriceRepository,
-  ProductPrice,
-  PromotionRecord,
-} from '../../src/application/ports/IPriceRepository';
+
 import { CreatePromotionDTO } from '../../src/application/dtos/pricing.dtos';
 import {
   ProductNotFoundError,
   InvalidPromotionError,
   PromotionDateError,
 } from '../../src/application/errors/pricing.errors';
+import {
+  IPriceRepository,
+  ProductPrice,
+  PromotionRecord,
+} from '../../src/application/ports/IPriceRepository';
+import { ManagePromotions } from '../../src/application/use-cases/ManagePromotions';
 
 const makeProductPrice = (
   productId: number,

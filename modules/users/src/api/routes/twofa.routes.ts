@@ -1,9 +1,10 @@
-import { Router, Request, Response } from 'express';
-import { TwoFactorAuthService } from '../../application/services/TwoFactorAuthService';
-import { UserService } from '../../application/services/UserService';
 import { authenticate, AuthenticatedRequest } from '@shared/middleware/auth.middleware';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router, Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
+
+import { TwoFactorAuthService } from '../../application/services/TwoFactorAuthService';
+import { UserService } from '../../application/services/UserService';
 
 const logger = createModuleLogger('2fa-routes');
 

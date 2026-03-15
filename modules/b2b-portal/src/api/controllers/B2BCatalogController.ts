@@ -4,9 +4,9 @@
  * Supports: product listing, filtering, search, stock visibility, pricing tiers
  */
 
+import { VAT_RATE } from '@shared/constants';
 import { Router, Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
-import { VAT_RATE } from '@shared/constants';
 
 export function createB2BCatalogRouter(dataSource: DataSource): Router {
   const router = Router();

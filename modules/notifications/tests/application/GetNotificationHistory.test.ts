@@ -3,6 +3,7 @@
  * Tests history retrieval with pagination and filtering
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { GetNotificationHistory } from '../../src/application/use-cases/GetNotificationHistory';
 
 describe('GetNotificationHistory Use Case', () => {

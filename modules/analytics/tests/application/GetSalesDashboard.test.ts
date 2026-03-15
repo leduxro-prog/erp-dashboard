@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Logger } from 'winston';
-import { GetSalesDashboard } from '../../src/application/use-cases/GetSalesDashboard';
-import { IDashboardRepository } from '../../src/domain/repositories/IDashboardRepository';
+
 import { IOrderDataPort } from '../../src/application/ports/IOrderDataPort';
 import { IPricingDataPort } from '../../src/application/ports/IPricingDataPort';
+import { GetSalesDashboard } from '../../src/application/use-cases/GetSalesDashboard';
 import { Dashboard } from '../../src/domain/entities/Dashboard';
+import { IDashboardRepository } from '../../src/domain/repositories/IDashboardRepository';
 
 /**
  * GetSalesDashboard Use-Case Integration Tests

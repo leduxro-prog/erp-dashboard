@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { ListQuotes } from '../../src/application/use-cases/ListQuotes';
-import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 import { QuoteStatus } from '../../src/domain/entities/Quote';
+import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 
 describe('ListQuotes Use Case', () => {
   let useCase: ListQuotes;

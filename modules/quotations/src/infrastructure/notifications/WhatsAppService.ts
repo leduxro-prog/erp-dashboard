@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+
 import { QuoteEmailData } from '../templates/EmailTemplates';
 
 export interface WhatsAppConfig {

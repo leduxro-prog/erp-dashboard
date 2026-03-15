@@ -6,8 +6,9 @@
  * @module B2B Portal - Domain Services
  */
 
-import { InvalidCuiError } from '../errors/b2b.errors';
 import { createModuleLogger } from '@shared/utils/logger';
+
+import { InvalidCuiError } from '../errors/b2b.errors';
 
 const logger = createModuleLogger('cui-validation-service');
 
@@ -18,7 +19,7 @@ export interface CuiValidationResult {
 
 export class CuiValidationService {
   validateFormat(cui: string): boolean {
-    let cleaned = cui.trim().replace(/^RO/i, '');
+    const cleaned = cui.trim().replace(/^RO/i, '');
 
     if (!/^\d{2,10}$/.test(cleaned)) {
       return false;

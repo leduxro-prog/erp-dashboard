@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+
 import { CompatibilityRule } from '../../domain/entities/CompatibilityRule';
 import { IRuleRepository } from '../../domain/repositories/IRuleRepository';
 

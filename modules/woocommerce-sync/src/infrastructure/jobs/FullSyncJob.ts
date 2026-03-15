@@ -1,7 +1,8 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { Queue, QueueOptions, Worker } from 'bullmq';
 import Redis from 'ioredis';
+
 import { SyncAllProducts } from '../../application/use-cases/SyncAllProducts';
-import { createModuleLogger } from '@shared/utils/logger';
 
 /**
  * FullSyncJob - Daily full product synchronization with WooCommerce

@@ -1,7 +1,8 @@
-import { Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
+
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
 import { getEventBus } from '@shared/utils/event-bus';
+import { Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 
 import { RegisterB2B, RegisterB2BInput } from '../../application/use-cases/RegisterB2B';

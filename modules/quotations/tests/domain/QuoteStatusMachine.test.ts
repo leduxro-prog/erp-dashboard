@@ -1,5 +1,5 @@
-import { QuoteStatusMachine } from '../../src/domain/entities/QuoteStatusMachine';
 import { QuoteStatus } from '../../src/domain/entities/Quote';
+import { QuoteStatusMachine } from '../../src/domain/entities/QuoteStatusMachine';
 
 describe('QuoteStatusMachine', () => {
   describe('canTransition', () => {

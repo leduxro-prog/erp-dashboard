@@ -1,4 +1,5 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+
 import { ArInvoiceEntity } from './ArInvoiceEntity';
 
 @Entity('ar_invoice_lines')

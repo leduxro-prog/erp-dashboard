@@ -123,7 +123,7 @@ describe('Order Creation Tests', () => {
         expect(orderItem.sku).toBe(cartItem.sku);
         expect(orderItem.quantity).toBe(cartItem.quantity);
         expect(orderItem.unit_price).toBe(cartItem.unitPrice);
-        expect(orderItem.total_price).toBe(cartItem.totalPrice);
+        expect(orderItem.line_total).toBe(cartItem.totalPrice);
       });
     });
 
@@ -410,7 +410,6 @@ describe('Order Creation Tests', () => {
       const customer = await helper.createTestCustomer();
       const cart = await helper.createTestCart(customer.id, {
         status: CartStatus.ACTIVE,
-        orderId: null,
       });
 
       // Act
@@ -613,7 +612,6 @@ describe('Order Creation Tests', () => {
         subtotal: 1000,
         discountRate: 0.1,
         discountAmount: 100,
-        taxRate: 0.21,
         taxAmount: 171,
         shippingCost: 50,
         total: 1121,
@@ -644,7 +642,6 @@ describe('Order Creation Tests', () => {
         subtotal: 1000,
         discountRate: 0,
         discountAmount: 0,
-        taxRate: 0.21,
         taxAmount: 190,
         shippingCost: 50,
         total: 1240,
@@ -671,7 +668,6 @@ describe('Order Creation Tests', () => {
       const cart = await helper.createTestCart(customer.id, {
         subtotal: 1000,
         discountAmount: 0,
-        taxRate: 0.21,
         taxAmount: 190,
         shippingCost: 0,
         total: 1190,

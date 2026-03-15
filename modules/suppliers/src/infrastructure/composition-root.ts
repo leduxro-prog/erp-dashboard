@@ -1,17 +1,19 @@
 import { Router } from 'express';
 import { DataSource, Repository } from 'typeorm';
+
 import { SupplierController } from '../api/controllers/SupplierController';
 import { createSupplierRoutes } from '../api/routes/supplier.routes';
-import { ScrapeSupplierStock } from '../application/use-cases/ScrapeSupplierStock';
+import { GetSupplierProducts } from '../application/use-cases/GetSupplierProducts';
 import { MapSku } from '../application/use-cases/MapSku';
 import { PlaceSupplierOrder } from '../application/use-cases/PlaceSupplierOrder';
-import { GetSupplierProducts } from '../application/use-cases/GetSupplierProducts';
-import { TypeOrmSupplierRepository } from './repositories/TypeOrmSupplierRepository';
-import { SupplierSyncJob } from './jobs/SupplierSyncJob';
-import { SupplierEntityDb } from './entities/SupplierEntityDb';
-import { SupplierProductEntityDb } from './entities/SupplierProductEntityDb';
+import { ScrapeSupplierStock } from '../application/use-cases/ScrapeSupplierStock';
+
 import { SkuMappingEntityDb } from './entities/SkuMappingEntityDb';
+import { SupplierEntityDb } from './entities/SupplierEntityDb';
 import { SupplierOrderEntityDb } from './entities/SupplierOrderEntityDb';
+import { SupplierProductEntityDb } from './entities/SupplierProductEntityDb';
+import { SupplierSyncJob } from './jobs/SupplierSyncJob';
+import { TypeOrmSupplierRepository } from './repositories/TypeOrmSupplierRepository';
 
 /**
  * Composition Root for Suppliers Module

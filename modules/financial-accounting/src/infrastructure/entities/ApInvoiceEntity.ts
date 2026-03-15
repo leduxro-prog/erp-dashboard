@@ -7,6 +7,7 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
+
 import { ApInvoiceLineEntity } from './ApInvoiceLineEntity';
 
 @Entity('ap_invoices')

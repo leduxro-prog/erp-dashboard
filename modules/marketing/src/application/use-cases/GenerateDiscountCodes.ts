@@ -6,8 +6,8 @@
  */
 
 import { DiscountCode } from '../../domain/entities/DiscountCode';
-import { IDiscountCodeRepository } from '../../domain/repositories/IDiscountCodeRepository';
 import { ValidationError } from '../../domain/errors/marketing.errors';
+import { IDiscountCodeRepository } from '../../domain/repositories/IDiscountCodeRepository';
 
 /**
  * Input for GenerateDiscountCodes use-case

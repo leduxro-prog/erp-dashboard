@@ -8,7 +8,6 @@
  * @version 1.0.0
  */
 
-import { Router } from 'express';
 import {
   ICypherModule,
   IModuleContext,
@@ -16,6 +15,8 @@ import {
   IModuleMetrics,
 } from '@shared/module-system';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router } from 'express';
+
 import { createB2BPortalRouter, type B2BPortalModuleConfig } from './infrastructure/composition-root';
 
 const logger = createModuleLogger('b2b-portal');

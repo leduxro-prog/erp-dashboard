@@ -3,11 +3,12 @@
  * Handles real webhook intake from WooCommerce for orders, products, and customers.
  */
 
+import { createModuleLogger } from '@shared/utils/logger';
 import { Request, Response } from 'express';
+
 import { WebhookReliabilityService } from '../../application/services/WebhookReliabilityService';
 import { WebhookEventTransformer } from '../../application/transformers/WebhookEventTransformer';
 import { OutboxEventPublisher } from '../../infrastructure/outbox/OutboxEventPublisher';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('woocommerce-webhook-controller');
 

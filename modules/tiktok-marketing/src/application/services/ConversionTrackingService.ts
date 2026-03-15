@@ -9,6 +9,7 @@
  * - Integration with orders module
  */
 
+import { createModuleLogger } from '@shared/utils/logger';
 import { DataSource, Repository } from 'typeorm';
 import {
     Entity,
@@ -17,8 +18,8 @@ import {
     CreateDateColumn,
     Index,
 } from 'typeorm';
+
 import { TikTokMarketingClient, TikTokEvent } from '../../infrastructure/api-clients/TikTokMarketingClient';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('tiktok-conversions');
 

@@ -6,6 +6,7 @@
  */
 
 import { CreditTransaction, CreditTransactionType } from '../entities/CreditTransaction';
+
 import { PaginatedResult, PaginationParams } from './IRegistrationRepository';
 
 /**

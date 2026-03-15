@@ -3,6 +3,7 @@
  * Tests campaign creation with different types and date validation
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { CreateCampaign, CreateCampaignInput } from '../../src/application/use-cases/CreateCampaign';
 import {
   InvalidCampaignDateRangeError,

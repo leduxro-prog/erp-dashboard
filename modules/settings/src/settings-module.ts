@@ -1,4 +1,3 @@
-import { Router } from 'express';
 import {
     ICypherModule,
     IModuleContext,
@@ -6,8 +5,10 @@ import {
     IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
-import { SettingsService } from './application/services/SettingsService';
+import { Router } from 'express';
+
 import { SettingsController } from './api/controllers/SettingsController';
+import { SettingsService } from './application/services/SettingsService';
 
 const logger = createModuleLogger('settings');
 

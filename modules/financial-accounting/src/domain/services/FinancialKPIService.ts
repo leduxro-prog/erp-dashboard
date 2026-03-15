@@ -8,8 +8,9 @@
  * - Tax Liabilities (TVA collected + estimated corporate tax)
  */
 
-import { DataSource } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource } from 'typeorm';
+
 import { DailyFinancialKPIs } from '../../application/dtos/DailyFinancialKPIs';
 
 const logger = createModuleLogger('financial-kpi');

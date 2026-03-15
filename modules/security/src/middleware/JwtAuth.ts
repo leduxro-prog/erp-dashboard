@@ -4,10 +4,10 @@
  * role-based access control, and audit logging.
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { createModuleLogger } from '@shared/utils/logger';
 import { UnauthorizedError, ForbiddenError } from '@shared/errors/BaseError';
-import { JwtParser, getJwtParser, UnauthorizedError as JwtUnauthorizedError } from '../utils/JwtParser';
+import { createModuleLogger } from '@shared/utils/logger';
+import { Request, Response, NextFunction } from 'express';
+
 import {
   JwtPayload,
   SecurityContext,
@@ -16,6 +16,7 @@ import {
   TokenRevocationCheck,
   SessionValidationResult,
 } from '../types/AuthContext';
+import { JwtParser, getJwtParser, UnauthorizedError as JwtUnauthorizedError } from '../utils/JwtParser';
 
 const logger = createModuleLogger('jwt-auth-middleware');
 

@@ -7,6 +7,7 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
+
 import { ArInvoiceLineEntity } from './ArInvoiceLineEntity';
 
 @Entity('ar_invoices')

@@ -7,9 +7,10 @@
  * - Implement compensation transactions
  */
 
-import { FinancialTransactionService } from './FinancialTransactionService';
 import logger from '@shared/utils/logger';
 import { v4 as uuidv4 } from 'uuid';
+
+import { CartEntity } from '../domain/entities/CartEntity';
 import {
   CheckoutFlowResult,
   CheckoutStep,
@@ -19,7 +20,8 @@ import {
   CheckoutStatus,
   TransactionContext,
 } from '../domain/types/checkout.types';
-import { CartEntity } from '../domain/entities/CartEntity';
+
+import { FinancialTransactionService } from './FinancialTransactionService';
 
 /**
  * Checkout flow state

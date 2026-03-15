@@ -2,6 +2,8 @@
  * Update Order Status Use Case
  * Validates and transitions order status with side effects and event publishing
  */
+import { createModuleLogger } from '@shared/utils/logger';
+
 import { Order, OrderStatus, IOrderRepository } from '../../domain';
 import { UpdateOrderStatusInput } from '../dtos';
 import {
@@ -9,7 +11,6 @@ import {
   InvalidStatusTransitionError,
   OrderCancellationError,
 } from '../errors';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('update-order-status');
 

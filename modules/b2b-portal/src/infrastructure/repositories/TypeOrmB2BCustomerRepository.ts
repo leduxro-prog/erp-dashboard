@@ -1,4 +1,5 @@
 import { DataSource, Repository } from 'typeorm';
+
 import { B2BCustomer, B2BCustomerTier } from '../../domain/entities/B2BCustomer';
 import { IB2BCustomerRepository, CustomerFilters } from '../../domain/repositories/IB2BCustomerRepository';
 import { PaginationParams, PaginatedResult } from '../../domain/repositories/IRegistrationRepository';

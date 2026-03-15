@@ -1,6 +1,6 @@
 import { ISupplierRepository } from '../../domain';
-import { SupplierNotFoundError } from '../errors/supplier.errors';
 import { GetSupplierProductsOptions, SupplierProductDTO } from '../dtos/supplier.dtos';
+import { SupplierNotFoundError } from '../errors/supplier.errors';
 
 export class GetSupplierProducts {
   constructor(private repository: ISupplierRepository) {}

@@ -1,5 +1,5 @@
-import { SupplierProduct } from '../entities/SupplierProduct';
 import { SkuMapping } from '../entities/SkuMapping';
+import { SupplierProduct } from '../entities/SupplierProduct';
 import { ISupplierRepository } from '../repositories/ISupplierRepository';
 
 export class SkuMappingService {

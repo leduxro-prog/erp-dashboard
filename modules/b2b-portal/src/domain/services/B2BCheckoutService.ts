@@ -1,8 +1,10 @@
-import { DataSource } from 'typeorm';
-import { CreditService } from './CreditService';
-import { InsufficientCreditError, CustomerSuspendedError } from '../errors/b2b.errors';
-import { ValidationError } from '@shared/errors/BaseError';
 import { VAT_RATE } from '@shared/constants';
+import { ValidationError } from '@shared/errors/BaseError';
+import { DataSource } from 'typeorm';
+
+import { InsufficientCreditError, CustomerSuspendedError } from '../errors/b2b.errors';
+
+import { CreditService } from './CreditService';
 
 export interface CheckoutItem {
   product_id: number;

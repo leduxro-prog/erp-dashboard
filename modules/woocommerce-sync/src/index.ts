@@ -1,5 +1,6 @@
-import { Router } from 'express';
 import { ICypherModule, IModuleContext, IModuleHealth, IModuleMetrics } from '@shared/module-system/module.interface';
+import { Router } from 'express';
+
 import { createWooCommerceRouter } from './infrastructure/composition-root';
 import { createWebhookComposition, startWebhookComposition, stopWebhookComposition, type WebhookCompositionContext } from './infrastructure/WebhookCompositionRoot';
 

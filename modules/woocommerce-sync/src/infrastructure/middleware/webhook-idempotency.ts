@@ -8,10 +8,11 @@
  * Works with the existing WebhookEventLogEntity infrastructure.
  */
 
+import crypto from 'crypto';
+
+import { createModuleLogger } from '@shared/utils/logger';
 import { Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
-import crypto from 'crypto';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('woo-webhook-idempotency');
 

@@ -1,10 +1,11 @@
+import { createModuleLogger } from '@shared/utils/logger';
+
 import { 
   IWhatsAppBusinessApi, 
   SendTextMessageRequest, 
   SendTemplateMessageRequest, 
   SendMediaMessageRequest 
 } from '../../domain/ports/IWhatsAppBusinessApi';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('send-whatsapp-message');
 

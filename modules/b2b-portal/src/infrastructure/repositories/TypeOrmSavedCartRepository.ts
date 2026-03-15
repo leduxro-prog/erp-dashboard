@@ -1,7 +1,8 @@
 import { DataSource, Repository } from 'typeorm';
+
 import { SavedCart, CartItemData } from '../../domain/entities/SavedCart';
-import { ISavedCartRepository } from '../../domain/repositories/ISavedCartRepository';
 import { PaginationParams, PaginatedResult } from '../../domain/repositories/IRegistrationRepository';
+import { ISavedCartRepository } from '../../domain/repositories/ISavedCartRepository';
 import { SavedCartEntity } from '../entities/SavedCartEntity';
 
 /**

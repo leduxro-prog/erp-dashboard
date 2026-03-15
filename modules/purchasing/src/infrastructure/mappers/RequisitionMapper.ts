@@ -1,11 +1,11 @@
 import {
-  PurchaseRequisition,
-  RequisitionLine,
-} from '../../domain/entities/PurchaseRequisition';
-import {
   RequisitionResponseDTO,
   RequisitionLineResponseDTO,
 } from '../../application/dtos/RequisitionDTOs';
+import {
+  PurchaseRequisition,
+  RequisitionLine,
+} from '../../domain/entities/PurchaseRequisition';
 
 export class RequisitionMapper {
   static toDTO(requisition: PurchaseRequisition): RequisitionResponseDTO {

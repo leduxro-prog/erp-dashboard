@@ -1,6 +1,7 @@
-import { Job, Queue, Worker, QueueOptions } from 'bullmq';
-import { SyncInvoiceStatusUseCase } from '../../application/use-cases/SyncInvoiceStatus';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Job, Queue, Worker, QueueOptions } from 'bullmq';
+
+import { SyncInvoiceStatusUseCase } from '../../application/use-cases/SyncInvoiceStatus';
 
 /**
  * Configuration for InvoiceStatusSyncJob

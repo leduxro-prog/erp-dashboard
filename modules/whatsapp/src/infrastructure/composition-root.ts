@@ -1,18 +1,10 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
-import { createModuleLogger } from '@shared/utils/logger';
 
 // Domain repositories (interfaces)
-import {
-  IMessageRepository,
-  IConversationRepository,
-  ITemplateRepository,
-  IWebhookRepository,
-  IAgentRepository,
-  ITagRepository,
-} from '../domain/repositories';
-
-// Use-cases
+import { WhatsAppController } from '../api/controllers/WhatsAppController';
+import { createWhatsAppRoutes } from '../api/routes/whatsapp.routes';
 import {
   SendMessage,
   ListMessages,
@@ -24,8 +16,6 @@ import {
   ListTemplates,
   CreateTemplate,
 } from '../application/use-cases';
-
-// NEW USE CASES
 import {
   ReopenConversation,
   MarkConversationAsRead,
@@ -41,26 +31,36 @@ import {
   UpdateConversationTags,
   GetStatistics,
 } from '../application/use-cases';
+import { IConnectionPort } from '../domain/ports/IConnectionPort';
+import { IWhatsAppBusinessApi } from '../domain/ports/IWhatsAppBusinessApi';
+import {
+  IMessageRepository,
+  IConversationRepository,
+  ITemplateRepository,
+  IWebhookRepository,
+  IAgentRepository,
+  ITagRepository,
+} from '../domain/repositories';
+
+// Use-cases
+
+// NEW USE CASES
 
 // Infrastructure repositories (TypeORM implementations)
-import { TypeOrmMessageRepository } from './repositories/TypeOrmMessageRepository';
+import { TypeOrmAgentRepository } from './repositories/TypeOrmAgentRepository';
 import { TypeOrmConversationRepository } from './repositories/TypeOrmConversationRepository';
+import { TypeOrmMessageRepository } from './repositories/TypeOrmMessageRepository';
+import { TypeOrmTagRepository } from './repositories/TypeOrmTagRepository';
 import { TypeOrmTemplateRepository } from './repositories/TypeOrmTemplateRepository';
 import { TypeOrmWebhookRepository } from './repositories/TypeOrmWebhookRepository';
 
 // NEW REPOSITORIES
-import { TypeOrmAgentRepository } from './repositories/TypeOrmAgentRepository';
-import { TypeOrmTagRepository } from './repositories/TypeOrmTagRepository';
 
 // Domain ports
-import { IWhatsAppBusinessApi } from '../domain/ports/IWhatsAppBusinessApi';
-import { IConnectionPort } from '../domain/ports/IConnectionPort';
 
 // Controller
-import { WhatsAppController } from '../api/controllers/WhatsAppController';
 
 // Routes
-import { createWhatsAppRoutes } from '../api/routes/whatsapp.routes';
 
 /**
  * Composition Root for WhatsApp Module

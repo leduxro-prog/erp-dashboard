@@ -1,8 +1,8 @@
-import { CreateQuote } from '../../src/application/use-cases/CreateQuote';
 import { CreateQuoteDTO } from '../../src/application/dtos/CreateQuoteDTO';
-import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 import { InvalidQuoteItemsError } from '../../src/application/errors/QuoteErrors';
+import { CreateQuote } from '../../src/application/use-cases/CreateQuote';
 import { Quote } from '../../src/domain/entities/Quote';
+import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 
 describe('CreateQuote Use Case', () => {
   let createQuote: CreateQuote;

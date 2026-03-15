@@ -1,5 +1,5 @@
-import { Resend } from 'resend';
 import Handlebars from 'handlebars';
+import { Resend } from 'resend';
 
 export interface EmailMessage {
   to: string | string[];

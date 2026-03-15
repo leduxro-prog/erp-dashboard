@@ -1,16 +1,21 @@
 import { Router } from 'express';
-import { DataSource } from 'typeorm';
 import { Redis } from 'ioredis';
-import { OrderController } from '../api/controllers/OrderController';
-import { OfflineController } from '../api/controllers/OfflineController';
-import { createOrderRoutes } from '../api/routes/order.routes';
-import { createOfflineRoutes } from '../api/routes/offline.routes';
-import { TypeOrmOrderRepository } from './repositories/TypeOrmOrderRepository';
-import { TypeOrmInventoryRepository } from '../../../inventory/src/infrastructure/repositories/TypeOrmInventoryRepository';
+import { DataSource } from 'typeorm';
+
 import { StockCache } from '../../../inventory/src/infrastructure/cache/StockCache';
-import { OrderMapper } from './mappers/OrderMapper';
-import { OrderCache } from './cache/OrderCache';
+import { TypeOrmInventoryRepository } from '../../../inventory/src/infrastructure/repositories/TypeOrmInventoryRepository';
+import { OfflineController } from '../api/controllers/OfflineController';
+import { OrderController } from '../api/controllers/OrderController';
+import { createOfflineRoutes } from '../api/routes/offline.routes';
+import { createOrderRoutes } from '../api/routes/order.routes';
 import { OfflineTransactionService } from '../application/services/OfflineTransactionService';
+
+import { OrderCache } from './cache/OrderCache';
+import { OrderMapper } from './mappers/OrderMapper';
+import { TypeOrmOrderRepository } from './repositories/TypeOrmOrderRepository';
+
+
+
 
 /**
  * Composition Root for Orders Module

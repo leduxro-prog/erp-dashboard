@@ -1,11 +1,7 @@
-import { DataSource, In, Repository } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
-import { StockItemEntity } from '../entities/StockItemEntity';
-import { StockMovementEntity, StockMovementType, ReferenceType } from '../entities/StockMovementEntity';
-import { LowStockAlertEntity, AlertSeverity } from '../entities/LowStockAlertEntity';
-import { StockReservationEntity, ReservationStatus } from '../entities/StockReservationEntity';
-import { WarehouseEntity } from '../entities/WarehouseEntity';
-import { StockCache } from '../cache/StockCache';
+import { DataSource, In, Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
+
 import {
   IInventoryRepository,
   StockLevel,
@@ -14,7 +10,13 @@ import {
   StockReservation,
   Warehouse,
 } from '../../domain/ports/IInventoryRepository';
-import { v4 as uuidv4 } from 'uuid';
+import { StockCache } from '../cache/StockCache';
+import { LowStockAlertEntity, AlertSeverity } from '../entities/LowStockAlertEntity';
+import { StockItemEntity } from '../entities/StockItemEntity';
+import { StockMovementEntity, StockMovementType, ReferenceType } from '../entities/StockMovementEntity';
+import { StockReservationEntity, ReservationStatus } from '../entities/StockReservationEntity';
+import { WarehouseEntity } from '../entities/WarehouseEntity';
+
 
 export class TypeOrmInventoryRepository implements IInventoryRepository {
   private stockItemRepo: Repository<StockItemEntity>;

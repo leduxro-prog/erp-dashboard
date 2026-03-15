@@ -9,8 +9,9 @@
  */
 
 import pg, { Pool, PoolConfig, QueryResult, QueryResultRow } from 'pg';
-import { OutboxLogger } from './logger';
+
 import { getConfig, Config, PostgresConfig } from './Config';
+import { OutboxLogger } from './logger';
 
 /**
  * Outbox event status enum

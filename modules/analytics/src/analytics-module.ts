@@ -1,4 +1,3 @@
-import { Router } from 'express';
 // import { Logger } from 'winston';
 import {
   ICypherModule,
@@ -7,6 +6,8 @@ import {
   IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router } from 'express';
+
 import { createAnalyticsRouter } from './infrastructure/composition-root';
 
 const logger = createModuleLogger('analytics');

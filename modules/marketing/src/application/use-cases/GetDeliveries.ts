@@ -5,11 +5,11 @@
  * @module Application/UseCases
  */
 
+import { ChannelDelivery } from '../../domain/entities/ChannelDelivery';
 import {
   IChannelDeliveryRepository,
   DeliveryFilter,
 } from '../../domain/repositories/IChannelDeliveryRepository';
-import { ChannelDelivery } from '../../domain/entities/ChannelDelivery';
 
 /**
  * Input for GetDeliveries use-case

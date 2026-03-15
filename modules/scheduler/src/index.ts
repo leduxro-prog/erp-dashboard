@@ -1,7 +1,9 @@
-import { Router } from 'express';
 import { ICypherModule, IModuleContext, IModuleHealth, IModuleMetrics } from '@shared/module-system/module.interface';
-import { SchedulerService } from './services/SchedulerService';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router } from 'express';
+
+import { SchedulerService } from './services/SchedulerService';
+
 
 const logger = createModuleLogger('scheduler-module');
 

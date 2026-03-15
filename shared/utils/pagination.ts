@@ -25,6 +25,7 @@
  */
 
 import Joi from 'joi';
+
 import { createModuleLogger } from './logger';
 
 const logger = createModuleLogger('pagination');

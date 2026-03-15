@@ -8,6 +8,7 @@
 
 import { createClient } from 'redis';
 import type { RedisClientOptions } from 'redis';
+
 import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('redis-pool');

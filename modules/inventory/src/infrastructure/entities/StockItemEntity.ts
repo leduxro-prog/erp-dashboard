@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+
 import { WarehouseEntity } from './WarehouseEntity';
 
 @Entity('stock_items')

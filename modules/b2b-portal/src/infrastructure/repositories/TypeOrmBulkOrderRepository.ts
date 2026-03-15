@@ -1,4 +1,5 @@
 import { DataSource, Repository } from 'typeorm';
+
 import { BulkOrder, BulkOrderStatus } from '../../domain/entities/BulkOrder';
 import { IBulkOrderRepository, BulkOrderFilters } from '../../domain/repositories/IBulkOrderRepository';
 import { PaginationParams, PaginatedResult } from '../../domain/repositories/IRegistrationRepository';

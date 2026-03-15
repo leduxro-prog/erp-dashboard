@@ -10,8 +10,9 @@
  * - Rate limiting and retry logic
  */
 
-import { createModuleLogger } from '@shared/utils/logger';
 import crypto from 'crypto';
+
+import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('tiktok-marketing');
 

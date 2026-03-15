@@ -42,6 +42,32 @@ jobs:
     runs-on: ubuntu-latest
     name: Build Checks
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.skip_build_checks != 'true' }}
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: cypher_erp_test
+          POSTGRES_USER: cypher_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,6 +85,15 @@ jobs:
 
       - name: Run release gate checks (ci:green)
         run: npm run ci:green
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: cypher_erp_test
+          DB_USER: cypher_user
+          DB_PASSWORD: test_password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
   # ============================================================================
   # Deploy to Hetzner via SSH

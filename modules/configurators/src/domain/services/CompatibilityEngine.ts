@@ -1,5 +1,5 @@
-import { ConfigurationItem } from '../entities/ConfiguratorSession';
 import { CompatibilityRule } from '../entities/CompatibilityRule';
+import { ConfigurationItem } from '../entities/ConfiguratorSession';
 
 /**
  * Compatibility Engine Service

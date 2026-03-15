@@ -4,8 +4,9 @@
  */
 
 import { DataSource, Repository } from 'typeorm';
-import { CashDrawerSessionEntity, DrawerSessionStatus } from '../../infrastructure/entities/CashDrawerSessionEntity';
+
 import { CashDrawerMovementEntity, CashMovementType } from '../../infrastructure/entities/CashDrawerMovementEntity';
+import { CashDrawerSessionEntity, DrawerSessionStatus } from '../../infrastructure/entities/CashDrawerSessionEntity';
 
 export interface OpenDrawerInput {
     terminalId: string;
@@ -136,7 +137,7 @@ export class CashDrawerService {
         }
 
         // Calculate new balance
-        let currentBalance =
+        const currentBalance =
             parseFloat(String(session.opening_amount)) +
             parseFloat(String(session.cash_sales_total)) -
             parseFloat(String(session.cash_refunds_total)) +

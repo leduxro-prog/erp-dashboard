@@ -1,4 +1,5 @@
 import { Redis } from 'ioredis';
+
 import { Quote } from '../../domain/entities/Quote';
 
 export class QuoteCache {

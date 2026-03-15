@@ -1,6 +1,7 @@
-import { Repository, DataSource, Between, ILike, In, FindOptionsWhere } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
+import { Repository, DataSource, Between, ILike, In, FindOptionsWhere } from 'typeorm';
+
 import { OrderEntity, OrderStatus } from '../entities/OrderEntity';
 import { OrderItemEntity } from '../entities/OrderItemEntity';
 import { OrderStatusHistoryEntity } from '../entities/OrderStatusHistoryEntity';
@@ -132,7 +133,7 @@ export class TypeOrmOrderRepository implements IOrderRepository {
     },
   ): Promise<{ data: OrderEntity[]; total: number; page: number; limit: number }> {
     const skip = (page - 1) * limit;
-    let where: FindOptionsWhere<OrderEntity> = {};
+    const where: FindOptionsWhere<OrderEntity> = {};
 
     if (filters?.status) {
       where.status = filters.status;

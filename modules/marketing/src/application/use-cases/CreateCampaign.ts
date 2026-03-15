@@ -6,8 +6,8 @@
  */
 
 import { Campaign, CampaignType, AudienceFilter } from '../../domain/entities/Campaign';
-import { ICampaignRepository } from '../../domain/repositories/ICampaignRepository';
 import { InvalidCampaignDateRangeError, InvalidAudienceFilterError } from '../../domain/errors/marketing.errors';
+import { ICampaignRepository } from '../../domain/repositories/ICampaignRepository';
 import { AudienceSegmentationService } from '../../domain/services/AudienceSegmentationService';
 
 /**

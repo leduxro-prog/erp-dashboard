@@ -1,11 +1,12 @@
+import { v4 as uuidv4 } from 'uuid';
+
 import { SyncItem, SyncType } from '../../domain';
 import { ProductSyncMapping } from '../../domain/entities/ProductSyncMapping';
-import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
 import { IWooCommerceClient } from '../../domain/ports/IWooCommerceClient';
 import { IWooCommerceMapper } from '../../domain/ports/IWooCommerceMapper';
+import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
 import { SyncResult } from '../dtos/woocommerce.dtos';
 import { SyncError, MappingNotFoundError } from '../errors/woocommerce.errors';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface InternalProduct {
   id: string;

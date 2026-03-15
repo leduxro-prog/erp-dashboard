@@ -1,6 +1,7 @@
-import { Job, Queue, Worker, QueueOptions } from 'bullmq';
-import { SyncPricesFromInvoicesUseCase } from '../../application/use-cases/SyncPricesFromInvoices';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Job, Queue, Worker, QueueOptions } from 'bullmq';
+
+import { SyncPricesFromInvoicesUseCase } from '../../application/use-cases/SyncPricesFromInvoices';
 
 /**
  * Configuration for PriceSyncJob

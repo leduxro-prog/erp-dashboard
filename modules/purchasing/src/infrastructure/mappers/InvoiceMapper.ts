@@ -1,8 +1,8 @@
-import { VendorInvoice, InvoiceLine } from '../../domain/entities/VendorInvoice';
 import {
   VendorInvoiceResponseDTO,
   InvoiceLineResponseDTO,
 } from '../../application/dtos/InvoiceDTOs';
+import { VendorInvoice, InvoiceLine } from '../../domain/entities/VendorInvoice';
 
 export class InvoiceMapper {
   static toDTO(invoice: VendorInvoice): VendorInvoiceResponseDTO {

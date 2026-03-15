@@ -3,8 +3,8 @@
  * Retrieves stock movement history for a product
  */
 
-import { IInventoryRepository } from '../../domain/repositories';
 import { StockMovement } from '../../domain/ports/IInventoryRepository';
+import { IInventoryRepository } from '../../domain/repositories';
 
 /**
  * GetMovementHistory Use Case

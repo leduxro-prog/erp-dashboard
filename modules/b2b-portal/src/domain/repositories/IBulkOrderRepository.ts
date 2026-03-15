@@ -6,6 +6,7 @@
  */
 
 import { BulkOrder, BulkOrderStatus } from '../entities/BulkOrder';
+
 import { PaginatedResult, PaginationParams } from './IRegistrationRepository';
 
 /**

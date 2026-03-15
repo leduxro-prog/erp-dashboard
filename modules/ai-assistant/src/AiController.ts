@@ -1,7 +1,9 @@
-import { Request, Response, Router } from 'express';
-import { AiService } from './AiService';
-import { createModuleLogger } from '../../../shared/utils/logger';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Request, Response, Router } from 'express';
+
+import { createModuleLogger } from '../../../shared/utils/logger';
+
+import { AiService } from './AiService';
 
 const AI_ALLOWED_ROLES = ['admin', 'sales', 'finance', 'support', 'supplier_manager', 'warehouse'];
 

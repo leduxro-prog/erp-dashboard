@@ -3,8 +3,8 @@
  * Enterprise endpoints for TikTok content and conversion tracking.
  */
 
-import { Router, Request, Response } from 'express';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router, Request, Response } from 'express';
 
 const logger = createModuleLogger('tiktok-api');
 const router = Router();

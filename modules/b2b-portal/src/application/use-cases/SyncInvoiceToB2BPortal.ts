@@ -7,6 +7,8 @@
  * @module B2B Portal - Application Use Cases
  */
 
+import { DataSource } from 'typeorm';
+
 import { IB2BSyncEventRepository } from '../../domain/repositories/IB2BSyncEventRepository';
 import {
   B2BPortalApiClient,
@@ -16,7 +18,6 @@ import {
   B2BPortalStatusMapper,
   ErpInvoiceStatus,
 } from '../../infrastructure/services/B2BPortalStatusMapper';
-import { DataSource } from 'typeorm';
 
 export interface SyncInvoiceToB2BPortalInput {
   /**

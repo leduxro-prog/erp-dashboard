@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { SeoScoreCalculator } from '../../src/domain/services/SeoScoreCalculator';
 
 describe('SeoScoreCalculator Service', () => {

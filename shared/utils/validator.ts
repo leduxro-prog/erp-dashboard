@@ -1,6 +1,6 @@
-import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import DOMPurify from 'isomorphic-dompurify';
+import Joi from 'joi';
 
 // Reusable Joi validation schemas
 export const idSchema = Joi.string().alphanum().length(24).required();

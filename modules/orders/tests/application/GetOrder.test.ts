@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
+import { InvalidOrderInputError, OrderNotFoundError } from '../../src/application/errors';
 import { GetOrder } from '../../src/application/use-cases/GetOrder';
 import { IOrderRepository, Order, OrderStatus, OrderItem, Address } from '../../src/domain';
-import { InvalidOrderInputError, OrderNotFoundError } from '../../src/application/errors';
 
 const makeOrder = (): Order => {
   const order = Order.create({

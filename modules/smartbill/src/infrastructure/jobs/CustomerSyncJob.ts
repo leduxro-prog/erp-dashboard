@@ -1,6 +1,7 @@
-import { Job, Queue, Worker, QueueOptions } from 'bullmq';
-import { SyncSmartBillCustomers } from '../../application/use-cases/SyncSmartBillCustomers';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Job, Queue, Worker, QueueOptions } from 'bullmq';
+
+import { SyncSmartBillCustomers } from '../../application/use-cases/SyncSmartBillCustomers';
 
 /**
  * Configuration for CustomerSyncJob

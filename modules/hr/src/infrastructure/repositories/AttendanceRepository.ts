@@ -1,6 +1,7 @@
 import { Repository, DataSource, Between } from 'typeorm';
-import { AttendanceRecordEntity } from '../entities/AttendanceRecord';
+
 import { AttendanceListQueryDTO } from '../../application/dtos/AttendanceDTO';
+import { AttendanceRecordEntity } from '../entities/AttendanceRecord';
 
 export class AttendanceRepository {
     private repository: Repository<AttendanceRecordEntity>;

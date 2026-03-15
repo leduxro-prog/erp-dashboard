@@ -1,6 +1,7 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
-import { JournalEntryEntity } from './JournalEntryEntity';
+
 import { ChartOfAccountEntity } from './ChartOfAccountEntity';
+import { JournalEntryEntity } from './JournalEntryEntity';
 
 @Entity('journal_entry_lines')
 @Index('idx_jel_entry_id', ['journalEntryId'])

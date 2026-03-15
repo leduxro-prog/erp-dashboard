@@ -14,9 +14,10 @@ import {
   IModuleHealth,
   IModuleMetrics,
 } from '@shared/module-system';
+import logger from '@shared/utils/logger';
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
-import logger from '@shared/utils/logger';
+
 import {
   TransactionManager,
   FinancialTransactionService,

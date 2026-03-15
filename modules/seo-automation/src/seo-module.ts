@@ -34,7 +34,6 @@
  * @module seo-automation
  */
 
-import { Router } from 'express';
 import {
   ICypherModule,
   IModuleContext,
@@ -42,10 +41,12 @@ import {
   IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
-import { createSeoModuleCompositionRoot, SeoModuleCompositionRoot } from './infrastructure/composition-root';
-import { IProductPort } from './application/ports/IProductPort';
+import { Router } from 'express';
+
 import { ICategoryPort } from './application/ports/ICategoryPort';
+import { IProductPort } from './application/ports/IProductPort';
 import { IWooCommercePort } from './application/ports/IWooCommercePort';
+import { createSeoModuleCompositionRoot, SeoModuleCompositionRoot } from './infrastructure/composition-root';
 
 const logger = createModuleLogger('seo-automation');
 

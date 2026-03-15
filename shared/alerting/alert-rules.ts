@@ -5,8 +5,9 @@
  * @module shared/alerting/alert-rules
  */
 
-import { AlertLevel, getAlertManager } from './alert-manager';
 import { createModuleLogger } from '../utils/logger';
+
+import { AlertLevel, getAlertManager } from './alert-manager';
 
 const logger = createModuleLogger('alert-rules');
 

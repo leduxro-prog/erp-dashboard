@@ -1,6 +1,7 @@
-import { Router, RequestHandler } from 'express';
-import { PricingController } from '../controllers/PricingController';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Router, RequestHandler } from 'express';
+
+import { PricingController } from '../controllers/PricingController';
 import {
   validationMiddleware,
   getProductPricingSchema,

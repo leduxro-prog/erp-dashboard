@@ -1,4 +1,5 @@
 import { Queue, Worker } from 'bullmq';
+
 import { SendReminders, ILogger } from '../../application/use-cases/SendReminders';
 
 export class QuoteReminderJob {

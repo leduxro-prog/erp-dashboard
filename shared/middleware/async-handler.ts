@@ -5,6 +5,7 @@
  */
 
 import { Request, Response, NextFunction, RequestHandler } from 'express';
+
 import { AuthenticatedRequest } from './auth.middleware';
 
 /**

@@ -1,8 +1,9 @@
-import { WooCommerceApiError, RateLimitError, NetworkError } from '../../application/errors/woocommerce.errors';
-import { WooCommerceProduct } from '../../application/dtos/woocommerce.dtos';
 import { ApiClient } from '@shared/api/api-client';
 import { ApiClientFactory } from '@shared/api/api-client-factory';
 import { createModuleLogger } from '@shared/utils/logger';
+
+import { WooCommerceProduct } from '../../application/dtos/woocommerce.dtos';
+import { WooCommerceApiError, RateLimitError, NetworkError } from '../../application/errors/woocommerce.errors';
 
 const logger = createModuleLogger('woocommerce-api-client');
 

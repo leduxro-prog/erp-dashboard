@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+import { QuoteExpiredError, QuoteNotFoundError } from '../../src/application/errors/QuoteErrors';
 import {
   SendQuote,
   IEmailService,
   IWhatsAppService,
 } from '../../src/application/use-cases/SendQuote';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
-import { QuoteExpiredError, QuoteNotFoundError } from '../../src/application/errors/QuoteErrors';
 
 describe('SendQuote Use Case', () => {
   let useCase: SendQuote;

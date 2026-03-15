@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
+import { InvalidOrderInputError } from '../../src/application/errors';
 import { ListOrders } from '../../src/application/use-cases/ListOrders';
 import { IOrderRepository, Order, OrderStatus, OrderItem, Address } from '../../src/domain';
-import { InvalidOrderInputError } from '../../src/application/errors';
 
 const makeOrder = (id: number, status: OrderStatus = OrderStatus.ORDER_CONFIRMED): Order =>
   Order.create({

@@ -5,11 +5,15 @@
  * @module shared/utils/feature-flags-advanced
  */
 
-import { createModuleLogger } from './logger';
-import { RedisPool } from '../cache/redis-pool';
-import { FeatureFlag, FlagEvaluationContext, IFeatureFlagService } from './feature-flags';
-import { getAlertManager, AlertLevel } from '../alerting';
 import * as crypto from 'crypto';
+
+import { getAlertManager, AlertLevel } from '../alerting';
+import { RedisPool } from '../cache/redis-pool';
+
+import { FeatureFlag, FlagEvaluationContext, IFeatureFlagService } from './feature-flags';
+import { createModuleLogger } from './logger';
+
+
 
 const logger = createModuleLogger('feature-flags-advanced');
 

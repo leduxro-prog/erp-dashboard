@@ -1,6 +1,6 @@
-import { SupplierProduct } from '../../domain/entities/SupplierProduct';
 import { SkuMapping } from '../../domain/entities/SkuMapping';
 import { SupplierOrderItem } from '../../domain/entities/SupplierOrder';
+import { SupplierProduct } from '../../domain/entities/SupplierProduct';
 
 export interface PriceChangeAlert {
   supplierSku: string;

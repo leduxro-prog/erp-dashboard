@@ -4,7 +4,9 @@
  */
 
 import * as crypto from 'crypto';
+
 import { DataSource, Repository } from 'typeorm';
+
 import { WebhookEventLogEntity, WebhookStatus } from '../../infrastructure/entities/WebhookEventLogEntity';
 
 const MAX_RETRIES = 5;

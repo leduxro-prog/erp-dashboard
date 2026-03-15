@@ -1,7 +1,8 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { ConfiguratorController } from '../controllers/ConfiguratorController';
-import { authenticate, requireRole, AuthenticatedRequest } from '@shared/middleware/auth.middleware';
 import { asyncHandler } from '@shared/middleware/async-handler';
+import { authenticate, requireRole, AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Router, Request, Response, NextFunction } from 'express';
+
+import { ConfiguratorController } from '../controllers/ConfiguratorController';
 import {
   validationMiddleware,
   queryValidationMiddleware,

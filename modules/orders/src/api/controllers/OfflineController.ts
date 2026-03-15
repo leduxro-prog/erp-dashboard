@@ -1,5 +1,6 @@
 
 import { Request, Response, NextFunction } from 'express';
+
 import { OfflineTransactionService } from '../../application/services/OfflineTransactionService';
 
 export class OfflineController {

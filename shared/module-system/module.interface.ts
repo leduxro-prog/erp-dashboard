@@ -12,8 +12,8 @@
  */
 
 import { Router } from 'express';
-import { DataSource } from 'typeorm';
 import Redis from 'ioredis';
+import { DataSource } from 'typeorm';
 import { Logger } from 'winston';
 
 /**

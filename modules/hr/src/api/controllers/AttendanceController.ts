@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { AttendanceService } from '../../domain/services/AttendanceService';
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { Request, Response, NextFunction } from 'express';
+
+import { AttendanceService } from '../../domain/services/AttendanceService';
 
 export class AttendanceController {
     constructor(private attendanceService: AttendanceService) { }

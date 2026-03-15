@@ -1,6 +1,7 @@
-import { Job, Queue, Worker, QueueOptions } from 'bullmq';
-import { SyncStockUseCase } from '../../application/use-cases/SyncStock';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Job, Queue, Worker, QueueOptions } from 'bullmq';
+
+import { SyncStockUseCase } from '../../application/use-cases/SyncStock';
 
 /**
  * Configuration for StockSyncJob

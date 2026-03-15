@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+
 import { IEmailService } from '../../application/use-cases/SendQuote';
 
 export interface EmailProvider {

@@ -5,6 +5,7 @@
 
 import * as cron from 'node-cron';
 import { DataSource } from 'typeorm';
+
 import { QuoteAnalyticsService } from '../../application/services/QuoteAnalyticsService';
 import { WhatsAppService } from '../notifications/WhatsAppService';
 import { QuoteEmailTemplates, QuoteEmailData } from '../templates/EmailTemplates';

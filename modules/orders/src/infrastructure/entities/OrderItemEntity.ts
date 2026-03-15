@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+
 import { OrderEntity } from './OrderEntity';
 
 @Entity('order_items')

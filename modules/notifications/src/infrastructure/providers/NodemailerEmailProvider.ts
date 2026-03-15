@@ -4,6 +4,7 @@
  */
 import * as nodemailer from 'nodemailer';
 import { Logger } from 'winston';
+
 import { IEmailProvider, EmailSendResult, EmailAttachment } from '../../application/ports/IEmailProvider';
 
 /**

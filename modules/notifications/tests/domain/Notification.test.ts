@@ -3,6 +3,7 @@
  * Tests for domain entity business logic
  */
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { Notification } from '../../src/domain/entities/Notification';
 
 describe('Notification Entity', () => {

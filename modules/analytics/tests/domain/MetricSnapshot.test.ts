@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { MetricSnapshot, MetricType, Period } from '../../src/domain/entities/MetricSnapshot';
 
 /**

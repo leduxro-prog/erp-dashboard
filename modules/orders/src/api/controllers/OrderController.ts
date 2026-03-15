@@ -1,11 +1,11 @@
+import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
 import { Request, Response, NextFunction } from 'express';
 
-import { TypeOrmOrderRepository } from '../../infrastructure/repositories/TypeOrmOrderRepository';
-import { OrderMapper, Order } from '../../infrastructure/mappers/OrderMapper';
+import { OrderStatusMachine } from '../../domain/entities/OrderStatusMachine';
 import { OrderCache } from '../../infrastructure/cache/OrderCache';
 import { OrderEntity, OrderStatus } from '../../infrastructure/entities/OrderEntity';
-import { OrderStatusMachine } from '../../domain/entities/OrderStatusMachine';
-import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { OrderMapper, Order } from '../../infrastructure/mappers/OrderMapper';
+import { TypeOrmOrderRepository } from '../../infrastructure/repositories/TypeOrmOrderRepository';
 
 export class OrderController {
   constructor(
@@ -37,7 +37,7 @@ export class OrderController {
 
       // Fetch product cost data for snapshot
       const productIds = items.map((item: any) => item.product_id);
-      let productCostMap: Record<string, { cost: number | null; source: string | null }> = {};
+      const productCostMap: Record<string, { cost: number | null; source: string | null }> = {};
       try {
         const costResult = await this.repository.getDataSource().query(
           `SELECT id, base_price,

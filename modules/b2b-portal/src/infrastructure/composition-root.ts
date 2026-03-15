@@ -1,34 +1,9 @@
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
 
-import {
-  IB2BCustomerRepository,
-  IRegistrationRepository,
-  ISavedCartRepository,
-  IBulkOrderRepository,
-  ICreditTransactionRepository,
-  IB2BSyncEventRepository,
-} from '../domain/repositories';
 
-import {
-  RegisterB2B,
-  ReviewRegistration,
-  ConvertCartToOrder,
-  SyncOrderStatusFromB2B,
-  SyncOrderToB2BPortal,
-  SyncInvoiceStatusFromB2B,
-  SyncInvoiceToB2BPortal,
-} from '../application/use-cases';
 
-import { TypeOrmB2BCustomerRepository } from './repositories/TypeOrmB2BCustomerRepository';
-import { TypeOrmRegistrationRepository } from './repositories/TypeOrmRegistrationRepository';
-import { TypeOrmSavedCartRepository } from './repositories/TypeOrmSavedCartRepository';
-import { TypeOrmBulkOrderRepository } from './repositories/TypeOrmBulkOrderRepository';
-import { TypeOrmCreditTransactionRepository } from './repositories/TypeOrmCreditTransactionRepository';
-import { TypeOrmB2BSyncEventRepository } from './repositories/TypeOrmB2BSyncEventRepository';
 
-import { OrderServiceAdapter } from './adapters/OrderServiceAdapter';
-import { NotificationServiceAdapter } from './adapters/NotificationServiceAdapter';
 
 import { B2BController } from '../api/controllers/B2BController';
 import { B2BOrderController } from '../api/controllers/B2BOrderController';
@@ -42,10 +17,34 @@ import { B2BPortalWebhookController } from '../api/controllers/B2BPortalWebhookC
 import { B2BPortalSyncController } from '../api/controllers/B2BPortalSyncController';
 
 import { createB2BRoutes } from '../api/routes/b2b.routes';
-
-import { CuiValidationService } from '../domain/services/CuiValidationService';
+import {
+  RegisterB2B,
+  ReviewRegistration,
+  ConvertCartToOrder,
+  SyncOrderStatusFromB2B,
+  SyncOrderToB2BPortal,
+  SyncInvoiceStatusFromB2B,
+  SyncInvoiceToB2BPortal,
+} from '../application/use-cases';
+import {
+  IB2BCustomerRepository,
+  IRegistrationRepository,
+  ISavedCartRepository,
+  IBulkOrderRepository,
+  ICreditTransactionRepository,
+  IB2BSyncEventRepository,
+} from '../domain/repositories';
 import { CreditService } from '../domain/services/CreditService';
+import { CuiValidationService } from '../domain/services/CuiValidationService';
 import { TierCalculationService } from '../domain/services/TierCalculationService';
+import { NotificationServiceAdapter } from './adapters/NotificationServiceAdapter';
+import { OrderServiceAdapter } from './adapters/OrderServiceAdapter';
+import { TypeOrmB2BCustomerRepository } from './repositories/TypeOrmB2BCustomerRepository';
+import { TypeOrmB2BSyncEventRepository } from './repositories/TypeOrmB2BSyncEventRepository';
+import { TypeOrmBulkOrderRepository } from './repositories/TypeOrmBulkOrderRepository';
+import { TypeOrmCreditTransactionRepository } from './repositories/TypeOrmCreditTransactionRepository';
+import { TypeOrmRegistrationRepository } from './repositories/TypeOrmRegistrationRepository';
+import { TypeOrmSavedCartRepository } from './repositories/TypeOrmSavedCartRepository';
 import { B2BPortalApiClient } from './services/B2BPortalApiClient';
 import { B2BPortalStatusMapper } from './services/B2BPortalStatusMapper';
 

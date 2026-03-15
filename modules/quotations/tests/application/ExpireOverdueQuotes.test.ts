@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import {
   ExpireOverdueQuotes,
   ILogger,
 } from '../../src/application/use-cases/ExpireOverdueQuotes';
-import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 import { QuoteStatus } from '../../src/domain/entities/Quote';
+import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 
 describe('ExpireOverdueQuotes Use Case', () => {
   let useCase: ExpireOverdueQuotes;

@@ -7,12 +7,12 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
+import { Campaign } from '../../domain/entities/Campaign';
+import { CampaignAuditEntry } from '../../domain/entities/CampaignAuditEntry';
+import { CampaignNotFoundError } from '../../domain/errors/marketing.errors';
+import { ICampaignAuditLogRepository } from '../../domain/repositories/ICampaignAuditLogRepository';
 import { ICampaignRepository } from '../../domain/repositories/ICampaignRepository';
 import { ICampaignStepRepository } from '../../domain/repositories/ICampaignStepRepository';
-import { ICampaignAuditLogRepository } from '../../domain/repositories/ICampaignAuditLogRepository';
-import { CampaignAuditEntry } from '../../domain/entities/CampaignAuditEntry';
-import { Campaign } from '../../domain/entities/Campaign';
-import { CampaignNotFoundError } from '../../domain/errors/marketing.errors';
 
 /**
  * Input for ScheduleCampaign use-case

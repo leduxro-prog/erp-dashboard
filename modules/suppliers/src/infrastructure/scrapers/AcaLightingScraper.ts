@@ -1,7 +1,9 @@
-import { Page } from 'puppeteer';
-import { BaseScraper, ScrapedProduct } from './BaseScraper';
-import { SupplierCredentials } from '../../domain';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Page } from 'puppeteer';
+
+import { SupplierCredentials } from '../../domain';
+
+import { BaseScraper, ScrapedProduct } from './BaseScraper';
 
 const logger = createModuleLogger('aca-lighting-scraper');
 

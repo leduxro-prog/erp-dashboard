@@ -1,8 +1,9 @@
+import { createModuleLogger } from '@shared/utils/logger';
+
 import { SmartBillProforma, InvoiceItem } from '../../domain/entities';
 import { ISmartBillRepository } from '../../domain/repositories/ISmartBillRepository';
 import { CreateProformaDto, ProformaResultDto } from '../dtos/smartbill.dtos';
 import { ProformaCreationError } from '../errors/smartbill.errors';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('smartbill');
 

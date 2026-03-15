@@ -1,7 +1,8 @@
 
-import { Router } from 'express';
-import { OfflineController } from '../controllers/OfflineController';
 import { authenticate } from '@shared/middleware/auth.middleware';
+import { Router } from 'express';
+
+import { OfflineController } from '../controllers/OfflineController';
 
 export function createOfflineRoutes(controller: OfflineController): Router {
     const router = Router();

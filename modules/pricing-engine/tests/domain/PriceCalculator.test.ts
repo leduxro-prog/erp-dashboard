@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { PriceCalculator } from '../../src/domain/services/PriceCalculator';
+
 import { Price } from '../../src/domain/entities/Price';
 import { InvalidMarginError } from '../../src/domain/errors/InvalidMarginError';
+import { PriceCalculator } from '../../src/domain/services/PriceCalculator';
 
 describe('PriceCalculator', () => {
   let calculator: PriceCalculator;

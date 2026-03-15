@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+
 import { Quote } from '../../domain/entities/Quote';
 import { IQuotePdfGenerator } from '../../domain/services/IQuotePdfGenerator';
 

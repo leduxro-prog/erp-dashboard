@@ -1,5 +1,5 @@
-import * as Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
+import * as Joi from 'joi';
 
 export const b2bLoginSchema = Joi.object({
   email: Joi.string().email().required().messages({

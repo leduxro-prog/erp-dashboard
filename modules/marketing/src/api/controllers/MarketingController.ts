@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { MarketingCompositionRoot } from '../../infrastructure/composition-root';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Request, Response, NextFunction } from 'express';
+
+import { MarketingCompositionRoot } from '../../infrastructure/composition-root';
 
 export class MarketingController {
   constructor(private readonly compositionRoot: MarketingCompositionRoot) {}

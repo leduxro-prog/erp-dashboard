@@ -1,6 +1,6 @@
-import { EmployeeRepository } from '../../infrastructure/repositories/EmployeeRepository';
-import { EmployeeEntity } from '../../infrastructure/entities/Employee';
 import { CreateEmployeeDTO, UpdateEmployeeDTO, TerminateEmployeeDTO, EmployeeListQueryDTO } from '../../application/dtos/EmployeeDTO';
+import { EmployeeEntity } from '../../infrastructure/entities/Employee';
+import { EmployeeRepository } from '../../infrastructure/repositories/EmployeeRepository';
 
 export class EmployeeService {
     constructor(private employeeRepository: EmployeeRepository) { }

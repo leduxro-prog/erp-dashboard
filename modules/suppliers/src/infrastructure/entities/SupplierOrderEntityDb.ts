@@ -8,6 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+
 import { SupplierEntityDb } from './SupplierEntityDb';
 
 @Entity('supplier_orders')

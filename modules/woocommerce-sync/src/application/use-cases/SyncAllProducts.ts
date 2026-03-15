@@ -1,10 +1,11 @@
+import { v4 as uuidv4 } from 'uuid';
+
 import { SyncBatch } from '../../domain/entities/SyncBatch';
 import { SyncItem } from '../../domain/entities/SyncItem';
-import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
 import { IWooCommerceClient } from '../../domain/ports/IWooCommerceClient';
 import { IWooCommerceMapper } from '../../domain/ports/IWooCommerceMapper';
+import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
 import { BatchSyncResult } from '../dtos/woocommerce.dtos';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface InternalProduct {
   id: string;

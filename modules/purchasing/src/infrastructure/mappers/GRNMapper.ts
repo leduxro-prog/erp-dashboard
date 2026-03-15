@@ -1,14 +1,14 @@
 import {
-  GoodsReceiptNote,
-  GRNLine,
-  ReturnItem,
-} from '../../domain/entities/GoodsReceiptNote';
-import {
   GRNResponseDTO,
   GRNLineResponseDTO,
   ReturnItemResponseDTO,
   InspectionResponseDTO,
 } from '../../application/dtos/GRNDTOs';
+import {
+  GoodsReceiptNote,
+  GRNLine,
+  ReturnItem,
+} from '../../domain/entities/GoodsReceiptNote';
 
 export class GRNMapper {
   static toDTO(grn: GoodsReceiptNote): GRNResponseDTO {

@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+
 import { InvoiceStatus, SmartBillApiInvoiceStatus } from '../../domain/entities/SmartBillInvoice';
 
 @Entity('smartbill_invoices')

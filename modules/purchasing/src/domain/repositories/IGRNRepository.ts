@@ -4,6 +4,7 @@ import {
   ReturnItem,
   GRNStatus,
 } from '../entities/GoodsReceiptNote';
+
 import { IPaginationOptions, IPaginatedResult } from './IRequisitionRepository';
 
 export interface IGRNRepository {

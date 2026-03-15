@@ -109,7 +109,6 @@ export class TransactionTestHelper {
       subtotal,
       discountRate: 0,
       discountAmount: 0,
-      taxRate,
       taxAmount,
       shippingCost,
       total,
@@ -319,9 +318,11 @@ export class TransactionTestHelper {
     });
 
     expect(customer).toBeDefined();
-    expect(customer?.creditLimit).toBe(expectedCreditLimit);
-    expect(customer?.usedCredit).toBe(expectedUsedCredit);
-    expect(customer?.creditLimit - customer?.usedCredit).toBeGreaterThanOrEqual(0);
+    if (!customer) throw new Error(`Customer ${customerId} not found`);
+
+    expect(customer.creditLimit).toBe(expectedCreditLimit);
+    expect(customer.usedCredit).toBe(expectedUsedCredit);
+    expect((customer.creditLimit || 0) - (customer.usedCredit || 0)).toBeGreaterThanOrEqual(0);
   }
 
   /**

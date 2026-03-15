@@ -6,13 +6,13 @@
  */
 
 import { Campaign } from '../../domain/entities/Campaign';
-import { ICampaignRepository } from '../../domain/repositories/ICampaignRepository';
-import { IDiscountCodeRepository } from '../../domain/repositories/IDiscountCodeRepository';
-import { ISequenceRepository } from '../../domain/repositories/ISequenceRepository';
 import {
   CampaignNotFoundError,
   CampaignAlreadyActiveError,
 } from '../../domain/errors/marketing.errors';
+import { ICampaignRepository } from '../../domain/repositories/ICampaignRepository';
+import { IDiscountCodeRepository } from '../../domain/repositories/IDiscountCodeRepository';
+import { ISequenceRepository } from '../../domain/repositories/ISequenceRepository';
 
 /**
  * Input for ActivateCampaign use-case

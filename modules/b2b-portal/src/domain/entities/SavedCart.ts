@@ -5,8 +5,9 @@
  * @module B2B Portal - Domain
  */
 
-import { EmptyCartError } from '../errors/b2b.errors';
 import { randomUUID } from 'crypto';
+
+import { EmptyCartError } from '../errors/b2b.errors';
 
 /**
  * Represents a single item in a saved cart

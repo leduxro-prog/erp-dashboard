@@ -7,9 +7,10 @@
  * @module whatsapp/application/use-cases
  */
 
-import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
-import { WhatsAppTemplate } from '../../domain/entities/WhatsAppTemplate';
 import { NotFoundError } from '@shared/errors';
+
+import { WhatsAppTemplate } from '../../domain/entities/WhatsAppTemplate';
+import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
 
 /**
  * Update template request DTO.

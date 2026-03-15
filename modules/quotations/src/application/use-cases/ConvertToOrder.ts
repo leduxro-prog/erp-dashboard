@@ -1,6 +1,6 @@
+import { QuoteStatus } from '../../domain/entities/Quote';
 import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 import { QuoteNotFoundError, QuoteAlreadyProcessedError } from '../errors/QuoteErrors';
-import { QuoteStatus } from '../../domain/entities/Quote';
 
 export interface IOrderService {
   createOrder(orderData: any): Promise<any>;

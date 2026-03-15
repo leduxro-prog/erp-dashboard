@@ -398,7 +398,7 @@ export class TestPostgres {
   /**
    * Selects rows from a table
    */
-  public async select<T = any>(
+  public async select<T extends QueryResultRow = any>(
     tableName: string,
     where?: string,
     whereParams: unknown[] = [],
@@ -425,10 +425,11 @@ export class TestPostgres {
   /**
    * Selects a single row from a table
    */
-  public async selectOne<T = any>(
+  public async selectOne<T extends QueryResultRow = any>(
     tableName: string,
-    where: string,
-    whereParams: unknown[] = []
+    where?: string,
+    whereParams: unknown[] = [],
+    orderBy?: string
   ): Promise<T | null> {
     const result = await this.select<T>(tableName, where, whereParams, undefined, 1);
     return result.rows[0] || null;

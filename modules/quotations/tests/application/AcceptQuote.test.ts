@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+import { QuoteExpiredError, QuoteNotFoundError } from '../../src/application/errors/QuoteErrors';
 import { AcceptQuote } from '../../src/application/use-cases/AcceptQuote';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
-import { QuoteExpiredError, QuoteNotFoundError } from '../../src/application/errors/QuoteErrors';
 
 describe('AcceptQuote Use Case', () => {
   let useCase: AcceptQuote;

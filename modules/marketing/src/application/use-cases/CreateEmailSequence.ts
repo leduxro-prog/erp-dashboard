@@ -6,9 +6,10 @@
  * @module marketing/application/use-cases
  */
 
+import { NotFoundError } from '@shared/errors';
+
 import { EmailSequence, SequenceTriggerEvent } from '../../domain/entities/EmailSequence';
 import { EmailSequenceStep, StepCondition } from '../../domain/entities/EmailSequenceStep';
-import { NotFoundError } from '@shared/errors';
 
 /**
  * Create email sequence request DTO.

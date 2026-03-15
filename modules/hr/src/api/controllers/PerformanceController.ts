@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { PerformanceService } from '../../domain/services/PerformanceService';
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { Request, Response, NextFunction } from 'express';
+
+import { PerformanceService } from '../../domain/services/PerformanceService';
 
 export class PerformanceController {
     constructor(private performanceService: PerformanceService) { }

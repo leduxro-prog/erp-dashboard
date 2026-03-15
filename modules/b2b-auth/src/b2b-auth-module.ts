@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
+
+import { ResendEmailAdapter } from '../../../modules/notifications/src/infrastructure/adapters/ResendEmailAdapter';
+import { renderTemplate } from '../../../modules/notifications/src/infrastructure/templates';
 import {
   ICypherModule,
   IModuleContext,
@@ -7,13 +10,12 @@ import {
   IModuleMetrics,
 } from '../../../shared/module-system/module.interface';
 import { createModuleLogger } from '../../../shared/utils/logger';
+
 import { B2BAuthController } from './api/controllers/B2BAuthController';
+import { ForgotB2BPassword } from './application/use-cases/ForgotB2BPassword';
 import { LoginB2BCustomer } from './application/use-cases/LoginB2BCustomer';
 import { RefreshB2BToken } from './application/use-cases/RefreshB2BToken';
-import { ForgotB2BPassword } from './application/use-cases/ForgotB2BPassword';
 import { ResetB2BPassword } from './application/use-cases/ResetB2BPassword';
-import { renderTemplate } from '../../../modules/notifications/src/infrastructure/templates';
-import { ResendEmailAdapter } from '../../../modules/notifications/src/infrastructure/adapters/ResendEmailAdapter';
 
 export class B2BAuthModule implements ICypherModule {
   readonly name = 'b2b-auth';

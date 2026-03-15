@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { SeoMetadata } from '../../src/domain/entities/SeoMetadata';
 
 describe('SeoMetadata Entity', () => {

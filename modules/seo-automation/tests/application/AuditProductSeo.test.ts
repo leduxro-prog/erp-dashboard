@@ -3,6 +3,7 @@
  * Tests SEO auditing with issue detection
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { AuditProductSeo, AuditProductSeoInput } from '../../src/application/use-cases/AuditProductSeo';
 import { SeoEntityType } from '../../src/domain/entities/SeoIssue';
 import { MetadataNotFoundError } from '../../src/domain/errors/seo.errors';

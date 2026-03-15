@@ -9,6 +9,7 @@
  * - Script template management
  */
 
+import { createModuleLogger } from '@shared/utils/logger';
 import {
     Entity,
     PrimaryGeneratedColumn,
@@ -18,7 +19,6 @@ import {
     Index,
 } from 'typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('content-scheduling');
 

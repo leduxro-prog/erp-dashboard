@@ -11,7 +11,6 @@
  * - Automatic retry with exponential backoff
  * - Event-driven architecture
  */
-import { Router } from 'express';
 import {
   ICypherModule,
   IModuleContext,
@@ -19,8 +18,10 @@ import {
   IModuleMetrics,
 } from '@shared/module-system';
 import { createModuleLogger } from '@shared/utils/logger';
-import { NotificationsCompositionRoot } from './infrastructure/composition-root';
+import { Router } from 'express';
+
 import { createNotificationsRouter } from './api/routes/notification.routes';
+import { NotificationsCompositionRoot } from './infrastructure/composition-root';
 
 const logger = createModuleLogger('notifications');
 

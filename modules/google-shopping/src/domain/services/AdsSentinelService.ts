@@ -13,8 +13,9 @@
  */
 
 import { createModuleLogger } from '@shared/utils/logger';
-import { GoogleAdsClient, BudgetStatus, PositionMetrics, ProductPerformance } from '../../infrastructure/api-clients/GoogleAdsClient';
+
 import { HighMarginSegmentationService } from '../../application/services/HighMarginSegmentationService';
+import { GoogleAdsClient, BudgetStatus, PositionMetrics, ProductPerformance } from '../../infrastructure/api-clients/GoogleAdsClient';
 
 const logger = createModuleLogger('ads-sentinel');
 

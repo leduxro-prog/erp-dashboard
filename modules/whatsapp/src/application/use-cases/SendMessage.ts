@@ -7,14 +7,15 @@
  * @module whatsapp/application/use-cases
  */
 
-import { Logger } from 'winston';
-import { WhatsAppMessage, MessageType } from '../../domain/entities/WhatsAppMessage';
-import { WhatsAppConversation } from '../../domain/entities/WhatsAppConversation';
-import { IMessageRepository } from '../../domain/repositories/IMessageRepository';
-import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
-import { IWhatsAppBusinessApi } from '../../domain/ports/IWhatsAppBusinessApi';
-import { InvalidPhoneError, ConversationClosedError } from '../../domain/errors/whatsapp.errors';
 import { ValidationError } from '@shared/errors';
+import { Logger } from 'winston';
+
+import { WhatsAppConversation } from '../../domain/entities/WhatsAppConversation';
+import { WhatsAppMessage, MessageType } from '../../domain/entities/WhatsAppMessage';
+import { InvalidPhoneError, ConversationClosedError } from '../../domain/errors/whatsapp.errors';
+import { IWhatsAppBusinessApi } from '../../domain/ports/IWhatsAppBusinessApi';
+import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
+import { IMessageRepository } from '../../domain/repositories/IMessageRepository';
 
 /**
  * Send message request DTO.

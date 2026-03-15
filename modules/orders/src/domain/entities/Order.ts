@@ -2,11 +2,11 @@
  * Order Aggregate Root Entity
  * Core business entity managing the complete order lifecycle
  */
-import { OrderStatus } from './OrderStatus';
-import { OrderItem } from './OrderItem';
-import { StatusChange } from './StatusChange';
 import { Address } from './Address';
+import { OrderItem } from './OrderItem';
+import { OrderStatus } from './OrderStatus';
 import { OrderStatusMachine } from './OrderStatusMachine';
+import { StatusChange } from './StatusChange';
 
 export type PaymentTerms = 'net_30' | 'net_60' | 'net_90' | 'prepay' | 'cash';
 export type PaymentStatus = 'pending' | 'partial' | 'paid';

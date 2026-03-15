@@ -1,7 +1,8 @@
-import { DataSource, Repository } from 'typeorm';
 import * as jwt from 'jsonwebtoken';
-import { B2BAuthCredentialsEntity } from '../../infrastructure/entities/B2BAuthCredentialsEntity';
+import { DataSource, Repository } from 'typeorm';
+
 import { B2BCustomerEntity } from '../../../../b2b-portal/src/infrastructure/entities/B2BCustomerEntity';
+import { B2BAuthCredentialsEntity } from '../../infrastructure/entities/B2BAuthCredentialsEntity';
 
 export interface LoginB2BCustomerRequest {
   email: string;

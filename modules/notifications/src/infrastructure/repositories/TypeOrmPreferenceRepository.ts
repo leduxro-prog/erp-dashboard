@@ -4,6 +4,7 @@
  */
 import { DataSource, Repository } from 'typeorm';
 import { Logger } from 'winston';
+
 import { NotificationPreference } from '../../domain/entities/NotificationPreference';
 import { IPreferenceRepository } from '../../domain/repositories/IPreferenceRepository';
 import { NotificationPreferenceEntity } from '../entities/NotificationPreferenceEntity';

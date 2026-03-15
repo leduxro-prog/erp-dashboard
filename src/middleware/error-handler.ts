@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+
 import { BaseError } from '../../shared/errors/BaseError';
 import logger from '../../shared/utils/logger';
 

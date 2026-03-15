@@ -1,4 +1,5 @@
 import { createModuleLogger } from '@shared/utils/logger';
+
 import { WorkflowTemplate } from '../../domain/entities/WorkflowTemplate';
 import { IWorkflowTemplateRepository } from '../../domain/repositories/IWorkflowTemplateRepository';
 import { TemplateNotFoundError } from '../errors/WorkflowError';

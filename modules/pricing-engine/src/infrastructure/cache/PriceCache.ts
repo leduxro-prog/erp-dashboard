@@ -1,5 +1,5 @@
-import Redis from 'ioredis';
 import { createModuleLogger } from '@shared/utils/logger';
+import Redis from 'ioredis';
 
 const logger = createModuleLogger('price-cache');
 

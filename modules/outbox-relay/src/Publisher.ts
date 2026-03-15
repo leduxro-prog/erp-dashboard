@@ -16,9 +16,10 @@ import amqp, {
   Replies,
   Message,
 } from 'amqplib';
+
+import { getConfig, RabbitMQConfig, CircuitBreakerConfig } from './Config';
 import { OutboxLogger } from './logger';
 import { OutboxMetrics, CircuitBreakerState } from './Metrics';
-import { getConfig, RabbitMQConfig, CircuitBreakerConfig } from './Config';
 
 /**
  * Message publish options

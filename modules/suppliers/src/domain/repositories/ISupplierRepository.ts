@@ -1,7 +1,7 @@
-import { Supplier } from '../entities/Supplier';
-import { SupplierProduct } from '../entities/SupplierProduct';
 import { SkuMapping } from '../entities/SkuMapping';
+import { Supplier } from '../entities/Supplier';
 import { SupplierOrder } from '../entities/SupplierOrder';
+import { SupplierProduct } from '../entities/SupplierProduct';
 
 export interface BulkUpsertResult {
   updated: number;

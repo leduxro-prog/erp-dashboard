@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+
 import { BatchStatus } from '../../domain/entities/SyncBatch';
 
 @Entity('wc_sync_batches')

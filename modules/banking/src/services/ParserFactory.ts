@@ -1,6 +1,6 @@
+import { BTStatementParser } from './BTStatementParser';
 import { IBankStatementParser } from './IBankStatementParser';
 import { INGStatementParser } from './INGStatementParser';
-import { BTStatementParser } from './BTStatementParser';
 
 /**
  * Factory for creating bank statement parsers based on content

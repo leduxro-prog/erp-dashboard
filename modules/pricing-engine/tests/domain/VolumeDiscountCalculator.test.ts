@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { VolumeDiscountCalculator } from '../../src/domain/services/VolumeDiscountCalculator';
 
 describe('VolumeDiscountCalculator', () => {

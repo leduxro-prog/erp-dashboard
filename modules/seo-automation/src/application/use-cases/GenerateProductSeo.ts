@@ -40,19 +40,20 @@
  * // Returns: { metadata, structuredData, score }
  */
 
+import { IEventBus } from '@shared/module-system/module.interface';
 import { Logger } from 'winston';
+
+import { SeoEntityType } from '../../domain/entities/SeoIssue';
 import { SeoMetadata } from '../../domain/entities/SeoMetadata';
 import { StructuredData, SchemaType } from '../../domain/entities/StructuredData';
-import { SeoEntityType } from '../../domain/entities/SeoIssue';
+import { ProductNotFoundError } from '../../domain/errors/seo.errors';
 import { ISeoMetadataRepository } from '../../domain/repositories/ISeoMetadataRepository';
 import { IStructuredDataRepository } from '../../domain/repositories/IStructuredDataRepository';
 import { MetaTagGenerator } from '../../domain/services/MetaTagGenerator';
+import { SeoScoreCalculator } from '../../domain/services/SeoScoreCalculator';
 import { SlugGenerator } from '../../domain/services/SlugGenerator';
 import { StructuredDataGenerator } from '../../domain/services/StructuredDataGenerator';
-import { SeoScoreCalculator } from '../../domain/services/SeoScoreCalculator';
 import { IProductPort } from '../ports/IProductPort';
-import { IEventBus } from '@shared/module-system/module.interface';
-import { ProductNotFoundError } from '../../domain/errors/seo.errors';
 
 /**
  * Input parameters for use case

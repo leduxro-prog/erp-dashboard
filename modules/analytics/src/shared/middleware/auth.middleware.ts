@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+
 import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('auth-middleware');

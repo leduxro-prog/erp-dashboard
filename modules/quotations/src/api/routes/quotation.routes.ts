@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
-import { QuotationController } from '../controllers/QuotationController';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Router, Request, Response } from 'express';
+
+import { QuotationController } from '../controllers/QuotationController';
 
 export function createQuotationRoutes(controller: QuotationController): Router {
   const router = Router();

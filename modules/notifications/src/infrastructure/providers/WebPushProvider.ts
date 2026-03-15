@@ -4,6 +4,7 @@
  */
 import * as webpush from 'web-push';
 import { Logger } from 'winston';
+
 import { IPushProvider, PushSendResult, PushNotificationPayload } from '../../application/ports/IPushProvider';
 
 /**

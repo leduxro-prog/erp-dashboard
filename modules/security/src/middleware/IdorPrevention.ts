@@ -10,9 +10,10 @@
  * 5. Sanitizing requests to remove unauthorized customer IDs
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { createModuleLogger } from '@shared/utils/logger';
 import { ForbiddenError } from '@shared/errors/BaseError';
+import { createModuleLogger } from '@shared/utils/logger';
+import { Request, Response, NextFunction } from 'express';
+
 import {
   SecurityRequest,
   IdorViolation,

@@ -1,12 +1,13 @@
-import { Router } from 'express';
-import { InventoryController } from '../controllers/InventoryController';
+import { wrapController } from '@shared/middleware/async-handler';
+import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import {
   validateBody,
   validateQuery,
   validateParams,
 } from '@shared/middleware/validation.middleware';
-import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
-import { wrapController } from '@shared/middleware/async-handler';
+import { Router } from 'express';
+
+import { InventoryController } from '../controllers/InventoryController';
 import {
   checkStockSchema,
   reserveStockSchema,

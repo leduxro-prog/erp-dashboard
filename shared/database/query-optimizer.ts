@@ -7,6 +7,7 @@
  */
 
 import { SelectQueryBuilder, DataSource, ObjectLiteral } from 'typeorm';
+
 import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('query-optimizer');

@@ -1,4 +1,5 @@
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
+import { DataSource } from 'typeorm';
 
 import {
   ConvertProformaToInvoiceUseCase,
@@ -7,10 +8,9 @@ import {
   IOrderServiceConvert,
   ProformaConversionError,
 } from '../../src/application/use-cases/ConvertProformaToInvoice';
-import { ISmartBillRepository } from '../../src/domain/repositories/ISmartBillRepository';
 import { SmartBillInvoice, InvoiceItem } from '../../src/domain/entities/SmartBillInvoice';
 import { SmartBillProforma } from '../../src/domain/entities/SmartBillProforma';
-import { DataSource } from 'typeorm';
+import { ISmartBillRepository } from '../../src/domain/repositories/ISmartBillRepository';
 
 const sampleItems: InvoiceItem[] = [
   {

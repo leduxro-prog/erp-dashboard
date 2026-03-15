@@ -22,9 +22,10 @@
  * @module shared/api/api-client-factory
  */
 
+import { createModuleLogger } from '../utils/logger';
+
 import { ApiClient, ApiClientConfig } from './api-client';
 import ApiRegistry, { ApiConfig } from './api-registry';
-import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('api-client-factory');
 

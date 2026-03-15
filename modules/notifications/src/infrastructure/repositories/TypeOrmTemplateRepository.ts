@@ -4,6 +4,7 @@
  */
 import { DataSource, Repository } from 'typeorm';
 import { Logger } from 'winston';
+
 import { NotificationTemplate } from '../../domain/entities/NotificationTemplate';
 import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
 import { NotificationTemplateEntity } from '../entities/NotificationTemplateEntity';

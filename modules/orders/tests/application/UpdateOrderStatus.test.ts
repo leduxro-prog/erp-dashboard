@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
+import { InvalidStatusTransitionError, OrderCancellationError, OrderNotFoundError } from '../../src/application/errors';
 import {
   IEventPublisher,
   IInvoiceService,
@@ -6,7 +8,6 @@ import {
   UpdateOrderStatus,
 } from '../../src/application/use-cases/UpdateOrderStatus';
 import { IOrderRepository, Order, OrderStatus, OrderItem, Address } from '../../src/domain';
-import { InvalidStatusTransitionError, OrderCancellationError, OrderNotFoundError } from '../../src/application/errors';
 
 const createOrder = (status: OrderStatus): Order =>
   Order.create({

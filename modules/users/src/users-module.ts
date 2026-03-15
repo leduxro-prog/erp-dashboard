@@ -1,5 +1,5 @@
 import * as crypto from 'crypto';
-import { Router } from 'express';
+
 import {
   ICypherModule,
   IModuleContext,
@@ -7,13 +7,17 @@ import {
   IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
-import { UserService } from './application/services/UserService';
-import { TwoFactorAuthService } from './application/services/TwoFactorAuthService';
+import { Router } from 'express';
+
+import { ResendEmailAdapter } from '../../../modules/notifications/src/infrastructure/adapters/ResendEmailAdapter';
+import { renderTemplate } from '../../../modules/notifications/src/infrastructure/templates';
+
 import { UserController } from './api/controllers/UserController';
 import { createTwoFactorRoutes } from './api/routes/twofa.routes';
+import { TwoFactorAuthService } from './application/services/TwoFactorAuthService';
+import { UserService } from './application/services/UserService';
 import { UserEntity } from './domain/entities/UserEntity';
-import { renderTemplate } from '../../../modules/notifications/src/infrastructure/templates';
-import { ResendEmailAdapter } from '../../../modules/notifications/src/infrastructure/adapters/ResendEmailAdapter';
+
 
 export class UsersModule implements ICypherModule {
   public readonly name = 'users';

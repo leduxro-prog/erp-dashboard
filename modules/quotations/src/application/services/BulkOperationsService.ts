@@ -4,9 +4,10 @@
  */
 
 import { DataSource } from 'typeorm';
+
 import { EmailService } from '../../infrastructure/email/EmailService';
-import { WhatsAppService } from '../../infrastructure/notifications/WhatsAppService';
 import { SmsService } from '../../infrastructure/notifications/SmsService';
+import { WhatsAppService } from '../../infrastructure/notifications/WhatsAppService';
 
 export interface BulkOperationResult {
   totalProcessed: number;

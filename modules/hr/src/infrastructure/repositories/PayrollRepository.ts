@@ -1,8 +1,9 @@
 import { Repository, DataSource } from 'typeorm';
-import { PayrollRunEntity } from '../entities/PayrollRun';
-import { PayrollEntryEntity } from '../entities/PayrollEntry';
-import { PayslipEntity } from '../entities/Payslip';
+
 import { PayrollListQueryDTO } from '../../application/dtos/PayrollDTO';
+import { PayrollEntryEntity } from '../entities/PayrollEntry';
+import { PayrollRunEntity } from '../entities/PayrollRun';
+import { PayslipEntity } from '../entities/Payslip';
 
 export class PayrollRepository {
     private payrollRunRepository: Repository<PayrollRunEntity>;

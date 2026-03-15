@@ -1,7 +1,9 @@
-import { NextFunction, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
-import { Tracer, ITracer } from '../utils/tracer';
+
+import { NextFunction, Request, Response } from 'express';
+
 import logger from '../utils/logger';
+import { Tracer, ITracer } from '../utils/tracer';
 
 /**
  * Extended Express Request with tracer context

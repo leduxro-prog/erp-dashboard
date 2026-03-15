@@ -1,8 +1,10 @@
-import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
-import { DataSource } from 'typeorm';
-import { TierCalculationService } from '../../domain/services/TierCalculationService';
 import { VAT_RATE } from '@shared/constants';
+import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Response, NextFunction } from 'express';
+import { DataSource } from 'typeorm';
+
+import { TierCalculationService } from '../../domain/services/TierCalculationService';
+
 
 export interface CartItemResponse {
   id: number;

@@ -1,6 +1,7 @@
 import { Repository, DataSource, FindOptionsWhere, ILike, In } from 'typeorm';
-import { EmployeeEntity } from '../entities/Employee';
+
 import { EmployeeListQueryDTO } from '../../application/dtos/EmployeeDTO';
+import { EmployeeEntity } from '../entities/Employee';
 
 export class EmployeeRepository {
     private repository: Repository<EmployeeEntity>;

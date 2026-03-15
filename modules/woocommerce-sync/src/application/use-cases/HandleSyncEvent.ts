@@ -1,6 +1,7 @@
-import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
-import { SyncItem } from '../../domain/entities/SyncItem';
 import { v4 as uuidv4 } from 'uuid';
+
+import { SyncItem } from '../../domain/entities/SyncItem';
+import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
 
 export interface SyncEvent {
   eventName: string;

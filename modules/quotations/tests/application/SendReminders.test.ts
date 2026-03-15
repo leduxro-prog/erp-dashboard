@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { SendReminders } from '../../src/application/use-cases/SendReminders';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 

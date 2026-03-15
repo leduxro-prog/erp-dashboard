@@ -3,6 +3,7 @@
  * Tests sending notifications via multiple channels: Email, SMS, WhatsApp, Push, In-App
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { SendNotification } from '../../src/application/use-cases/SendNotification';
 import {
   TemplateNotFoundError,

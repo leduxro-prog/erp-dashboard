@@ -5,10 +5,10 @@ import {
   ExceptionType,
   ToleranceConfig,
 } from '../entities/ThreeWayMatch';
-import { IMatchRepository } from '../repositories/IMatchRepository';
-import { IPurchaseOrderRepository } from '../repositories/IPurchaseOrderRepository';
 import { IGRNRepository } from '../repositories/IGRNRepository';
 import { IInvoiceRepository } from '../repositories/IInvoiceRepository';
+import { IMatchRepository } from '../repositories/IMatchRepository';
+import { IPurchaseOrderRepository } from '../repositories/IPurchaseOrderRepository';
 
 export class MatchingService {
   private defaultTolerances: ToleranceConfig = {

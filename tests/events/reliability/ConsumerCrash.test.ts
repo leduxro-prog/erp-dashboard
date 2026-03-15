@@ -528,7 +528,7 @@ describe('Consumer Crash Recovery', () => {
 
       for (const msg of messages) {
         await rmq.publish(topology.exchange, topology.routingKey, msg);
-      });
+      }
 
       const errorCounts: Record<string, number> = {};
       let processedCount = 0;

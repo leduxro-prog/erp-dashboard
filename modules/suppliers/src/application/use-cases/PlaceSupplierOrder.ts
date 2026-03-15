@@ -1,10 +1,10 @@
 import { ISupplierRepository, SupplierOrderEntity, SupplierOrderItem, SupplierOrderStatus } from '../../domain';
+import { SupplierOrderResult } from '../dtos/supplier.dtos';
 import {
   SupplierNotFoundError,
   InvalidOrderError,
   InsufficientStockError,
 } from '../errors/supplier.errors';
-import { SupplierOrderResult } from '../dtos/supplier.dtos';
 
 export interface OrderItem {
   supplierSku: string;

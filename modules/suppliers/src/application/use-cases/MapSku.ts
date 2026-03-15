@@ -1,11 +1,11 @@
 import { ISupplierRepository, SkuMapping, SkuMappingEntity } from '../../domain';
+import { SkuMappingDTO, UnmappedProductsDTO, SupplierProductDTO } from '../dtos/supplier.dtos';
 import {
   SkuMappingError,
   SkuMappingAlreadyExistsError,
   InvalidSkuMappingError,
   SupplierNotFoundError,
 } from '../errors/supplier.errors';
-import { SkuMappingDTO, UnmappedProductsDTO, SupplierProductDTO } from '../dtos/supplier.dtos';
 
 export class MapSku {
   constructor(private repository: ISupplierRepository) {}

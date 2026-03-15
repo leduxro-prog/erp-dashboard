@@ -4,21 +4,15 @@
  */
 
 import {
-  ORDER_EVENTS,
-  OrderCreatedEvent,
-  OrderStatusChangedEvent,
-  OrderShippedEvent,
-  OrderDeliveredEvent,
-  OrderCancelledEvent,
-  OrderInvoiceGeneratedEvent,
-  OrderPaymentReceivedEvent,
-  OrderPartialDeliveryEvent,
-  OrderEventPayload,
-  OrderEventType,
-  OrderItem,
-  PartialDeliveryItem,
-} from './order.events';
-
+  CUSTOMER_EVENTS,
+  CustomerRegisteredEvent,
+  B2bApprovedEvent,
+  B2bRejectedEvent,
+  TierUpgradedEvent,
+  CreditLimitChangedEvent,
+  CustomerEventPayload,
+  CustomerEventType,
+} from './customer.events';
 import {
   INVENTORY_EVENTS,
   StockUpdatedEvent,
@@ -33,7 +27,31 @@ import {
   InventoryEventType,
   SyncedItem,
 } from './inventory.events';
-
+import {
+  ORDER_EVENTS,
+  OrderCreatedEvent,
+  OrderStatusChangedEvent,
+  OrderShippedEvent,
+  OrderDeliveredEvent,
+  OrderCancelledEvent,
+  OrderInvoiceGeneratedEvent,
+  OrderPaymentReceivedEvent,
+  OrderPartialDeliveryEvent,
+  OrderEventPayload,
+  OrderEventType,
+  OrderItem,
+  PartialDeliveryItem,
+} from './order.events';
+import {
+  PRICING_EVENTS,
+  PriceUpdatedEvent,
+  PromotionStartedEvent,
+  PromotionEndedEvent,
+  TierChangedEvent,
+  VolumeDiscountAppliedEvent,
+  PricingEventPayload,
+  PricingEventType,
+} from './pricing.events';
 import {
   QUOTE_EVENTS,
   QuoteCreatedEvent,
@@ -48,18 +66,6 @@ import {
   QuoteEventType,
   QuoteItem,
 } from './quote.events';
-
-import {
-  PRICING_EVENTS,
-  PriceUpdatedEvent,
-  PromotionStartedEvent,
-  PromotionEndedEvent,
-  TierChangedEvent,
-  VolumeDiscountAppliedEvent,
-  PricingEventPayload,
-  PricingEventType,
-} from './pricing.events';
-
 import {
   SUPPLIER_EVENTS,
   SupplierSyncStartedEvent,
@@ -73,17 +79,6 @@ import {
   SyncedProduct,
   SupplierOrderItem,
 } from './supplier.events';
-
-import {
-  CUSTOMER_EVENTS,
-  CustomerRegisteredEvent,
-  B2bApprovedEvent,
-  B2bRejectedEvent,
-  TierUpgradedEvent,
-  CreditLimitChangedEvent,
-  CustomerEventPayload,
-  CustomerEventType,
-} from './customer.events';
 
 export {
   ORDER_EVENTS,

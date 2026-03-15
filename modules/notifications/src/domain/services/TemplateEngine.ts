@@ -6,8 +6,9 @@
  *
  * @class TemplateEngine
  */
-import { NotificationTemplate } from '../entities/NotificationTemplate';
 import { Logger } from 'winston';
+
+import { NotificationTemplate } from '../entities/NotificationTemplate';
 
 export interface TemplateRenderResult {
   subject: string;

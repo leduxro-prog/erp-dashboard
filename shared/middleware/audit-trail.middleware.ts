@@ -10,10 +10,11 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+
 import { IAuditLogger, AuditEvent } from '../interfaces/audit-logger.interface';
 import { AuditLogService, AuditLogEntry } from '../services/AuditLogService';
 import logger from '../utils/logger';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Paths that should be excluded from audit logging

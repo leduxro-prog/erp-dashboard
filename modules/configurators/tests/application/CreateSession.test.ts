@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Logger } from 'winston';
+
 import { CreateSession } from '../../src/application/use-cases/CreateSession';
-import { ISessionRepository } from '../../src/domain/repositories/ISessionRepository';
 import { ConfiguratorSession } from '../../src/domain/entities/ConfiguratorSession';
+import { ISessionRepository } from '../../src/domain/repositories/ISessionRepository';
 
 /**
  * CreateSession Use-Case Tests

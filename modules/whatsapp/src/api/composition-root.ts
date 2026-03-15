@@ -8,8 +8,8 @@
  */
 
 import { Router } from 'express';
-import { DataSource } from 'typeorm';
 import Redis from 'ioredis';
+import { DataSource } from 'typeorm';
 
 /**
  * Create WhatsApp module router with all dependencies.

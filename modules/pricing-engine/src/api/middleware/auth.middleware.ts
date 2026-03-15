@@ -1,6 +1,6 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('pricing-auth-middleware');
 

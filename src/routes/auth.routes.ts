@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { createModuleLogger } from '../../shared/utils/logger';
+
 import { jwtService, TokenPayload } from '../../shared/services/JwtService';
+import { createModuleLogger } from '../../shared/utils/logger';
 
 const logger = createModuleLogger('auth-routes');
 const router = Router();

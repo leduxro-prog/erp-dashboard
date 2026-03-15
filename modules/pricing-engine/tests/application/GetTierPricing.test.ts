@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { GetTierPricing } from '../../src/application/use-cases/GetTierPricing';
-import { IPriceRepository, ProductPrice } from '../../src/application/ports/IPriceRepository';
+
 import { ProductNotFoundError } from '../../src/application/errors/pricing.errors';
+import { IPriceRepository, ProductPrice } from '../../src/application/ports/IPriceRepository';
+import { GetTierPricing } from '../../src/application/use-cases/GetTierPricing';
 
 const makeProductPrice = (price: number, productId: number = 1): ProductPrice => ({
   productId,

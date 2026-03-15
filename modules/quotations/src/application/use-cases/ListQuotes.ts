@@ -1,5 +1,5 @@
-import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 import { Quote, QuoteStatus } from '../../domain/entities/Quote';
+import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 
 export interface ListQuotesFilter {
   customerId?: string;

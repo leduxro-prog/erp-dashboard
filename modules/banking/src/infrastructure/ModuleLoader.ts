@@ -1,8 +1,9 @@
 import { ICypherModule, IModuleContext, IModuleHealth, IModuleMetrics } from '@shared/module-system/module.interface';
+import { createModuleLogger } from '@shared/utils/logger';
 import { Router } from 'express';
+
 import { BankingController } from '../api/controllers/BankingController';
 import { createBankingRoutes } from '../api/routes/banking.routes';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('banking-module');
 

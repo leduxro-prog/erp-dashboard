@@ -3,9 +3,9 @@
  * Defines the contract for WooCommerce sync data persistence
  */
 
-import { SyncItem } from '../../domain/entities/SyncItem';
-import { SyncBatch } from '../../domain/entities/SyncBatch';
 import { ProductSyncMapping } from '../../domain/entities/ProductSyncMapping';
+import { SyncBatch } from '../../domain/entities/SyncBatch';
+import { SyncItem } from '../../domain/entities/SyncItem';
 
 export interface SyncStats {
   totalSyncItems: number;

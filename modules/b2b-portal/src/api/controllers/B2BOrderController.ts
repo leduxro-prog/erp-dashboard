@@ -1,11 +1,14 @@
-import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
-import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
-import { DataSource, QueryRunner } from 'typeorm';
-import { TierCalculationService } from '../../domain/services/TierCalculationService';
-import { ValidationError } from '@shared/errors/BaseError';
-import { InsufficientCreditError, CustomerSuspendedError } from '../../domain/errors/b2b.errors';
+
 import { VAT_RATE } from '@shared/constants';
+import { ValidationError } from '@shared/errors/BaseError';
+import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Request, Response, NextFunction } from 'express';
+import { DataSource, QueryRunner } from 'typeorm';
+
+import { InsufficientCreditError, CustomerSuspendedError } from '../../domain/errors/b2b.errors';
+import { TierCalculationService } from '../../domain/services/TierCalculationService';
+
 
 interface CartItem {
   id: string;

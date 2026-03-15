@@ -4,6 +4,7 @@
  */
 import { DataSource, Repository, LessThan, Between } from 'typeorm';
 import { Logger } from 'winston';
+
 import { Notification } from '../../domain/entities/Notification';
 import { INotificationRepository, PaginationOptions, NotificationQueryResult } from '../../domain/repositories/INotificationRepository';
 import { NotificationEntity } from '../entities/NotificationEntity';

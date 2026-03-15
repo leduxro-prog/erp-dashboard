@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -6,7 +7,6 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 
 @Entity('b2b_auth_credentials')
 @Index('idx_b2b_auth_email', ['email'])

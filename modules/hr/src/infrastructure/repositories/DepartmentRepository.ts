@@ -1,6 +1,7 @@
 import { Repository, DataSource, TreeRepository, IsNull } from 'typeorm';
-import { DepartmentEntity } from '../entities/Department';
+
 import { DepartmentListQueryDTO } from '../../application/dtos/DepartmentDTO';
+import { DepartmentEntity } from '../entities/Department';
 
 export class DepartmentRepository {
     private repository: Repository<DepartmentEntity>;
