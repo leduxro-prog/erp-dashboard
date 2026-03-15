@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledux/contracts/b2b-surface-contract-v1.schema.json",
+  "title": "B2BSurfaceContractV1",
+  "type": "object",
+  "required": [
+    "version",
+    "surfaceType",
+    "ownership",
+    "releasePath",
+    "authentication",
+    "pricing",
+    "visibility",
+    "quoteProjectFlow"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "surfaceType": { "const": "in-platform-first-class" },
+    "ownership": {
+      "type": "object",
+      "required": ["erp", "commerceCore", "b2bSurface"],
+      "properties": {
+        "erp": { "type": "array", "items": { "type": "string" } },
+        "commerceCore": { "type": "array", "items": { "type": "string" } },
+        "b2bSurface": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "releasePath": {
+      "type": "object",
+      "required": ["independentB2BGate", "requiresCommerceCompatibilityCheck"],
+      "properties": {
+        "independentB2BGate": { "type": "boolean" },
+        "requiresCommerceCompatibilityCheck": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "authentication": {
+      "type": "object",
+      "required": ["accountScoped", "supportsSSO"],
+      "properties": {
+        "accountScoped": { "type": "boolean" },
+        "supportsSSO": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "pricing": {
+      "type": "object",
+      "required": ["erpMasterInputs", "accountContractPricing"],
+      "properties": {
+        "erpMasterInputs": { "type": "boolean" },
+        "accountContractPricing": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "visibility": {
+      "type": "object",
+      "required": ["separateFromRetail", "usesPublishedCatalogVisibility"],
+      "properties": {
+        "separateFromRetail": { "type": "boolean" },
+        "usesPublishedCatalogVisibility": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "quoteProjectFlow": {
+      "type": "object",
+      "required": ["quoteLifecycle", "projectLists", "quoteToOrderPath"],
+      "properties": {
+        "quoteLifecycle": { "type": "boolean" },
+        "projectLists": { "type": "boolean" },
+        "quoteToOrderPath": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
