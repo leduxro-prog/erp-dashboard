@@ -44,12 +44,6 @@ export interface CartResponse {
   currency: string;
 }
 
-interface VolumeDiscount {
-  min_quantity: number;
-  max_quantity: number | null;
-  discount_percentage: number;
-}
-
 export class B2BCartController {
   private tierService: TierCalculationService;
   private readonly TAX_RATE = VAT_RATE;

@@ -18,9 +18,9 @@ import { CreateProformaUseCase } from './application/use-cases/CreateProforma';
 import { CreateProformaFromQuoteUseCase } from './application/use-cases/CreateProformaFromQuote';
 import { GetWarehousesUseCase } from './application/use-cases/GetWarehouses';
 import { ImportPricesFromExcelUseCase } from './application/use-cases/ImportPricesFromExcel';
+import { SyncInvoiceStatusUseCase } from './application/use-cases/SyncInvoiceStatus';
 import { SyncPricesFromInvoicesUseCase } from './application/use-cases/SyncPricesFromInvoices';
 import { SyncSmartBillCustomers } from './application/use-cases/SyncSmartBillCustomers';
-import { SyncInvoiceStatusUseCase } from './application/use-cases/SyncInvoiceStatus';
 import { SyncStockUseCase } from './application/use-cases/SyncStock';
 import {
   SmartBillApiClient,

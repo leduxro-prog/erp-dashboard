@@ -18,7 +18,17 @@ import { ApplyDiscountCode } from '../application/use-cases/ApplyDiscountCode';
 import { CreateCampaign } from '../application/use-cases/CreateCampaign';
 import { CreateDiscountCode } from '../application/use-cases/CreateDiscountCode';
 import { CreateEmailSequence } from '../application/use-cases/CreateEmailSequence';
+import { DeleteEmailSequence } from '../application/use-cases/DeleteEmailSequence';
 import { GenerateDiscountCodes } from '../application/use-cases/GenerateDiscountCodes';
+import { GetAttributionAnalytics } from '../application/use-cases/GetAttributionAnalytics';
+import { GetCampaignAnalytics } from '../application/use-cases/GetCampaignAnalytics';
+import { GetDeliveries } from '../application/use-cases/GetDeliveries';
+import { GetEmailSequenceDetails } from '../application/use-cases/GetEmailSequenceDetails';
+import { GetFunnelAnalytics } from '../application/use-cases/GetFunnelAnalytics';
+import { ListEmailSequences } from '../application/use-cases/ListEmailSequences';
+import { PreviewAudience } from '../application/use-cases/PreviewAudience';
+import { ScheduleCampaign } from '../application/use-cases/ScheduleCampaign';
+import { UpdateEmailSequence } from '../application/use-cases/UpdateEmailSequence';
 import { ValidateDiscountCode } from '../application/use-cases/ValidateDiscountCode';
 import { IAttributionEventRepository } from '../domain/repositories/IAttributionEventRepository';
 import { IAudienceSegmentRepository } from '../domain/repositories/IAudienceSegmentRepository';
@@ -46,18 +56,8 @@ import { AudienceSegmentationService } from '../domain/services/AudienceSegmenta
 import { DiscountCalculationService } from '../domain/services/DiscountCalculationService';
 
 // Use cases (existing)
-import { GetCampaignAnalytics } from '../application/use-cases/GetCampaignAnalytics';
-import { PreviewAudience } from '../application/use-cases/PreviewAudience';
-import { ScheduleCampaign } from '../application/use-cases/ScheduleCampaign';
-import { GetDeliveries } from '../application/use-cases/GetDeliveries';
-import { GetAttributionAnalytics } from '../application/use-cases/GetAttributionAnalytics';
-import { GetFunnelAnalytics } from '../application/use-cases/GetFunnelAnalytics';
 
 // Use cases (NEW - Email Sequences)
-import { ListEmailSequences } from '../application/use-cases/ListEmailSequences';
-import { GetEmailSequenceDetails } from '../application/use-cases/GetEmailSequenceDetails';
-import { UpdateEmailSequence } from '../application/use-cases/UpdateEmailSequence';
-import { DeleteEmailSequence } from '../application/use-cases/DeleteEmailSequence';
 
 // Infrastructure
 import { CampaignJobRunner } from './jobs/CampaignJobRunner';

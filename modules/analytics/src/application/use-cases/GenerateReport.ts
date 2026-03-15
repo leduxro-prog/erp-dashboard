@@ -139,13 +139,14 @@ export class GenerateReport {
           suppliers: await this.supplierDataPort.getSupplierMetrics(dateRange),
         };
 
-      case 'FINANCIAL_OVERVIEW':
+      case 'FINANCIAL_OVERVIEW': {
         // Combine multiple data sources for financial report
         const [orders, customers] = await Promise.all([
           this.orderDataPort.getOrderMetrics(dateRange),
           this.customerDataPort.getCustomerMetrics(dateRange),
         ]);
         return { orders, customers };
+      }
 
       case 'CUSTOM':
         // Custom reports would use custom data gathering logic

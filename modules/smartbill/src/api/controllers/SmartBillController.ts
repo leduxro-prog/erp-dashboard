@@ -13,11 +13,11 @@ import { CreateInvoiceUseCase } from '../../application/use-cases/CreateInvoice'
 import { CreateProformaUseCase } from '../../application/use-cases/CreateProforma';
 import { CreateProformaFromQuoteUseCase } from '../../application/use-cases/CreateProformaFromQuote';
 import { GetWarehousesUseCase } from '../../application/use-cases/GetWarehouses';
+import { ImportPricesFromExcelUseCase } from '../../application/use-cases/ImportPricesFromExcel';
 import { SyncInvoiceStatusUseCase } from '../../application/use-cases/SyncInvoiceStatus';
 import { SyncPricesFromInvoicesUseCase } from '../../application/use-cases/SyncPricesFromInvoices';
-import { SyncStockUseCase } from '../../application/use-cases/SyncStock';
-import { ImportPricesFromExcelUseCase } from '../../application/use-cases/ImportPricesFromExcel';
 import { SyncSmartBillCustomers } from '../../application/use-cases/SyncSmartBillCustomers';
+import { SyncStockUseCase } from '../../application/use-cases/SyncStock';
 import { SmartBillApiClient } from '../../infrastructure/api-client/SmartBillApiClient';
 
 

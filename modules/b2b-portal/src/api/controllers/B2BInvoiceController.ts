@@ -3,7 +3,7 @@ import * as path from 'path';
 
 import { VAT_RATE } from '@shared/constants';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 
 import {

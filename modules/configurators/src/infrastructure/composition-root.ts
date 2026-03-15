@@ -10,7 +10,12 @@ import { CalculateConfigurationPrice } from '../application/use-cases/CalculateC
 import { CompleteConfiguration } from '../application/use-cases/CompleteConfiguration';
 import { ConvertToQuote } from '../application/use-cases/ConvertToQuote';
 import { CreateSession } from '../application/use-cases/CreateSession';
+import { GetCatalog } from '../application/use-cases/GetCatalog';
+import { GetSession } from '../application/use-cases/GetSession';
+import { ListSessions } from '../application/use-cases/ListSessions';
 import { RemoveComponent } from '../application/use-cases/RemoveComponent';
+import { UpdateComponent } from '../application/use-cases/UpdateComponent';
+import { ValidateConfiguration } from '../application/use-cases/ValidateConfiguration';
 import { ICatalogRepository } from '../domain/repositories/ICatalogRepository';
 import { IRuleRepository } from '../domain/repositories/IRuleRepository';
 import { ISessionRepository } from '../domain/repositories/ISessionRepository';
@@ -20,11 +25,6 @@ import { TypeOrmCatalogRepository } from './repositories/TypeOrmCatalogRepositor
 import { TypeOrmRuleRepository } from './repositories/TypeOrmRuleRepository';
 import { TypeOrmSessionRepository } from './repositories/TypeOrmSessionRepository';
 
-import { UpdateComponent } from '../application/use-cases/UpdateComponent';
-import { ValidateConfiguration } from '../application/use-cases/ValidateConfiguration';
-import { GetSession } from '../application/use-cases/GetSession';
-import { ListSessions } from '../application/use-cases/ListSessions';
-import { GetCatalog } from '../application/use-cases/GetCatalog';
 
 /**
  * Composition Root for Configurator Module

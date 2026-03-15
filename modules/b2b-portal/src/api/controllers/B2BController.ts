@@ -364,7 +364,7 @@ export class B2BController {
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const { status, approved_credit_limit, rejection_reason, notes, tier, payment_terms } =
+      const { status, approved_credit_limit, rejection_reason, tier, payment_terms } =
         req.body;
       const reviewedBy = req.user?.id || 'admin'; // Fallback for dev
 

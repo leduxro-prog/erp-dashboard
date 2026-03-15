@@ -8,8 +8,12 @@ import { EmployeeService } from '../../domain/services/EmployeeService';
 import { LeaveService } from '../../domain/services/LeaveService';
 import { PayrollService } from '../../domain/services/PayrollService';
 import { PerformanceService } from '../../domain/services/PerformanceService';
+import { AttendanceRepository } from '../../infrastructure/repositories/AttendanceRepository';
 import { DepartmentRepository } from '../../infrastructure/repositories/DepartmentRepository';
 import { EmployeeRepository } from '../../infrastructure/repositories/EmployeeRepository';
+import { LeaveRepository } from '../../infrastructure/repositories/LeaveRepository';
+import { PayrollRepository } from '../../infrastructure/repositories/PayrollRepository';
+import { PerformanceRepository } from '../../infrastructure/repositories/PerformanceRepository';
 import { AttendanceController } from '../controllers/AttendanceController';
 import { DepartmentController } from '../controllers/DepartmentController';
 import { EmployeeController } from '../controllers/EmployeeController';
@@ -20,10 +24,6 @@ import { AttendanceValidator } from '../validators/AttendanceValidator';
 import { EmployeeValidator } from '../validators/EmployeeValidator';
 import { LeaveValidator } from '../validators/LeaveValidator';
 import { PayrollValidator } from '../validators/PayrollValidator';
-import { LeaveRepository } from '../../infrastructure/repositories/LeaveRepository';
-import { AttendanceRepository } from '../../infrastructure/repositories/AttendanceRepository';
-import { PayrollRepository } from '../../infrastructure/repositories/PayrollRepository';
-import { PerformanceRepository } from '../../infrastructure/repositories/PerformanceRepository';
 
 const validator = {
     body: (schema: Joi.ObjectSchema | Record<string, any>) => {

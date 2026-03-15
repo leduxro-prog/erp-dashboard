@@ -25,24 +25,20 @@ import {
   authLimiter,
   writeOperationLimiter,
 } from '../shared/middleware/rate-limit.middleware';
-
-import { buildHostTopology } from './config/host-topology';
-
-import logger, { createModuleLogger } from '../shared/utils/logger';
-import { getEventBus } from '../shared/utils/event-bus';
 import { createRequestIdMiddleware } from '../shared/middleware/request-id.middleware';
-import { tracingMiddleware } from '../shared/middleware/tracing.middleware';
 import { sanitizeMiddleware } from '../shared/middleware/sanitize.middleware';
+import { tracingMiddleware } from '../shared/middleware/tracing.middleware';
+import { ModuleRegistry, ModuleLoader, IModuleContext } from '../shared/module-system';
+import { AuditLogService } from '../shared/services/AuditLogService';
+import { UnifiedDlqService } from '../shared/services/UnifiedDlqService';
 import { createAuditLogger } from '../shared/utils/audit-logger';
+import { getEventBus } from '../shared/utils/event-bus';
+import logger, { createModuleLogger } from '../shared/utils/logger';
 
 import { registerApiDocsRoutes } from './api-docs/routes';
-
-import { ModuleRegistry, ModuleLoader, IModuleContext } from '../shared/module-system';
-import { UnifiedDlqService } from '../shared/services/UnifiedDlqService';
-import { AuditLogService } from '../shared/services/AuditLogService';
 import { validateEnv, ConfigSchema } from './config/env.validation';
+import { buildHostTopology } from './config/host-topology';
 import { AppDataSource } from './data-source';
-
 import authRoutes from './routes/auth.routes';
 
 

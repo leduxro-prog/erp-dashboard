@@ -37,7 +37,7 @@ export class AnalyticsController {
    * List all dashboards with pagination
    * GET /api/v1/analytics/dashboards
    */
-  async listDashboards(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listDashboards(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       this._logger.info('Listing dashboards');
       const page = parseInt(req.query.page as string) || 1;
@@ -75,7 +75,7 @@ export class AnalyticsController {
    * Create a new dashboard
    * POST /api/v1/analytics/dashboards
    */
-  async createDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createDashboard(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { name, description, dashboard_type, is_public, refresh_interval } = req.validatedBody || req.body || {};
 
@@ -106,7 +106,7 @@ export class AnalyticsController {
    * Get dashboard with widgets
    * GET /api/v1/analytics/dashboards/:id
    */
-  async getDashboardWithWidgets(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getDashboardWithWidgets(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
 
@@ -155,7 +155,7 @@ export class AnalyticsController {
    * Update dashboard
    * PUT /api/v1/analytics/dashboards/:id
    */
-  async updateDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateDashboard(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
       const updateData = req.validatedBody || req.body || {};
@@ -182,7 +182,7 @@ export class AnalyticsController {
    * Delete dashboard
    * DELETE /api/v1/analytics/dashboards/:id
    */
-  async deleteDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async deleteDashboard(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
 
@@ -204,7 +204,7 @@ export class AnalyticsController {
    * Add widget to dashboard
    * POST /api/v1/analytics/dashboards/:id/widgets
    */
-  async addWidget(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async addWidget(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
       const { name, widget_type, chart_type, data_source, position } = req.validatedBody || req.body || {};
@@ -234,7 +234,7 @@ export class AnalyticsController {
    * Update widget
    * PUT /api/v1/analytics/dashboards/:id/widgets/:widgetId
    */
-  async updateWidget(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateWidget(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id, widgetId } = req.params;
       const updateData = req.validatedBody || req.body || {};
@@ -260,7 +260,7 @@ export class AnalyticsController {
    * Remove widget from dashboard
    * DELETE /api/v1/analytics/dashboards/:id/widgets/:widgetId
    */
-  async removeWidget(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async removeWidget(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id, widgetId } = req.params;
 
@@ -283,7 +283,7 @@ export class AnalyticsController {
    * Generate report
    * POST /api/v1/analytics/reports
    */
-  async generateReport(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async generateReport(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { name, report_type, format, date_range, filters, include_charts, include_summary } = req.validatedBody || req.body || {};
 
@@ -320,7 +320,7 @@ export class AnalyticsController {
    * List reports with pagination
    * GET /api/v1/analytics/reports
    */
-  async listReports(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async listReports(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -348,7 +348,7 @@ export class AnalyticsController {
    * Get report details
    * GET /api/v1/analytics/reports/:id
    */
-  async getReportDetails(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getReportDetails(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
 
@@ -377,7 +377,7 @@ export class AnalyticsController {
    * Download report (CSV/Excel/PDF)
    * GET /api/v1/analytics/reports/:id/download
    */
-  async downloadReport(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async downloadReport(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
       const format = (req.query.format as string) || 'PDF';
@@ -401,7 +401,7 @@ export class AnalyticsController {
    * Get metric snapshots
    * GET /api/v1/analytics/metrics/snapshots
    */
-  async getMetricSnapshots(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getMetricSnapshots(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -428,7 +428,7 @@ export class AnalyticsController {
    * Create metric snapshot
    * POST /api/v1/analytics/metrics/snapshots
    */
-  async createMetricSnapshot(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createMetricSnapshot(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { snapshot_name, metric_keys, date_range, dimensions, filters } = req.validatedBody || req.body || {};
 
@@ -459,7 +459,7 @@ export class AnalyticsController {
    * Get forecasts
    * GET /api/v1/analytics/forecasts
    */
-  async getForecasts(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getForecasts(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -486,7 +486,7 @@ export class AnalyticsController {
    * Generate forecast
    * POST /api/v1/analytics/forecasts/generate
    */
-  async generateForecast(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async generateForecast(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { forecast_name, metric_key, forecast_periods, period_type, confidence_level, method } = req.validatedBody || req.body || {};
 
@@ -518,7 +518,7 @@ export class AnalyticsController {
    * Get Sales KPI dashboard
    * GET /api/v1/analytics/kpi/sales
    */
-  async getSalesKPI(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getSalesKPI(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const start_date = req.query.start_date as string;
       const end_date = req.query.end_date as string;
@@ -558,7 +558,7 @@ export class AnalyticsController {
    * Get Inventory KPI dashboard
    * GET /api/v1/analytics/kpi/inventory
    */
-  async getInventoryKPI(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getInventoryKPI(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const start_date = req.query.start_date as string;
       const end_date = req.query.end_date as string;

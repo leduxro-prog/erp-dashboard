@@ -4,16 +4,13 @@ import { Response, NextFunction } from 'express';
 import { AssignConversation } from '../../application/use-cases/AssignConversation';
 
 // NEW USE CASES IMPORTS
-import { UpdateTemplate } from '../../application/use-cases/UpdateTemplate';
-import { DeleteTemplate } from '../../application/use-cases/DeleteTemplate';
-import { GetAgents } from '../../application/use-cases/GetAgents';
-import { SetAgentStatus } from '../../application/use-cases/SetAgentStatus';
-import { GetConnectionStatus } from '../../application/use-cases/GetConnectionStatus';
 import { ConnectWhatsApp } from '../../application/use-cases/ConnectWhatsApp';
 import { CreateTemplate } from '../../application/use-cases/CreateTemplate';
+import { DeleteTemplate } from '../../application/use-cases/DeleteTemplate';
 import { DisconnectWhatsApp } from '../../application/use-cases/DisconnectWhatsApp';
+import { GetAgents } from '../../application/use-cases/GetAgents';
+import { GetConnectionStatus } from '../../application/use-cases/GetConnectionStatus';
 import { GetConversation } from '../../application/use-cases/GetConversation';
-import { UpdateConversationTags } from '../../application/use-cases/UpdateConversationTags';
 import { GetStatistics } from '../../application/use-cases/GetStatistics';
 import { GetTags } from '../../application/use-cases/GetTags';
 import { ListConversations } from '../../application/use-cases/ListConversations';
@@ -25,6 +22,9 @@ import { ReconnectWhatsApp } from '../../application/use-cases/ReconnectWhatsApp
 import { ReopenConversation } from '../../application/use-cases/ReopenConversation';
 import { ResolveConversation } from '../../application/use-cases/ResolveConversation';
 import { SendMessage } from '../../application/use-cases/SendMessage';
+import { SetAgentStatus } from '../../application/use-cases/SetAgentStatus';
+import { UpdateConversationTags } from '../../application/use-cases/UpdateConversationTags';
+import { UpdateTemplate } from '../../application/use-cases/UpdateTemplate';
 
 /**
  * WhatsApp Controller

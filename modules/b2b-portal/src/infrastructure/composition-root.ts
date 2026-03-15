@@ -5,17 +5,16 @@ import { DataSource } from 'typeorm';
 
 
 
-import { B2BController } from '../api/controllers/B2BController';
-import { B2BOrderController } from '../api/controllers/B2BOrderController';
 import { B2BCartController } from '../api/controllers/B2BCartController';
 import { B2BCheckoutController } from '../api/controllers/B2BCheckoutController';
-import { B2BInvoiceController } from '../api/controllers/B2BInvoiceController';
+import { B2BController } from '../api/controllers/B2BController';
 import { B2BCustomerController } from '../api/controllers/B2BCustomerController';
-import { B2BPaymentController } from '../api/controllers/B2BPaymentController';
 import { B2BFavoritesController } from '../api/controllers/B2BFavoritesController';
-import { B2BPortalWebhookController } from '../api/controllers/B2BPortalWebhookController';
+import { B2BInvoiceController } from '../api/controllers/B2BInvoiceController';
+import { B2BOrderController } from '../api/controllers/B2BOrderController';
+import { B2BPaymentController } from '../api/controllers/B2BPaymentController';
 import { B2BPortalSyncController } from '../api/controllers/B2BPortalSyncController';
-
+import { B2BPortalWebhookController } from '../api/controllers/B2BPortalWebhookController';
 import { createB2BRoutes } from '../api/routes/b2b.routes';
 import {
   RegisterB2B,
@@ -37,6 +36,7 @@ import {
 import { CreditService } from '../domain/services/CreditService';
 import { CuiValidationService } from '../domain/services/CuiValidationService';
 import { TierCalculationService } from '../domain/services/TierCalculationService';
+
 import { NotificationServiceAdapter } from './adapters/NotificationServiceAdapter';
 import { OrderServiceAdapter } from './adapters/OrderServiceAdapter';
 import { TypeOrmB2BCustomerRepository } from './repositories/TypeOrmB2BCustomerRepository';

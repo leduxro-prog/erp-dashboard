@@ -24,6 +24,8 @@ import { AuditProductSeo } from '../application/use-cases/AuditProductSeo';
 import { GenerateProductSeo } from '../application/use-cases/GenerateProductSeo';
 import { IAuditRepository } from '../domain/repositories/IAuditRepository';
 import { ISeoMetadataRepository } from '../domain/repositories/ISeoMetadataRepository';
+import { ISitemapRepository } from '../domain/repositories/ISitemapRepository';
+import { IStructuredDataRepository } from '../domain/repositories/IStructuredDataRepository';
 import { MetaTagGenerator } from '../domain/services/MetaTagGenerator';
 import { SeoScoreCalculator } from '../domain/services/SeoScoreCalculator';
 import { SlugGenerator } from '../domain/services/SlugGenerator';
@@ -34,8 +36,6 @@ import { StructuredDataGenerator } from '../domain/services/StructuredDataGenera
 // Ports
 
 // Repositories (interfaces)
-import { ISitemapRepository } from '../domain/repositories/ISitemapRepository';
-import { IStructuredDataRepository } from '../domain/repositories/IStructuredDataRepository';
 
 // Infrastructure repositories (TypeORM implementations)
 import { TypeOrmAuditRepository } from './repositories/TypeOrmAuditRepository';
