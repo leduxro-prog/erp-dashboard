@@ -18,6 +18,25 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 
+interface TechnicalSpecs {
+  lumens?: number;
+  kelvin?: number;
+  cri?: number;
+  ipRating?: string;
+  wattage?: number;
+  voltage?: string;
+  mountingType?: string;
+  dimensions?: {
+    length?: number;
+    width?: number;
+    height?: number;
+    unit?: string;
+  };
+  ean?: string;
+  warrantyYears?: number;
+  lifespan?: number;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -31,19 +50,40 @@ interface Product {
   supplier_lead_time: number;
   rating?: number;
   category?: string;
+  technical?: TechnicalSpecs;
+  datasheet_url?: string;
 }
 
 const parseSpecs = (product: Product) => {
+  // Prefer structured data from backend if available
+  if (product.technical) {
+    const t = product.technical;
+    return {
+      watt: t.wattage?.toString() || '—',
+      kelvin: t.kelvin?.toString() || '—',
+      ip: t.ipRating || '—',
+      lumen: t.lumens?.toString() || '—',
+      cri: t.cri ? `>${t.cri}` : '>80',
+      voltage: t.voltage || '220-240V AC',
+      warranty: t.warrantyYears ? `${t.warrantyYears} ani` : '3 ani',
+    };
+  }
+
+  // Fallback to regex for legacy data
   const text = `${product.name} ${product.description}`.toLowerCase();
   const wattMatch = text.match(/(\d+)\s*w(?:att)?/i);
   const kelvinMatch = text.match(/(\d{4})\s*k/i);
   const ipMatch = text.match(/ip\s*(\d{2})/i);
   const lumenMatch = text.match(/(\d+)\s*(?:lm|lumen)/i);
+  
   return {
     watt: wattMatch ? wattMatch[1] : '—',
     kelvin: kelvinMatch ? kelvinMatch[1] : '—',
     ip: ipMatch ? `IP${ipMatch[1]}` : '—',
     lumen: lumenMatch ? lumenMatch[1] : '—',
+    cri: '>80',
+    voltage: '220-240V AC',
+    warranty: '3 ani',
   };
 };
 
@@ -154,16 +194,14 @@ export const B2BProductDetailPage: React.FC = () => {
   };
 
   const specRows = [
-    { label: 'Putere', value: `${specs.watt}W`, icon: '⚡' },
-    { label: 'Temperatură Culoare', value: `${specs.kelvin}K`, icon: '🌡' },
-    { label: 'Flux Luminos', value: `${specs.lumen} lm`, icon: '💡' },
+    { label: 'Putere', value: specs.watt !== '—' ? `${specs.watt}W` : '—', icon: '⚡' },
+    { label: 'Temperatură Culoare', value: specs.kelvin !== '—' ? `${specs.kelvin}K` : '—', icon: '🌡' },
+    { label: 'Flux Luminos', value: specs.lumen !== '—' ? `${specs.lumen} lm` : '—', icon: '💡' },
     { label: 'Grad Protecție', value: specs.ip, icon: '💧' },
-    { label: 'CRI', value: '>80', icon: '🎨' },
-    { label: 'Durată Viață', value: '30,000h', icon: '⏱' },
-    { label: 'Tensiune', value: '220-240V AC', icon: '🔌' },
-    { label: 'Material Corp', value: 'Aluminiu', icon: '🔧' },
-    { label: 'Garanție', value: '3 ani', icon: '🛡' },
-    { label: 'Certificări', value: 'CE, RoHS', icon: '✅' },
+    { label: 'CRI', value: specs.cri, icon: '🎨' },
+    { label: 'Tensiune', value: specs.voltage, icon: '🔌' },
+    { label: 'Garanție', value: specs.warranty, icon: '🛡' },
+    { label: 'EAN', value: product.technical?.ean || '—', icon: '🏷' },
   ];
 
   return (
@@ -251,6 +289,28 @@ export const B2BProductDetailPage: React.FC = () => {
                 <Share2 size={16} /> Distribuie
               </button>
               <button
+                onClick={async () => {
+                  if (product) {
+                    try {
+                      const response = await fetch(`/api/v1/b2b/products/${product.id}/datasheet`, {
+                        credentials: 'include',
+                      });
+                      if (!response.ok) throw new Error('Download failed');
+                      
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', `Fisa_Tehnica_${product.sku}.pdf`);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                    } catch (err) {
+                      alert('Nu s-a putut genera fișa tehnică.');
+                    }
+                  }
+                }}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.03)',

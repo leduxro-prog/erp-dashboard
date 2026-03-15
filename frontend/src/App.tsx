@@ -72,6 +72,9 @@ const B2BOrderDetailPage = lazy(() =>
 const B2BInvoicesPage = lazy(() =>
   import('./pages/b2b-portal/B2BInvoicesPage').then((m) => ({ default: m.B2BInvoicesPage })),
 );
+const B2BQuickOrderPage = lazy(() =>
+  import('./pages/b2b-portal/B2BBulkOrderPage').then((m) => ({ default: m.B2BQuickOrderPage })),
+);
 const B2BCartPage = lazy(() =>
   import('./pages/b2b-portal/B2BCartPage').then((m) => ({ default: m.B2BCartPage })),
 );
@@ -410,6 +413,14 @@ export default function App() {
             element={
               <Suspense fallback={<PageLoadingFallback />}>
                 <B2BOrderDetailPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="quick-order"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <B2BQuickOrderPage />
               </Suspense>
             }
           />

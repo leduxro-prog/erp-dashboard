@@ -7,9 +7,67 @@
 import { VAT_RATE } from '@shared/constants';
 import { Router, Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
+import { CatalogPdfGenerator } from '../../infrastructure/pdf/CatalogPdfGenerator';
 
 export function createB2BCatalogRouter(dataSource: DataSource): Router {
   const router = Router();
+  const pdfGenerator = new CatalogPdfGenerator();
+
+  // ==========================================
+  // GET /products/:id/datasheet - Product PDF
+  // ==========================================
+  router.get('/products/:id/datasheet', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const productId = parseInt(req.params.id);
+
+      // We need to fetch the full product data to generate the PDF
+      // Using a simplified version of the GET /products/:id logic
+      const query = `
+        SELECT 
+          p.*,
+          c.name as category_name,
+          ps.*
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN product_specifications ps ON ps.product_id = p.id
+        WHERE p.id = $1 AND p.is_active = true
+      `;
+
+      const results = await dataSource.query(query, [productId]);
+      if (results.length === 0) {
+        res.status(404).json({ success: false, error: 'Product not found' });
+        return;
+      }
+
+      const p = results[0];
+      const productData = {
+        name: p.name,
+        sku: p.sku,
+        description: p.description,
+        category: { name: p.category_name },
+        specs: {
+          wattage: p.wattage,
+          lumens: p.lumens,
+          color_temperature: p.color_temperature,
+          cri: p.cri,
+          ip_rating: p.ip_rating,
+          voltage: p.voltage_input,
+          dimmable: p.dimmable,
+          warranty_years: p.warranty_years,
+          brand: p.brand
+        }
+      };
+
+      const pdfBuffer = await pdfGenerator.generateProductDatasheet(productData);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=Fisa_Tehnica_${p.sku}.pdf`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating datasheet:', error);
+      next(error);
+    }
+  });
 
   // ==========================================
   // GET /products - List products with filters

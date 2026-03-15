@@ -67,6 +67,9 @@ export const B2BPortalLayout: React.FC = () => {
             <Link to="/b2b-portal/orders" className={navLinkClass('/b2b-portal/orders')}>
               {isRo ? 'Comenzi' : 'Orders'}
             </Link>
+            <Link to="/b2b-portal/quick-order" className={navLinkClass('/b2b-portal/quick-order')}>
+              {isRo ? 'Comandă Rapidă' : 'Quick Order'}
+            </Link>
             <Link to="/b2b-portal/cart" className={navLinkClass('/b2b-portal/cart')}>
               {isRo ? 'Coș' : 'Cart'}
             </Link>

@@ -1,34 +1,42 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Plus, Loader2 } from 'lucide-react';
 import { StrategicAnalysis } from '../components/CRM/StrategicAnalysis';
+import { crmService } from '@/services/crm.service';
 
 const CRMPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('customers');
 
-  const customers = [
-    { id: 1, name: 'John Smith', email: 'john@example.com', segment: 'VIP', ltv: 45000, last_order: '2024-01-08', status: 'Active' },
-    { id: 2, name: 'Jane Doe', email: 'jane@example.com', segment: 'Premium', ltv: 28500, last_order: '2024-01-05', status: 'Active' },
-    { id: 3, name: 'Bob Wilson', email: 'bob@example.com', segment: 'Standard', ltv: 12400, last_order: '2023-12-20', status: 'Inactive' },
-    { id: 4, name: 'Alice Brown', email: 'alice@example.com', segment: 'VIP', ltv: 52000, last_order: '2024-01-07', status: 'Active' },
-  ];
+  // Real data fetching
+  const { data: customersData, isLoading: customersLoading } = useQuery({
+    queryKey: ['crm', 'customers'],
+    queryFn: () => crmService.getCustomers({ page: 1, limit: 100 }),
+  });
 
-  const segments = [
-    { id: 1, name: 'VIP Customers', rules: 'LTV > 40000', members: 12, avg_value: 48500 },
-    { id: 2, name: 'Premium', rules: 'LTV 20000-40000', members: 28, avg_value: 31200 },
-    { id: 3, name: 'Standard', rules: 'LTV 5000-20000', members: 95, avg_value: 12800 },
-    { id: 4, name: 'At Risk', rules: 'No purchase > 6 months', members: 34, avg_value: 8500 },
-  ];
+  const { data: segments, isLoading: segmentsLoading } = useQuery({
+    queryKey: ['crm', 'segments'],
+    queryFn: () => crmService.getSegments(),
+  });
+
+  const { data: coupons, isLoading: couponsLoading } = useQuery({
+    queryKey: ['crm', 'coupons'],
+    queryFn: () => crmService.getCoupons(),
+  });
+
+  if (customersLoading || segmentsLoading || couponsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  const customers = customersData?.data || [];
 
   const loyaltyPrograms = [
     { id: 1, name: 'Gold Tier', benefits: '10% discount + free shipping', members: 45, active: true },
     { id: 2, name: 'Silver Tier', benefits: '5% discount', members: 120, active: true },
     { id: 3, name: 'Bronze Tier', benefits: 'Standard pricing', members: 250, active: true },
-  ];
-
-  const coupons = [
-    { code: 'SALE20', discount: '20%', type: 'Percentage', usage: 125, limit: 500, valid_until: '2024-02-28' },
-    { code: 'FREE50', discount: '50 RON', type: 'Fixed', usage: 45, limit: 100, valid_until: '2024-01-31' },
-    { code: 'WELCOME10', discount: '10%', type: 'Percentage', usage: 234, limit: 1000, valid_until: '2024-12-31' },
   ];
 
   const communications = [
@@ -46,7 +54,7 @@ const CRMPage: React.FC = () => {
           <Plus size={18} />
           Campanie Noua
         </button>
-        <StrategicAnalysis clients={customers} />
+        <StrategicAnalysis clients={customers as any} />
       </div>
 
       {/* Tabs */}
@@ -91,12 +99,14 @@ const CRMPage: React.FC = () => {
               <tbody>
                 {customers.map(cust => (
                   <tr key={cust.id}>
-                    <td className="font-bold text-slate-900">{cust.name}</td>
+                    <td className="font-bold text-slate-900">
+                      {cust.firstName || cust.companyName} {cust.lastName || ''}
+                    </td>
                     <td className="text-sm text-slate-600">{cust.email}</td>
-                    <td><span className="badge-success">{cust.segment}</span></td>
-                    <td className="font-bold">{cust.ltv.toLocaleString()} RON</td>
-                    <td className="text-sm text-slate-600">{cust.last_order}</td>
-                    <td><span className={`${cust.status === 'Active' ? 'badge-success' : 'badge-warning'}`}>{cust.status}</span></td>
+                    <td><span className="badge-success">{cust.segments?.[0] || 'Standard'}</span></td>
+                    <td className="font-bold">{(cust.totalPurchases || 0).toLocaleString()} RON</td>
+                    <td className="text-sm text-slate-600">{cust.lastPurchaseDate ? new Date(cust.lastPurchaseDate).toLocaleDateString() : '-'}</td>
+                    <td><span className="badge-success">Activ</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -108,16 +118,16 @@ const CRMPage: React.FC = () => {
       {/* Segments Tab */}
       {activeTab === 'segments' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {segments.map(seg => (
+          {segments?.map(seg => (
             <div key={seg.id} className="card">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="font-bold text-slate-900">{seg.name}</h3>
-                <span className="badge-success">{seg.members}</span>
+                <span className="badge-success">{seg.memberCount}</span>
               </div>
-              <p className="text-sm text-slate-600 mb-4">{seg.rules}</p>
+              <p className="text-sm text-slate-600 mb-4">{seg.description}</p>
               <div className="flex justify-between items-center pt-4 border-t">
-                <span className="text-slate-600 text-sm">Avg Value</span>
-                <span className="font-bold text-slate-900">{seg.avg_value.toLocaleString()} RON</span>
+                <span className="text-slate-600 text-sm">Target Value</span>
+                <span className="font-bold text-slate-900">{(seg.criteria?.minSpent || 0).toLocaleString()} RON</span>
               </div>
             </div>
           ))}
@@ -160,14 +170,14 @@ const CRMPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {coupons.map(coup => (
+                {coupons?.map(coup => (
                   <tr key={coup.code}>
                     <td className="font-bold font-mono text-slate-900">{coup.code}</td>
-                    <td className="font-bold">{coup.discount}</td>
+                    <td className="font-bold">{coup.value}{coup.type === 'percentage' ? '%' : ' RON'}</td>
                     <td className="text-sm text-slate-600">{coup.type}</td>
-                    <td className="font-bold">{coup.usage}</td>
-                    <td className="font-bold">{coup.limit}</td>
-                    <td className="text-sm text-slate-600">{coup.valid_until}</td>
+                    <td className="font-bold">{coup.currentRedemptions}</td>
+                    <td className="font-bold">{coup.maxRedemptions || '∞'}</td>
+                    <td className="text-sm text-slate-600">{new Date(coup.expiresAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>

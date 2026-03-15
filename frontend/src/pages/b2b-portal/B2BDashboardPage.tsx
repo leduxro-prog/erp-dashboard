@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Building2, CreditCard, ShoppingBag, TrendingUp, Package, Clock,
   Bell, ChevronRight, ShoppingCart, FileText, Headphones, Star,
@@ -9,16 +10,6 @@ import { useB2BAuthStore } from '../../stores/b2b/b2b-auth.store';
 import { b2bApi } from '../../services/b2b-api';
 import { CreditWidget } from '../../components/b2b/CreditWidget';
 import { ORDER_STATUS_CONFIG } from '../../constants/b2b-portal';
-
-interface DashboardStats {
-  totalOrders: number;
-  processingOrders: number;
-  totalPurchased: number;
-  totalSavings: number;
-  creditAvailable: number;
-  creditUsed: number;
-  lastOrderDate: string | null;
-}
 
 interface Notification {
   id: string;
@@ -52,67 +43,40 @@ const tierConfig: Record<string, { color: string; bg: string; border: string; la
 export const B2BDashboardPage: React.FC = () => {
   const { customer } = useB2BAuthStore();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
-  const [newProducts, setNewProducts] = useState<Product[]>([]);
-  const [promoProducts, setPromoProducts] = useState<Product[]>([]);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  // Optimized data fetching with React Query
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['b2b', 'stats'],
+    queryFn: () => b2bApi.getDashboardStats(),
+  });
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      const [
-        statsData, 
-        ordersData, 
-        notificationsData, 
-        favoritesData, 
-        newData, 
-        promoData
-      ] = await Promise.allSettled([
-        b2bApi.getDashboardStats(),
-        b2bApi.getOrders({ page: 1, limit: 5 }),
-        b2bApi.getNotifications(),
-        b2bApi.getFavoriteProducts(),
-        b2bApi.getNewProducts(),
-        b2bApi.getPromoProducts()
-      ]);
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
+    queryKey: ['b2b', 'orders', 'recent'],
+    queryFn: () => b2bApi.getOrders({ page: 1, limit: 5 }),
+  });
 
-      if (statsData.status === 'fulfilled') {
-        setStats(statsData.value);
-      }
-      
-      if (ordersData.status === 'fulfilled') {
-        setRecentOrders(ordersData.value.orders || []);
-      }
+  const { data: notifications, isLoading: notificationsLoading } = useQuery<Notification[]>({
+    queryKey: ['b2b', 'notifications'],
+    queryFn: () => b2bApi.getNotifications(),
+  });
 
-      if (notificationsData.status === 'fulfilled') {
-        setNotifications(notificationsData.value || []);
-      }
+  const { data: favoriteProducts, isLoading: favoritesLoading } = useQuery<Product[]>({
+    queryKey: ['b2b', 'products', 'favorites'],
+    queryFn: () => b2bApi.getFavoriteProducts(),
+  });
 
-      if (favoritesData.status === 'fulfilled') {
-        setFavoriteProducts(favoritesData.value || []);
-      }
+  const { data: newProducts, isLoading: newLoading } = useQuery<Product[]>({
+    queryKey: ['b2b', 'products', 'new'],
+    queryFn: () => b2bApi.getNewProducts(),
+  });
 
-      if (newData.status === 'fulfilled') {
-        setNewProducts(newData.value || []);
-      }
+  const { data: promoProducts, isLoading: promoLoading } = useQuery<Product[]>({
+    queryKey: ['b2b', 'products', 'promo'],
+    queryFn: () => b2bApi.getPromoProducts(),
+  });
 
-      if (promoData.status === 'fulfilled') {
-        setPromoProducts(promoData.value || []);
-      }
-
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isLoading = statsLoading || ordersLoading || notificationsLoading || 
+                    favoritesLoading || newLoading || promoLoading;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ro-RO', {
@@ -149,13 +113,15 @@ export const B2BDashboardPage: React.FC = () => {
     }
   };
 
-  if (loading && !stats) {
+  if (isLoading && !stats) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
+
+  const recentOrders = ordersData?.orders || [];
 
   return (
     <div className="space-y-6">
@@ -298,7 +264,7 @@ export const B2BDashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {recentOrders.slice(0, 5).map((order) => {
+                  {recentOrders.slice(0, 5).map((order: any) => {
                     const status = order.status?.toLowerCase();
                     const config = ORDER_STATUS_CONFIG[status] || { label: order.status, bg: 'bg-gray-100', color: 'text-gray-800' };
                     return (
@@ -339,14 +305,14 @@ export const B2BDashboardPage: React.FC = () => {
               <Bell className="w-5 h-5 text-gray-600" />
               Notificări
             </h2>
-            {notifications.filter(n => !n.read).length > 0 && (
+            {notifications && notifications.filter(n => !n.read).length > 0 && (
               <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">
                 {notifications.filter(n => !n.read).length} noi
               </span>
             )}
           </div>
           <div className="divide-y divide-gray-100 max-h-[320px] overflow-y-auto">
-            {notifications.length === 0 ? (
+            {!notifications || notifications.length === 0 ? (
               <div className="px-5 py-12 text-center text-gray-500 text-sm">
                 Nu aveți notificări noi
               </div>
@@ -384,7 +350,7 @@ export const B2BDashboardPage: React.FC = () => {
             </h2>
           </div>
           <div className="p-4 space-y-3">
-            {favoriteProducts.length === 0 ? (
+            {!favoriteProducts || favoriteProducts.length === 0 ? (
               <p className="text-center py-8 text-gray-500 text-sm">Nu aveți produse favorite</p>
             ) : (
               favoriteProducts.map((product) => (
@@ -423,7 +389,7 @@ export const B2BDashboardPage: React.FC = () => {
             </h2>
           </div>
           <div className="p-4 space-y-3">
-            {newProducts.length === 0 ? (
+            {!newProducts || newProducts.length === 0 ? (
               <p className="text-center py-8 text-gray-500 text-sm">Nu există produse noi</p>
             ) : (
               newProducts.map((product) => (
@@ -462,7 +428,7 @@ export const B2BDashboardPage: React.FC = () => {
             </h2>
           </div>
           <div className="p-4 space-y-3">
-            {promoProducts.length === 0 ? (
+            {!promoProducts || promoProducts.length === 0 ? (
               <p className="text-center py-8 text-gray-500 text-sm">Nu există promoții active</p>
             ) : (
               promoProducts.map((product) => (
