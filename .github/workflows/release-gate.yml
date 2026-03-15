@@ -39,12 +39,6 @@ on:
         type: boolean
         default: false
 
-  pull_request:
-    types: [closed]
-    branches:
-      - main
-      - develop
-
 env:
   NODE_VERSION: '20.x'
   POSTGRES_VERSION: '15-alpine'
