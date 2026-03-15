@@ -1,8 +1,8 @@
-import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import { Request, Response, Router } from 'express';
 
-import { createModuleLogger } from '../../../shared/utils/logger';
+import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 
+import { createModuleLogger } from '../../../shared/utils/logger';
 import { AiService } from './AiService';
 
 const AI_ALLOWED_ROLES = ['admin', 'sales', 'finance', 'support', 'supplier_manager', 'warehouse'];
@@ -16,7 +16,7 @@ export class AiController {
     this.initializeRoutes();
   }
 
-  private initializeRoutes() {
+  private initializeRoutes(): void {
     this.router.use(authenticate);
     this.router.post('/chat', requireRole(AI_ALLOWED_ROLES), this.chat.bind(this));
     this.router.post('/analyze-crm', requireRole(AI_ALLOWED_ROLES), this.analyzeCrm.bind(this));
@@ -26,7 +26,7 @@ export class AiController {
     return this.router;
   }
 
-  private async chat(req: Request, res: Response) {
+  private async chat(req: Request, res: Response): Promise<void> {
     try {
       if (!this.aiService) {
         res.status(503).json({ error: 'AI service is not configured' });
@@ -38,7 +38,7 @@ export class AiController {
         res.status(400).json({ error: 'Message is required' });
         return;
       }
-      const response = await this.aiService.chat(message, context || '');
+      const response = await this.aiService.chat(String(message), String(context || ''));
       res.json({ response });
     } catch (error) {
       this.logger.error('Error processing chat request', error);
@@ -46,7 +46,7 @@ export class AiController {
     }
   }
 
-  private async analyzeCrm(req: Request, res: Response) {
+  private async analyzeCrm(req: Request, res: Response): Promise<void> {
     try {
       if (!this.aiService) {
         res.status(503).json({ error: 'AI service is not configured' });

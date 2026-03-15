@@ -1,11 +1,11 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
 import { createModuleLogger } from '../../../shared/utils/logger';
 
 export class AiService {
   private logger = createModuleLogger('AiService');
   private genAI: GoogleGenerativeAI;
-  private model: any;
+  private model: GenerativeModel;
 
   constructor(apiKey: string) {
     if (!apiKey) {
@@ -34,7 +34,7 @@ export class AiService {
       `;
 
       const result = await this.model.generateContent(prompt);
-      const response = await result.response;
+      const response = result.response;
       return response.text();
     } catch (error) {
       this.logger.error('Error generating chat response', error);
@@ -42,7 +42,7 @@ export class AiService {
     }
   }
 
-  async analyzeCrmData(clients: any[]): Promise<string[]> {
+  async analyzeCrmData(clients: Record<string, unknown>[]): Promise<string[]> {
     try {
       this.logger.info(`Analyzing CRM data for ${clients.length} clients`);
 
@@ -58,7 +58,7 @@ export class AiService {
       `;
 
       const result = await this.model.generateContent(prompt);
-      const response = await result.response;
+      const response = result.response;
       const text = response.text();
 
       return text
@@ -71,7 +71,7 @@ export class AiService {
     }
   }
 
-  private sanitizeClientForPrompt(client: Record<string, any>): Record<string, any> {
+  private sanitizeClientForPrompt(client: Record<string, unknown>): Record<string, unknown> {
     return {
       id: client?.id,
       segment: client?.segment,
