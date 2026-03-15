@@ -28,7 +28,7 @@ describe('SearchIndexModel', () => {
     expect(technical.properties.lumens).toBeTruthy();
     expect(technical.properties.kelvin).toBeTruthy();
     expect(technical.properties.cri).toBeTruthy();
-    expect(technical.properties.ip).toBeTruthy();
+    expect(technical.properties.ipRating).toBeTruthy();
     expect(technical.properties.wattage).toBeTruthy();
     expect(technical.properties.voltage).toBeTruthy();
     expect(technical.properties.mountingType).toBeTruthy();
@@ -64,14 +64,17 @@ describe('SearchIndexModel', () => {
       newIndex: 'catalog_products_v202603141215',
     });
 
-    expect(plan.actions).toHaveLength(3);
+    expect(plan.actions).toHaveLength(4);
     expect(plan.actions[0]).toEqual({
       remove: { index: 'catalog_products_v202603141010', alias: 'catalog_products_read' },
     });
     expect(plan.actions[1]).toEqual({
-      add: { index: 'catalog_products_v202603141215', alias: 'catalog_products_read' },
+      remove: { index: 'catalog_products_v202603141010', alias: 'catalog_products_write' },
     });
     expect(plan.actions[2]).toEqual({
+      add: { index: 'catalog_products_v202603141215', alias: 'catalog_products_read' },
+    });
+    expect(plan.actions[3]).toEqual({
       add: { index: 'catalog_products_v202603141215', alias: 'catalog_products_write' },
     });
   });

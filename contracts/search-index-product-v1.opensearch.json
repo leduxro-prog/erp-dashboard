@@ -33,7 +33,7 @@
           "lumens": { "type": "float" },
           "kelvin": { "type": "integer" },
           "cri": { "type": "integer" },
-          "ip": { "type": "keyword" },
+          "ipRating": { "type": "keyword" },
           "wattage": { "type": "float" },
           "voltage": { "type": "keyword" },
           "mountingType": { "type": "keyword" },

@@ -157,15 +157,13 @@ export function deriveTriggers(changedPaths: string[]): ProjectionTrigger[] {
 
   for (const path of paths) {
     const normalized = String(path ?? '').toLowerCase();
-    if (
-      normalized.startsWith('technical.') ||
-      normalized.startsWith('commercial.') ||
-      normalized.startsWith('visibility.')
-    ) {
-      out.add('search-reindex');
-    }
+    
     if (normalized.startsWith('media.') || normalized.startsWith('documents.')) {
       out.add('media-document-refresh');
+    } else {
+      // Anything that is not media or documents (e.g. sku, technical, commercial, visibility, lifecycleState)
+      // implies a change to the core searchable product data.
+      out.add('search-reindex');
     }
   }
 

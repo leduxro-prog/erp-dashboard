@@ -134,6 +134,11 @@ describe('PublishedCatalogProjection', () => {
     expect(deriveTriggers([])).toEqual(['search-reindex']);
   });
 
+  it('deriveTriggers emits search reindex for root level fields like sku', () => {
+    const triggers = deriveTriggers(['sku', 'lifecycleState']);
+    expect(triggers).toEqual(['search-reindex']);
+  });
+
   it('full upsert replaces projection entirely and sets sourceVersion', () => {
     const current = {
       productId: 'p-1',

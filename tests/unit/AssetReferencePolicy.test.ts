@@ -140,4 +140,20 @@ describe('AssetReferencePolicy', () => {
       }),
     ).toThrow('Asset origin must be erp, supplier, or derived');
   });
+
+  it('validateAssetRef rejects public access for restricted asset classes', () => {
+    expect(() =>
+      validateAssetRef({
+        assetClass: 'supplier-asset',
+        url: 'https://cdn.ledux.ro/suppliers/s-1/documents/private.pdf',
+        checksum: 'abc123def456',
+        mimeType: 'application/pdf',
+        sizeBytes: 123456,
+        version: 2,
+        access: 'public',
+        origin: 'supplier',
+        updatedAt: '2026-03-14T12:00:00Z',
+      }),
+    ).toThrow('Asset class supplier-asset requires signed access');
+  });
 });

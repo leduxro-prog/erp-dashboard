@@ -37,7 +37,7 @@ export function evaluateErpSyncReleaseGate(
   const intent = String(environmentIntent ?? 'staging')
     .trim()
     .toLowerCase();
-  const isStrict = intent === 'production' || intent === 'rehearsal';
+  const isStrict = intent !== 'staging' && intent !== 'local';
   const checks: GateCheck[] = [];
 
   const hasToken = normalize(env.ERP_SYNC_INGEST_TOKEN).length > 0;

@@ -74,6 +74,13 @@ export function validateAssetRef(asset: unknown): boolean {
     throw new Error('Asset access must be public or signed');
   }
 
+  if (
+    shouldUseSignedAccess(String(record['assetClass'])) &&
+    String(record['access']) !== 'signed'
+  ) {
+    throw new Error(`Asset class ${String(record['assetClass'])} requires signed access`);
+  }
+
   if (!['erp', 'supplier', 'derived'].includes(String(record['origin']))) {
     throw new Error('Asset origin must be erp, supplier, or derived');
   }

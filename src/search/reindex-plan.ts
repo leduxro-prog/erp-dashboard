@@ -36,6 +36,7 @@ export function buildAliasSwapPlan(params: AliasSwapParams): AliasPlan {
 
   if (oldIndex) {
     actions.push({ remove: { index: oldIndex, alias: aliasRead } });
+    actions.push({ remove: { index: oldIndex, alias: aliasWrite } });
   }
   actions.push({ add: { index: newIndex, alias: aliasRead } });
   actions.push({ add: { index: newIndex, alias: aliasWrite } });

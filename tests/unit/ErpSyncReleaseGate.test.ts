@@ -126,4 +126,18 @@ describe('ErpSyncReleaseGate', () => {
 
     expect(blocked.status).toBe('blocked');
   });
+
+  it('unknown environment intent defaults to strict hardening (fails fast)', () => {
+    const blocked = evaluateErpSyncReleaseGate(
+      {
+        ERP_SYNC_INGEST_TOKEN: 'token-123',
+        ERP_SYNC_REQUIRE_SOURCE_ALLOWLIST: 'true',
+        ERP_SYNC_REQUIRE_HMAC_SIGNATURE: 'true',
+      },
+      'prod', // unknown, mistyped production
+    );
+
+    expect(blocked.status).toBe('blocked');
+    expect(blocked.violations).toContain('ERP_SYNC_HMAC_SECRET missing or invalid');
+  });
 });
