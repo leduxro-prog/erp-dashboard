@@ -1,5 +1,7 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 
+import { resolveDatabaseSsl } from './config/database-ssl';
+
 /**
  * TypeORM DataSource Configuration
  * Configures PostgreSQL connection with enterprise-grade connection pooling
@@ -21,9 +23,10 @@ const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USERNAME || 'postgres',
+  username: process.env.DB_USERNAME || process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'cypher_erp',
+  ssl: resolveDatabaseSsl(),
   synchronize: false,
   logging: process.env.DB_LOGGING === 'true',
   logger: 'advanced-console',

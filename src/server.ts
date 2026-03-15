@@ -9,6 +9,7 @@ import http from 'http';
 import path from 'path';
 import { AppDataSource } from './data-source';
 import { validateEnv, ConfigSchema } from './config/env.validation';
+import { buildHostTopology } from './config/host-topology';
 import {
   globalApiLimiter,
   b2bApiLimiter,
@@ -131,39 +132,12 @@ async function bootstrap(): Promise<void> {
     bootstrapLogger.info('Event bus initialized');
 
     // Step 5: Configure CORS
-    const configuredCorsOrigins = config.CORS_ORIGINS?.trim();
+    const hostTopology = buildHostTopology(config);
+    const allowedOrigins = hostTopology.allowedCorsOrigins;
 
-    const defaultOriginsByEnv =
-      config.NODE_ENV === 'production'
-        ? [
-            process.env.FRONTEND_URL,
-            process.env.PUBLIC_BASE_URL,
-            'https://ledux.ro',
-            'https://www.ledux.ro',
-            'https://erp.ledux.ro',
-            'https://api.ledux.ro',
-          ]
-        : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'];
-
-    const configuredOrigins = configuredCorsOrigins ? configuredCorsOrigins.split(',') : [];
-    const defaultOrigins = defaultOriginsByEnv.filter((origin): origin is string =>
-      Boolean(origin),
-    );
-
-    const originPool =
-      config.NODE_ENV === 'production'
-        ? [...configuredOrigins, ...defaultOrigins]
-        : configuredOrigins.length > 0
-          ? configuredOrigins
-          : defaultOrigins;
-
-    const allowedOrigins = Array.from(
-      new Set(originPool.map((origin) => origin.trim()).filter(Boolean)),
-    );
-
-    if (config.NODE_ENV === 'production' && configuredOrigins.length === 0) {
+    if (hostTopology.deploymentIntent !== 'local' && !config.CORS_ORIGINS?.trim()) {
       bootstrapLogger.warn(
-        'CORS_ORIGINS is not configured; using production-safe domain defaults.',
+        'CORS_ORIGINS is not configured; using explicit host topology origins.',
       );
     }
 
