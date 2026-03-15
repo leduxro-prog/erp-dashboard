@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledux/contracts/catalog-publication-event-v1.schema.json",
+  "title": "CatalogPublicationEventV1",
+  "type": "object",
+  "required": [
+    "eventVersion",
+    "eventType",
+    "idempotencyKey",
+    "occurredAt",
+    "source",
+    "payload"
+  ],
+  "properties": {
+    "eventVersion": { "const": "1.0" },
+    "eventType": {
+      "enum": ["catalog.product.upsert-partial", "catalog.product.upsert-full", "catalog.product.withdraw"]
+    },
+    "idempotencyKey": { "type": "string", "minLength": 8 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "required": ["system", "sourceVersion"],
+      "properties": {
+        "system": { "const": "erp" },
+        "sourceVersion": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "productId",
+        "sku",
+        "erpProductId",
+        "projectionVersion",
+        "lifecycleState",
+        "visibility",
+        "technical",
+        "media",
+        "documents"
+      ],
+      "properties": {
+        "productId": { "type": "string", "minLength": 1 },
+        "sku": { "type": "string", "minLength": 1 },
+        "erpProductId": { "type": "string", "minLength": 1 },
+        "projectionVersion": { "type": "integer", "minimum": 1 },
+        "lifecycleState": { "enum": ["draft", "published", "withdrawn"] },
+        "visibility": {
+          "type": "object",
+          "required": ["retail", "b2b"],
+          "properties": {
+            "retail": { "type": "boolean" },
+            "b2b": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "publishState": {
+          "type": "object",
+          "properties": {
+            "retail": { "type": "boolean" },
+            "b2b": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "commercial": {
+          "type": "object",
+          "properties": {
+            "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+            "listPrice": { "type": "number", "minimum": 0 },
+            "promoPrice": { "type": "number", "minimum": 0 },
+            "priceRulesVersion": { "type": "integer", "minimum": 0 },
+            "stock": {
+              "type": "object",
+              "properties": {
+                "available": { "type": "integer", "minimum": 0 },
+                "backorderable": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "technical": {
+          "type": "object",
+          "properties": {
+            "lumens": { "type": "number" },
+            "kelvin": { "type": "integer" },
+            "cri": { "type": "integer" },
+            "ipRating": { "type": "string" },
+            "wattage": { "type": "number" },
+            "voltage": { "type": "string" },
+            "mountingType": { "type": "string" },
+            "dimensions": {
+              "type": "object",
+              "properties": {
+                "length": { "type": "number" },
+                "width": { "type": "number" },
+                "height": { "type": "number" },
+                "unit": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "ean": { "type": "string" },
+            "supplierCodes": { "type": "array", "items": { "type": "string" } },
+            "manufacturerCodes": { "type": "array", "items": { "type": "string" } },
+            "complianceFlags": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "media": {
+          "type": "object",
+          "required": ["primaryImage", "gallery"],
+          "properties": {
+            "primaryImage": {
+              "type": ["object", "null"],
+              "properties": {
+                "url": { "type": "string" },
+                "checksum": { "type": "string" },
+                "mimeType": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "gallery": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string" },
+                  "checksum": { "type": "string" },
+                  "mimeType": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "documents": {
+          "type": "object",
+          "required": ["datasheets", "certificates", "installation", "warranty", "compliance"],
+          "properties": {
+            "datasheets": { "type": "array", "items": { "$ref": "#/$defs/documentRef" } },
+            "certificates": { "type": "array", "items": { "$ref": "#/$defs/documentRef" } },
+            "installation": { "type": "array", "items": { "$ref": "#/$defs/documentRef" } },
+            "warranty": { "type": "array", "items": { "$ref": "#/$defs/documentRef" } },
+            "compliance": { "type": "array", "items": { "$ref": "#/$defs/documentRef" } }
+          },
+          "additionalProperties": false
+        },
+        "assortment": {
+          "type": "object",
+          "properties": {
+            "retailCollections": { "type": "array", "items": { "type": "string" } },
+            "b2bSegments": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "changedPaths": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "documentRef": {
+      "type": "object",
+      "required": ["url", "documentType"],
+      "properties": {
+        "url": { "type": "string" },
+        "documentType": { "type": "string" },
+        "checksum": { "type": "string" },
+        "mimeType": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
