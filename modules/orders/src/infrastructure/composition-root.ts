@@ -52,6 +52,7 @@ export function createOrdersRouter(dataSource: DataSource, redisClient?: Redis):
     orderRepository,
     orderMapper,
     orderCache,
+    inventoryRepository,
   );
 
   const offlineController = new OfflineController(offlineService);

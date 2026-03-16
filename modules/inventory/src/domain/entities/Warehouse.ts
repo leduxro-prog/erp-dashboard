@@ -4,8 +4,11 @@ export interface WarehouseProps {
   id: string;
   name: string;
   code: WarehouseCode;
-  priority: 1 | 2 | 3;
+  priority: number;
   isActive: boolean;
+  city?: string;
+  region?: string;
+  postalCode?: string;
   smartBillId?: string;
 }
 
@@ -13,8 +16,11 @@ export class Warehouse {
   private readonly id: string;
   private readonly name: string;
   private readonly code: WarehouseCode;
-  private readonly priority: 1 | 2 | 3;
+  private readonly priority: number;
   private isActive: boolean;
+  private readonly city?: string;
+  private readonly region?: string;
+  private readonly postalCode?: string;
   private readonly smartBillId?: string;
 
   constructor(props: WarehouseProps) {
@@ -26,15 +32,14 @@ export class Warehouse {
       throw new Error('Warehouse name is required');
     }
 
-    if (![1, 2, 3].includes(props.priority)) {
-      throw new Error('Priority must be 1, 2, or 3');
-    }
-
     this.id = props.id;
     this.name = props.name;
     this.code = props.code;
     this.priority = props.priority;
     this.isActive = props.isActive;
+    this.city = props.city;
+    this.region = props.region;
+    this.postalCode = props.postalCode;
     this.smartBillId = props.smartBillId;
   }
 
@@ -50,12 +55,24 @@ export class Warehouse {
     return this.code;
   }
 
-  getPriority(): 1 | 2 | 3 {
+  getPriority(): number {
     return this.priority;
   }
 
   getIsActive(): boolean {
     return this.isActive;
+  }
+
+  getCity(): string | undefined {
+    return this.city;
+  }
+
+  getRegion(): string | undefined {
+    return this.region;
+  }
+
+  getPostalCode(): string | undefined {
+    return this.postalCode;
   }
 
   getSmartBillId(): string | undefined {
@@ -74,26 +91,32 @@ export class Warehouse {
     return [
       new Warehouse({
         id: 'wh-magazin-001',
-        name: 'Magazin',
+        name: 'Magazin Central',
         code: 'magazin',
         priority: 1,
         isActive: true,
+        city: 'Bucuresti',
+        region: 'B',
         smartBillId: 'sb-magazin-001',
       }),
       new Warehouse({
         id: 'wh-ddepozit-002',
-        name: 'ddepozit',
+        name: 'Depozit Voluntari',
         code: 'ddepozit',
         priority: 2,
         isActive: true,
+        city: 'Voluntari',
+        region: 'IF',
         smartBillId: 'sb-ddepozit-002',
       }),
       new Warehouse({
         id: 'wh-cantitativ-003',
-        name: 'cantitativ',
+        name: 'Cantitativ',
         code: 'cantitativ',
         priority: 3,
         isActive: true,
+        city: 'Bucuresti',
+        region: 'B',
         smartBillId: 'sb-cantitativ-003',
       }),
     ];

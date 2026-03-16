@@ -2,6 +2,7 @@ import { createModuleLogger } from '@shared/utils/logger';
 import { DataSource, In, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
+import { GeographicRoutingService } from '../../domain/services/GeographicRoutingService';
 import {
   IInventoryRepository,
   StockLevel,
@@ -16,7 +17,8 @@ import { StockItemEntity } from '../entities/StockItemEntity';
 import { StockMovementEntity, StockMovementType, ReferenceType } from '../entities/StockMovementEntity';
 import { StockReservationEntity, ReservationStatus } from '../entities/StockReservationEntity';
 import { WarehouseEntity } from '../entities/WarehouseEntity';
-
+import { Warehouse as WarehouseDomain } from '../../domain/entities/Warehouse';
+import { StockItem as StockItemDomain } from '../../domain/entities/StockItem';
 
 export class TypeOrmInventoryRepository implements IInventoryRepository {
   private stockItemRepo: Repository<StockItemEntity>;
@@ -25,6 +27,7 @@ export class TypeOrmInventoryRepository implements IInventoryRepository {
   private reservationRepo: Repository<StockReservationEntity>;
   private warehouseRepo: Repository<WarehouseEntity>;
   private logger = createModuleLogger('inventory');
+  private routingService: GeographicRoutingService;
 
   constructor(
     private dataSource: DataSource,
@@ -35,6 +38,44 @@ export class TypeOrmInventoryRepository implements IInventoryRepository {
     this.alertRepo = dataSource.getRepository(LowStockAlertEntity);
     this.reservationRepo = dataSource.getRepository(StockReservationEntity);
     this.warehouseRepo = dataSource.getRepository(WarehouseEntity);
+    this.routingService = new GeographicRoutingService();
+  }
+
+  async findBestWarehouse(
+    productId: string,
+    location: { city?: string; region?: string; postalCode?: string },
+  ): Promise<string> {
+    const [warehouses, stockItems] = await Promise.all([
+      this.warehouseRepo.find({ where: { is_active: true } }),
+      this.stockItemRepo.find({ where: { product_id: productId } }),
+    ]);
+
+    const domainWarehouses = warehouses.map(
+      (w) =>
+        new WarehouseDomain({
+          id: w.id,
+          name: w.name,
+          code: w.code as any,
+          priority: w.priority,
+          isActive: w.is_active,
+          city: w.city || undefined,
+          region: w.region || undefined,
+          postalCode: w.postal_code || undefined,
+        }),
+    );
+
+    const domainStock = stockItems.map(
+      (si) =>
+        new StockItemDomain(
+          si.product_id,
+          si.warehouse_id,
+          si.quantity,
+          si.reserved_quantity,
+          si.minimum_threshold,
+        ),
+    );
+
+    return this.routingService.findBestWarehouse(location, domainWarehouses, domainStock);
   }
 
   async getStockLevel(productId: string, warehouseId?: string): Promise<StockLevel[]> {

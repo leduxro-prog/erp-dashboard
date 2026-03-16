@@ -63,6 +63,10 @@ export interface Warehouse {
 
 export interface IInventoryRepository {
   getWarehouses(): Promise<Warehouse[]>;
+  findBestWarehouse(
+    productId: string,
+    location: { city?: string; region?: string; postalCode?: string },
+  ): Promise<string>;
   getStockLevel(productId: string, warehouseId?: string): Promise<StockLevel[]>;
   getStockLevelBatch(productIds: string[]): Promise<Map<string, StockLevel[]>>;
   recordMovement(
