@@ -4,16 +4,66 @@
  * Supports: product listing, filtering, search, stock visibility, pricing tiers
  */
 
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Router, Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
+import multer from 'multer';
 
 import { VAT_RATE } from '../../../../../shared/constants/pricing-tiers';
 import { CatalogPdfGenerator } from '../../infrastructure/pdf/CatalogPdfGenerator';
 import { TierCalculationService } from '../../domain/services/TierCalculationService';
 
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
 export function createB2BCatalogRouter(dataSource: DataSource): Router {
   const router = Router();
   const pdfGenerator = new CatalogPdfGenerator();
+
+  // ==========================================
+  // POST /search/visual - Search by Photo (AI)
+  // ==========================================
+  router.post('/search/visual', upload.single('image'), async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ success: false, error: 'No image provided' });
+        return;
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        res.status(503).json({ success: false, error: 'Visual search not configured' });
+        return;
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const prompt = "Identify this lighting or electrical product. Provide exactly 3-5 technical keywords in Romanian that would help find it in an ERP catalog. Respond ONLY with the keywords separated by spaces.";
+      
+      const imageParts = [
+        {
+          inlineData: {
+            data: req.file.buffer.toString("base64"),
+            mimeType: req.file.mimetype
+          }
+        }
+      ];
+
+      const result = await model.generateContent([prompt, ...imageParts]);
+      const keywords = result.response.text().trim();
+
+      res.json({
+        success: true,
+        data: {
+          keywords,
+          suggested_search: keywords
+        }
+      });
+    } catch (error) {
+      console.error('Visual search error:', error);
+      next(error);
+    }
+  });
 
   // ==========================================
   // GET /products/:id/pricing - Tiered pricing
@@ -643,7 +693,7 @@ export function createB2BCatalogRouter(dataSource: DataSource): Router {
         params.push(parseInt(category_id));
       }
 
-      const [brands, ipRatings, colorTemps, mountingTypes, priceRange] = await Promise.all([
+      const [brands, ipRatings, colorTemps, mountingTypes, energyClasses, cris, priceRange] = await Promise.all([
         dataSource.query(
           `
           SELECT DISTINCT ps.brand, COUNT(*) as count
@@ -690,8 +740,32 @@ export function createB2BCatalogRouter(dataSource: DataSource): Router {
         ),
         dataSource.query(
           `
-          SELECT MIN(p.base_price) as min_price, MAX(p.base_price) as max_price
+          SELECT DISTINCT ps.energy_class, COUNT(*) as count
+          FROM product_specifications ps
+          JOIN products p ON p.id = ps.product_id
+          LEFT JOIN categories c ON c.id = p.category_id
+          WHERE ps.energy_class IS NOT NULL AND p.is_active = true ${catCondition}
+          GROUP BY ps.energy_class ORDER BY ps.energy_class
+        `,
+          params,
+        ),
+        dataSource.query(
+          `
+          SELECT DISTINCT ps.cri, COUNT(*) as count
+          FROM product_specifications ps
+          JOIN products p ON p.id = ps.product_id
+          LEFT JOIN categories c ON c.id = p.category_id
+          WHERE ps.cri IS NOT NULL AND p.is_active = true ${catCondition}
+          GROUP BY ps.cri ORDER BY ps.cri
+        `,
+          params,
+        ),
+        dataSource.query(
+          `
+          SELECT MIN(p.base_price) as min_price, MAX(p.base_price) as max_price,
+                 MIN(ps.wattage) as min_wattage, MAX(ps.wattage) as max_wattage
           FROM products p
+          LEFT JOIN product_specifications ps ON ps.product_id = p.id
           LEFT JOIN categories c ON c.id = p.category_id
           WHERE p.is_active = true ${catCondition}
         `,
@@ -713,11 +787,16 @@ export function createB2BCatalogRouter(dataSource: DataSource): Router {
             value: m.mounting_type,
             count: parseInt(m.count),
           })),
+          energy_classes: energyClasses.map((e: any) => ({ value: e.energy_class, count: parseInt(e.count) })),
+          cri_values: cris.map((c: any) => ({ value: c.cri, count: parseInt(c.count) })),
           price_range: {
             min: parseFloat(priceRange[0]?.min_price || '0'),
             max: parseFloat(priceRange[0]?.max_price || '0'),
           },
-          wattage_range: { min: 3, max: 200 },
+          wattage_range: {
+            min: parseFloat(priceRange[0]?.min_wattage || '3'),
+            max: parseFloat(priceRange[0]?.max_wattage || '200'),
+          },
         },
       });
     } catch (error) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Search,
   SlidersHorizontal,
@@ -16,6 +17,11 @@ import {
   Droplets,
   CheckCircle,
   Shield,
+  Camera,
+  FolderPlus,
+  ArrowRight,
+  TrendingUp,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { b2bApi } from '../../services/b2b-api';
@@ -109,8 +115,14 @@ export const B2BStoreCatalogPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('Toate Produsele');
   const [selectedKelvin, setSelectedKelvin] = useState<string[]>([]);
   const [selectedIp, setSelectedIp] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedMounting, setSelectedMounting] = useState<string[]>([]);
+  const [selectedEnergy, setSelectedEnergy] = useState<string[]>([]);
+  const [isDimmable, setIsDimmable] = useState<boolean | null>(null);
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
+  const [wattageMin, setWattageMin] = useState('');
+  const [wattageMax, setWattageMax] = useState('');
   const [stockFilter, setStockFilter] = useState<'all' | 'local' | 'supplier'>('all');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -118,6 +130,11 @@ export const B2BStoreCatalogPage: React.FC = () => {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [addedToCart, setAddedToCart] = useState<number | null>(null);
   const [compareList, setCompareList] = useState<number[]>([]);
+  const [isVisualSearching, setIsVisualSearching] = useState(false);
+
+  // Projects
+  const [availableProjects, setAvailableProjects] = useState<any[]>([]);
+  const [showProjectModal, setShowProjectModal] = useState<{ productId: number } | null>(null);
 
   // B2B Rules
   const [b2bSettings, setB2bSettings] = useState({
@@ -128,9 +145,18 @@ export const B2BStoreCatalogPage: React.FC = () => {
 
   // Dynamic Filters
   const [availableCategories, setAvailableCategories] = useState<string[]>(lightingCategories);
-  const [availableFilters, setAvailableFilters] = useState<{ kelvin: any[]; ip: any[] }>({
+  const [availableFilters, setAvailableFilters] = useState<{ 
+    kelvin: any[]; 
+    ip: any[];
+    brands: any[];
+    mounting: any[];
+    energy: any[];
+  }>({
     kelvin: kelvinOptions,
     ip: ipOptions,
+    brands: [],
+    mounting: [],
+    energy: []
   });
 
   // Pagination
@@ -169,12 +195,60 @@ export const B2BStoreCatalogPage: React.FC = () => {
       }
       if (filters) {
         setAvailableFilters({
-          kelvin: filters.kelvin || kelvinOptions,
-          ip: filters.ip || ipOptions,
+          kelvin: filters.color_temperatures || filters.kelvin || kelvinOptions,
+          ip: filters.ip_ratings || filters.ip || ipOptions,
+          brands: filters.brands || [],
+          mounting: filters.mounting_types || [],
+          energy: filters.energy_classes || []
         });
+
+        if (filters.price_range) {
+          // setPriceMax(filters.price_range.max.toString());
+        }
       }
     } catch (err) {
       console.error('Failed to fetch filters:', err);
+    }
+  };
+
+  const fetchProjects = async () => {
+    if (!isAuthenticated) return;
+    try {
+      const data = await b2bApi.getB2BProjects();
+      setAvailableProjects(data || []);
+    } catch (err) {
+      console.error('Failed to fetch projects:', err);
+    }
+  };
+
+  const handleVisualSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsVisualSearching(true);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/v1/b2b/search/visual', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) throw new Error('Visual search failed');
+      const payload = await response.json();
+      const data = payload?.data ?? payload;
+
+      if (data.suggested_search) {
+        setSearchQuery(data.suggested_search);
+        toast.success(`Căutare sugerată: ${data.suggested_search}`);
+      }
+    } catch (err) {
+      toast.error('Căutarea vizuală nu a putut identifica produsul.');
+    } finally {
+      setIsVisualSearching(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -182,15 +256,21 @@ export const B2BStoreCatalogPage: React.FC = () => {
     try {
       setLoading(true);
       const currentPage = isInitial ? 1 : page;
-      const params = {
+      const params: any = {
         page: currentPage,
         limit: itemsPerPage,
         search: searchQuery || undefined,
         category: selectedCategory !== 'Toate Produsele' ? selectedCategory : undefined,
         kelvin: selectedKelvin.length > 0 ? selectedKelvin : undefined,
         ip: selectedIp.length > 0 ? selectedIp : undefined,
+        brand: selectedBrands.length > 0 ? selectedBrands.join(',') : undefined,
+        mounting: selectedMounting.length > 0 ? selectedMounting.join(',') : undefined,
+        energy: selectedEnergy.length > 0 ? selectedEnergy.join(',') : undefined,
+        dimmable: isDimmable !== null ? isDimmable : undefined,
         min_price: priceMin ? parseFloat(priceMin) : undefined,
         max_price: priceMax ? parseFloat(priceMax) : undefined,
+        wattage_min: wattageMin ? parseFloat(wattageMin) : undefined,
+        wattage_max: wattageMax ? parseFloat(wattageMax) : undefined,
         sort: sortBy,
         stock: stockFilter !== 'all' ? stockFilter : undefined,
       };
@@ -205,7 +285,7 @@ export const B2BStoreCatalogPage: React.FC = () => {
       } else {
         const queryParams = new URLSearchParams();
         Object.entries(params).forEach(([key, value]) => {
-          if (!value) return;
+          if (value === undefined || value === null || value === '') return;
           if (Array.isArray(value)) {
             value.forEach((v) => queryParams.append(key, String(v)));
             return;
@@ -238,11 +318,38 @@ export const B2BStoreCatalogPage: React.FC = () => {
     }
   };
 
-  // Handlers
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      setPage(prev => prev + 1);
+  const handleAddToProject = async (projectId: string, productId: number) => {
+    try {
+      await b2bApi.addProductToProject(projectId, { product_id: productId, quantity: 1 });
+      toast.success('Produs adăugat în proiect!');
+      setShowProjectModal(null);
+    } catch (err) {
+      toast.error('Eroare la adăugarea în proiect.');
     }
+  };
+
+  const toggleBrand = (val: string) => {
+    setSelectedBrands(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  const toggleMounting = (val: string) => {
+    setSelectedMounting(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  const toggleEnergy = (val: string) => {
+    setSelectedEnergy(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  const toggleKelvin = (val: string) => {
+    setSelectedKelvin(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  const toggleIp = (val: string) => {
+    setSelectedIp(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  const toggleCompare = (id: number) => {
+    setCompareList(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
   };
 
   const handleAddToCart = (product: Product) => {
@@ -258,16 +365,10 @@ export const B2BStoreCatalogPage: React.FC = () => {
     setTimeout(() => setAddedToCart(null), 2000);
   };
 
-  const toggleCompare = (id: number) => {
-    setCompareList(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
-  };
-
-  const toggleKelvin = (val: string) => {
-    setSelectedKelvin(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
-  };
-
-  const toggleIp = (val: string) => {
-    setSelectedIp(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  const handleLoadMore = () => {
+    if (!loading && hasMore) {
+      setPage(prev => prev + 1);
+    }
   };
 
   const clearFilters = () => {
@@ -348,8 +449,12 @@ export const B2BStoreCatalogPage: React.FC = () => {
                   placeholder="Caută după denumire sau SKU..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-white focus:border-primary-500 outline-none transition-all"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-12 text-white focus:border-primary-500 outline-none transition-all"
                 />
+                <label className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500 hover:text-primary-500 transition-colors">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleVisualSearch} disabled={isVisualSearching} />
+                  {isVisualSearching ? <Loader className="animate-spin" size={18} /> : <Camera size={18} />}
+                </label>
               </div>
               <button onClick={() => setShowFilters(!showFilters)} className="md:hidden bg-primary-500/10 border border-primary-500/20 text-primary-500 p-3 rounded-2xl">
                 <SlidersHorizontal size={24} />
@@ -388,6 +493,27 @@ export const B2BStoreCatalogPage: React.FC = () => {
             </div>
 
             <div className="p-5 rounded-3xl bg-white/2 border border-white/5 space-y-6">
+              {/* Brands Filter */}
+              {availableFilters.brands.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Shield size={14} className="text-primary-500" /> Brand
+                  </h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                    {availableFilters.brands.map(brand => (
+                      <label key={brand.value} className="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" checked={selectedBrands.includes(brand.value)} onChange={() => toggleBrand(brand.value)} className="hidden" />
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedBrands.includes(brand.value) ? 'bg-primary-500 border-primary-500' : 'border-white/20'}`}>
+                          {selectedBrands.includes(brand.value) && <CheckCircle size={10} className="text-black" />}
+                        </div>
+                        <span className="text-xs text-gray-400 group-hover:text-white">{brand.value}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Technical Filters */}
               <div>
                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <Thermometer size={14} className="text-primary-500" /> Kelvin
@@ -420,6 +546,43 @@ export const B2BStoreCatalogPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Wattage Range */}
+              <div>
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Zap size={14} className="text-primary-500" /> Putere (Watt)
+                </h4>
+                <div className="flex gap-2">
+                  <input 
+                    type="number" 
+                    placeholder="Min" 
+                    value={wattageMin} 
+                    onChange={(e) => setWattageMin(e.target.value)}
+                    className="w-1/2 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-xs text-white outline-none"
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Max" 
+                    value={wattageMax} 
+                    onChange={(e) => setWattageMax(e.target.value)}
+                    className="w-1/2 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-xs text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Dimmable Toggle */}
+              <div>
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Opțiuni</h4>
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <span className="text-xs text-gray-400">Dimmabil</span>
+                  <button 
+                    onClick={() => setIsDimmable(isDimmable === true ? null : true)}
+                    className={`w-10 h-5 rounded-full relative transition-all ${isDimmable === true ? 'bg-primary-500' : 'bg-white/10'}`}
+                  >
+                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${isDimmable === true ? 'right-1' : 'left-1'}`} />
+                  </button>
+                </label>
               </div>
             </div>
 
@@ -476,6 +639,17 @@ export const B2BStoreCatalogPage: React.FC = () => {
                           <button onClick={() => toggleCompare(product.id)} className="border border-white/30 text-white px-6 py-2 rounded-full text-xs font-bold backdrop-blur-sm">
                             {compareList.includes(product.id) ? '✓ Compară' : '+ Compară'}
                           </button>
+                          {isAuthenticated && (
+                            <button 
+                              onClick={() => {
+                                fetchProjects();
+                                setShowProjectModal({ productId: product.id });
+                              }} 
+                              className="text-white/70 hover:text-white text-[10px] font-bold mt-1"
+                            >
+                              + Proiect
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -598,6 +772,42 @@ export const B2BStoreCatalogPage: React.FC = () => {
               
               <Link to={`/b2b-store/product/${quickViewProduct.id}`} onClick={() => setQuickViewProduct(null)} className="block text-center text-gray-500 hover:text-white font-bold py-2">Vezi detalii complete →</Link>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Project Selection Modal */}
+      {showProjectModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/90" onClick={() => setShowProjectModal(null)}>
+          <div className="bg-[#12121a] border border-white/10 rounded-[32px] max-w-md w-full p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-white">Adaugă în Proiect</h3>
+              <button onClick={() => setShowProjectModal(null)} className="p-2 text-gray-500 hover:text-white"><X/></button>
+            </div>
+
+            <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar mb-8">
+              {availableProjects.length === 0 ? (
+                <p className="text-gray-500 italic text-center py-4">Nu ai proiecte create.</p>
+              ) : (
+                availableProjects.map(proj => (
+                  <button 
+                    key={proj.id}
+                    onClick={() => handleAddToProject(proj.id, showProjectModal.productId)}
+                    className="w-full text-left p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-blue-600/20 hover:border-blue-500 transition-all flex items-center justify-between group"
+                  >
+                    <span className="font-bold text-white group-hover:text-blue-400">{proj.name}</span>
+                    <ChevronRight size={16} className="text-gray-600" />
+                  </button>
+                ))
+              )}
+            </div>
+
+            <Link 
+              to="/b2b-portal/projects" 
+              className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-white/2 border border-dashed border-white/20 text-gray-400 hover:text-white hover:bg-white/5 transition-all font-bold text-sm"
+            >
+              <FolderPlus size={18} /> Creează Proiect Nou
+            </Link>
           </div>
         </div>
       )}
