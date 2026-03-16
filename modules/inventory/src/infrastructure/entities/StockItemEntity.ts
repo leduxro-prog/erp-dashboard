@@ -33,6 +33,9 @@ export class StockItemEntity {
   @Column('integer', { default: 0 })
   minimum_threshold!: number;
 
+  @Column('varchar', { name: 'bin_location', length: 50, nullable: true })
+  bin_location!: string | null;
+
   @UpdateDateColumn()
   last_updated!: Date;
 

@@ -45,6 +45,9 @@ export interface ProductSchemaData {
   ratingValue?: number;
   ratingCount?: number;
   url?: string;
+  color?: string;
+  material?: string;
+  wattage?: number;
 }
 
 /**
@@ -123,6 +126,17 @@ export class StructuredDataGenerator {
         availability: product.availability || 'https://schema.org/InStock',
       },
     };
+
+    // Add additional properties for rich results
+    if (product.color) schema.color = product.color;
+    if (product.material) schema.material = product.material;
+    if (product.wattage) {
+      schema.additionalProperty = {
+        '@type': 'PropertyValue',
+        name: 'Wattage',
+        value: `${product.wattage}W`
+      };
+    }
 
     // Add category if provided
     if (product.category) {

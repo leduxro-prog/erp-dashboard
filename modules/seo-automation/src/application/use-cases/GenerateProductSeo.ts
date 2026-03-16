@@ -137,6 +137,9 @@ export class GenerateProductSeo {
         price: product.price,
         features: product.features,
         sku: product.sku,
+        wattage: (product as any).wattage,
+        color_temperature: (product as any).color_temperature,
+        ip_rating: (product as any).ip_rating,
       });
 
       // Step 3: Generate slug
@@ -153,6 +156,9 @@ export class GenerateProductSeo {
         brand: 'Ledux',
         sku: product.sku,
         category: product.category,
+        color: (product as any).color,
+        material: (product as any).material,
+        wattage: (product as any).wattage,
       });
 
       // Step 5: Calculate score

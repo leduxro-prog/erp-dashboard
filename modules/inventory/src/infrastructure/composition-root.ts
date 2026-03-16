@@ -8,6 +8,7 @@ import Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 
 import { InventoryController } from '../api/controllers/InventoryController';
+import { InventoryPickingController } from '../api/controllers/InventoryPickingController';
 import { createInventoryRoutes } from '../api/routes/inventory.routes';
 import { AdjustStock } from '../application/use-cases/AdjustStock';
 import { CheckStock } from '../application/use-cases/CheckStock';
@@ -48,7 +49,7 @@ export function createInventoryRouter(dataSource: DataSource): Router {
   const getMovementHistory = new GetMovementHistory(inventoryRepository);
   const getWarehouses = new GetWarehouses(inventoryRepository);
 
-  // Instantiate controller with all injected use-cases
+  // Instantiate controllers
   const controller = new InventoryController(
     checkStock,
     reserveStock,
@@ -60,6 +61,8 @@ export function createInventoryRouter(dataSource: DataSource): Router {
     dataSource
   );
 
+  const pickingController = new InventoryPickingController(dataSource);
+
   // Create and return configured Express router
-  return createInventoryRoutes(controller);
+  return createInventoryRoutes(controller, pickingController);
 }

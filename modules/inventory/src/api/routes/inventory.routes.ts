@@ -8,6 +8,7 @@ import {
 import { Router } from 'express';
 
 import { InventoryController } from '../controllers/InventoryController';
+import { InventoryPickingController } from '../controllers/InventoryPickingController';
 import {
   checkStockSchema,
   reserveStockSchema,
@@ -15,8 +16,14 @@ import {
   getMovementsSchema,
 } from '../validators/inventory.validators';
 
-export function createInventoryRoutes(controller: InventoryController): Router {
+export function createInventoryRoutes(
+  controller: InventoryController,
+  pickingController: InventoryPickingController
+): Router {
   const router = Router();
+
+  // Picking routes
+  router.use('/', pickingController.getRouter());
 
   // Apply authentication to all routes
   router.use(authenticate);
