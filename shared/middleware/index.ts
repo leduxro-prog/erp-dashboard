@@ -23,7 +23,12 @@ export { sanitizeMiddleware } from './sanitize.middleware';
 
 // Rate limiting middleware
 export {
+  createRateLimitPolicies,
+  defaultApiLimiter,
+  authInteractiveLimiter,
+  refreshGuardrailLimiter,
   globalApiLimiter,
+  b2bApiLimiter,
   loginLimiter,
   authLimiter,
   writeOperationLimiter,

@@ -6,9 +6,10 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import http from 'http';
 import path from 'path';
+import Redis from 'ioredis';
 import { AppDataSource } from './data-source';
 import { validateEnv, ConfigSchema } from './config/env.validation';
-import { rateLimiter, authRateLimiter } from './middleware/rate-limiter';
+import { parseTrustedProxyCidrs } from './config/trusted-proxy';
 import logger, { createModuleLogger } from '../shared/utils/logger';
 import { getEventBus } from '../shared/utils/event-bus';
 import { createRequestIdMiddleware } from '../shared/middleware/request-id.middleware';
@@ -16,6 +17,7 @@ import { createAuditMiddleware } from '../shared/middleware/audit-trail.middlewa
 import { createCSRFMiddleware } from '../shared/middleware/csrf.middleware';
 import { tracingMiddleware } from '../shared/middleware/tracing.middleware';
 import { sanitizeMiddleware } from '../shared/middleware/sanitize.middleware';
+import { createRateLimitPolicies } from '../shared/middleware/rate-limit.middleware';
 import { createAuditLogger } from '../shared/utils/audit-logger';
 import { registerApiDocsRoutes } from './api-docs/routes';
 import { ModuleRegistry, ModuleLoader, IModuleContext } from '../shared/module-system';
@@ -26,6 +28,32 @@ import { createWebsiteSyncRouter } from './routes/website-sync.routes';
 dotenv.config();
 
 const bootstrapLogger = createModuleLogger('bootstrap');
+
+function createRateLimitRedisClient(): Redis | undefined {
+  if (process.env.RATE_LIMIT_STORE !== 'redis') {
+    return undefined;
+  }
+
+  if (process.env.REDIS_URL) {
+    return new Redis(process.env.REDIS_URL, {
+      lazyConnect: true,
+      maxRetriesPerRequest: 1,
+    });
+  }
+
+  const host = process.env.REDIS_HOST;
+  if (!host) {
+    return undefined;
+  }
+
+  return new Redis({
+    host,
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || undefined,
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
+  });
+}
 
 /**
  * Create module context with all dependencies.
@@ -104,6 +132,18 @@ async function bootstrap(): Promise<void> {
 
     // Step 2: Create Express application
     const app: Express = express();
+    const trustedProxy = process.env.TRUST_PROXY ?? 'loopback, linklocal, uniquelocal';
+    app.set('trust proxy', trustedProxy);
+
+    const trustedProxyCidrs = parseTrustedProxyCidrs(trustedProxy);
+    const rateLimitRedisClient = createRateLimitRedisClient();
+    const rateLimitPolicies = createRateLimitPolicies({
+      redisClient: rateLimitRedisClient,
+      logger: bootstrapLogger,
+      clientKeyConfig: {
+        trustedProxyCidrs,
+      },
+    });
 
     // Step 3: Initialize TypeORM DataSource
     bootstrapLogger.info('Initializing database connection...');
@@ -203,13 +243,7 @@ async function bootstrap(): Promise<void> {
       })
     );
 
-    // Step 14: Apply rate limiting
-    app.use(rateLimiter); // General API rate limiter
-
-    // Step 14b: Apply stricter rate limiting to auth endpoints
-    app.use('/auth', authRateLimiter);
-
-    // Step 14c: Metrics collection middleware
+    // Step 14: Metrics collection middleware
     app.use(createMetricsMiddleware());
 
     // Step 15: Health check endpoint
@@ -220,6 +254,19 @@ async function bootstrap(): Promise<void> {
         environment: config.NODE_ENV,
       });
     });
+
+    app.get('/api/v1/health', (_req: Request, res: Response): void => {
+      res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: config.NODE_ENV,
+      });
+    });
+
+    // Step 15b: Apply endpoint-tiered rate limiting
+    app.post('/api/v1/b2b-auth/refresh', rateLimitPolicies.refreshGuardrailLimiter);
+    app.use('/api/v1', rateLimitPolicies.authInteractiveLimiter);
+    app.use('/api/v1', rateLimitPolicies.defaultApiLimiter);
 
     // Step 16: Register API documentation routes
     bootstrapLogger.info('Registering API documentation routes...');
