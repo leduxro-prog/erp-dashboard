@@ -7,8 +7,9 @@ import {
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
 import { UserService } from './application/services/UserService';
+import { TwoFactorAuthService } from './application/services/TwoFactorAuthService';
 import { UserController } from './api/controllers/UserController';
-import { UserEntity } from './domain/entities/UserEntity';
+import { UserEntity, UserRole } from './domain/entities/UserEntity';
 
 export class UsersModule implements ICypherModule {
     public readonly name = 'users';
@@ -22,6 +23,7 @@ export class UsersModule implements ICypherModule {
     private logger = createModuleLogger('users');
     private context!: IModuleContext;
     private userService!: UserService;
+    private twoFactorAuthService!: TwoFactorAuthService;
     private userController!: UserController;
     private eventBus: any; // Using any for now to avoid import issues, but explicitly typed in method
 
@@ -37,7 +39,10 @@ export class UsersModule implements ICypherModule {
 
         // Initialize Service and Controller
         this.userService = new UserService(context.dataSource);
-        this.userController = new UserController(this.userService);
+        this.twoFactorAuthService = new TwoFactorAuthService(
+            context.dataSource.getRepository(UserEntity),
+        );
+        this.userController = new UserController(this.userService, this.twoFactorAuthService);
 
         // Initialize Router
         this.router = this.userController.getRouter();
@@ -52,12 +57,18 @@ export class UsersModule implements ICypherModule {
     private async handleB2BRegistrationApproved(data: any): Promise<void> {
         this.logger.info('Received b2b.registration_approved event', data);
         try {
-            const { registration, customerId } = data;
+            const email = String(data?.email || data?.registration?.email || '').trim().toLowerCase();
+            const customerId = data?.customerId;
+
+            if (!email) {
+                this.logger.warn('B2B registration approved event missing email; skipping user creation');
+                return;
+            }
 
             // Check if user already exists
-            const existingUser = await this.userService.findByUsername(registration.email);
+            const existingUser = await this.userService.findByUsername(email);
             if (existingUser) {
-                this.logger.warn(`User with email ${registration.email} already exists. Skipping creation.`);
+                this.logger.warn(`User with email ${email} already exists. Skipping creation.`);
                 return;
             }
 
@@ -65,14 +76,14 @@ export class UsersModule implements ICypherModule {
             const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
 
             await this.userService.create({
-                username: registration.email, // Use email as username for B2B
-                email: registration.email,
+                email,
                 password: tempPassword,
-                role: 'b2b_client' as any, // Using cast to avoid import cycle or enum issues
-                isActive: true,
+                first_name: String(data?.companyName || 'B2B'),
+                last_name: 'Client',
+                role: UserRole.B2B_USER,
             });
 
-            this.logger.info(`Created user for B2B customer ${customerId} with email ${registration.email}`);
+            this.logger.info(`Created user for B2B customer ${customerId} with email ${email}`);
 
             // TODO: Send email with credentials to the user
             // await this.emailService.sendWelcomeEmail(registration.email, tempPassword);

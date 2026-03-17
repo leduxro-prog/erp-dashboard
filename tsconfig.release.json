@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "modules/banking/**/*",
+    "modules/suppliers/**/*",
+    "modules/search-index/**/*",
+    "modules/smartbill/**/*",
+    "modules/b2b-portal/**/*",
+    "modules/seo-automation/**/*"
+  ]
+}

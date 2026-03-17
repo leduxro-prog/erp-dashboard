@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc && tsc-alias",
+    "build:release": "tsc -p tsconfig.release.json && tsc-alias -p tsconfig.release.json",
     "build:incremental": "tsc --incremental --tsBuildInfoFile .tsbuildinfo && tsc-alias",
     "start": "node dist/server.js",
     "lint": "eslint 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'",
@@ -42,6 +43,10 @@
     "docker:logs": "docker compose logs -f"
   },
   "dependencies": {
+    "@nestjs/common": "^11.1.13",
+    "@nestjs/core": "^11.1.13",
+    "@nestjs/platform-express": "^11.1.13",
+    "@nestjs/typeorm": "^11.0.0",
     "@google/generative-ai": "^0.24.1",
     "@woocommerce/woocommerce-rest-api": "^1.0.1",
     "amqplib": "^0.10.3",
@@ -80,6 +85,7 @@
     "redis": "^4.6.12",
     "reflect-metadata": "^0.2.2",
     "resend": "^4.0.0",
+    "rxjs": "^7.8.2",
     "sharp": "^0.34.5",
     "tsconfig-paths": "^4.2.0",
     "typeorm": "^0.3.20",
