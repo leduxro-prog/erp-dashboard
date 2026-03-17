@@ -14,6 +14,7 @@ RUN apk add --no-cache python3 make g++
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.json ./
+COPY tsconfig.release.json ./
 
 # Install dependencies
 RUN npm install
@@ -25,7 +26,7 @@ COPY modules ./modules
 COPY database ./database
 
 # Build TypeScript
-RUN npm run build
+RUN npm run build:release
 
 # Stage 2: Production Runtime
 FROM node:20-alpine AS production

@@ -117,6 +117,38 @@ export class UserService {
     return this.findByEmail(username);
   }
 
+  async findOrCreateGoogleUser(data: {
+    googleId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string;
+  }): Promise<UserEntity & { avatar_url?: string; auth_provider?: string }> {
+    const normalizedEmail = String(data.email || '').trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      throw new Error('Google account email is required');
+    }
+
+    const existing = await this.findByEmail(normalizedEmail);
+    if (existing) {
+      await this.updateGoogleProfileColumns(existing.id, data);
+      return this.readGoogleAuthProjection(existing.id, existing);
+    }
+
+    const generatedPassword = crypto.randomBytes(32).toString('hex');
+    const createdUser = await this.create({
+      email: normalizedEmail,
+      password: generatedPassword,
+      first_name: data.firstName || normalizedEmail.split('@')[0],
+      last_name: data.lastName || '',
+      role: UserRole.GUEST,
+    });
+
+    await this.updateGoogleProfileColumns(createdUser.id, data);
+    return this.readGoogleAuthProjection(createdUser.id, createdUser);
+  }
+
   async validatePassword(userId: number, password: string): Promise<boolean> {
     const user = await this.repository
       .createQueryBuilder('user')
@@ -264,5 +296,90 @@ export class UserService {
     });
 
     return true;
+  }
+
+  private async updateGoogleProfileColumns(
+    userId: number,
+    data: {
+      googleId: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl?: string;
+    },
+  ): Promise<void> {
+    // Keep Google auth flow resilient even when optional schema columns are not present.
+    try {
+      await this.repository.query(
+        `
+          UPDATE users
+          SET
+            google_id = COALESCE(google_id, $1),
+            auth_provider = CASE WHEN auth_provider = 'local' THEN 'google' ELSE auth_provider END,
+            avatar_url = COALESCE($2, avatar_url),
+            first_name = COALESCE(NULLIF(first_name, ''), $3),
+            last_name = COALESCE(NULLIF(last_name, ''), $4),
+            updated_at = NOW()
+          WHERE id = $5
+        `,
+        [data.googleId, data.avatarUrl || null, data.firstName || '', data.lastName || '', userId],
+      );
+    } catch (error) {
+      this.logger.warn('Google profile columns not persisted (fallback mode)', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  private async readGoogleAuthProjection(
+    userId: number,
+    fallbackUser: UserEntity,
+  ): Promise<UserEntity & { avatar_url?: string; auth_provider?: string }> {
+    const projectedUser = fallbackUser as UserEntity & {
+      avatar_url?: string;
+      auth_provider?: string;
+    };
+
+    try {
+      const rows = await this.repository.query(
+        `
+          SELECT
+            id,
+            email,
+            first_name,
+            last_name,
+            role,
+            is_active,
+            avatar_url,
+            auth_provider
+          FROM users
+          WHERE id = $1
+          LIMIT 1
+        `,
+        [userId],
+      );
+
+      const row = rows?.[0];
+      if (!row) {
+        projectedUser.avatar_url = undefined;
+        projectedUser.auth_provider = 'local';
+        return projectedUser;
+      }
+
+      projectedUser.id = Number(row.id);
+      projectedUser.email = String(row.email);
+      projectedUser.first_name = String(row.first_name || fallbackUser.first_name || '');
+      projectedUser.last_name = String(row.last_name || fallbackUser.last_name || '');
+      projectedUser.role = ((row.role as UserRole) || fallbackUser.role) as UserRole;
+      projectedUser.is_active = Boolean(row.is_active);
+      projectedUser.avatar_url = row.avatar_url ? String(row.avatar_url) : undefined;
+      projectedUser.auth_provider = row.auth_provider ? String(row.auth_provider) : 'local';
+
+      return projectedUser;
+    } catch {
+      projectedUser.avatar_url = undefined;
+      projectedUser.auth_provider = 'local';
+      return projectedUser;
+    }
   }
 }
