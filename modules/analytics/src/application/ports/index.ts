@@ -4,3 +4,4 @@ export * from './INotificationPort';
 export * from './IOrderDataPort';
 export * from './IPricingDataPort';
 export * from './ISupplierDataPort';
+export * from './ISalesReadModelRepository';

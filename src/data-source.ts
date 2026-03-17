@@ -1,6 +1,8 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 
 import { resolveDatabaseSsl } from './config/database-ssl';
+import { SmartBillSalesDocumentEntity } from '../modules/analytics/src/infrastructure/entities/SmartBillSalesDocumentEntity';
+import { SalesKpiDailyEntity } from '../modules/analytics/src/infrastructure/entities/SalesKpiDailyEntity';
 
 /**
  * TypeORM DataSource Configuration
@@ -31,6 +33,8 @@ const dataSourceOptions: DataSourceOptions = {
   logging: process.env.DB_LOGGING === 'true',
   logger: 'advanced-console',
   entities: [
+    SmartBillSalesDocumentEntity,
+    SalesKpiDailyEntity,
     // Core and Module Entities
     'modules/**/infrastructure/entities/*.ts',
     'modules/**/src/domain/entities/*.ts',

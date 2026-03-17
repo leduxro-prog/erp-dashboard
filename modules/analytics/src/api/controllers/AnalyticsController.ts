@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { Logger } from 'winston';
+import { DataSource } from 'typeorm';
 
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
 import { GetSalesDashboard } from '../../application/use-cases/GetSalesDashboard';
 import { GenerateReport } from '../../application/use-cases/GenerateReport';
 import { IDashboardRepository, IReportRepository, IMetricRepository } from '../../domain/repositories';
+import { SalesKpiQueryService } from '../../application/services/SalesKpiQueryService';
 
 // Use Request directly - access user via (req as any).user
 export type AuthenticatedRequest = Request & { user?: { id: string }; validatedBody?: unknown };
@@ -20,8 +22,48 @@ export class AnalyticsController {
     private readonly _dashboardRepository: IDashboardRepository,
     private readonly _reportRepository: IReportRepository,
     private readonly _metricRepository: IMetricRepository,
-    private readonly _logger: Logger
+    private readonly _logger: Logger,
+    private readonly _dataSource?: DataSource,
+    private readonly _salesKpiQueryService?: SalesKpiQueryService,
   ) {}
+
+  private parseNumber(value: unknown): number {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  }
+
+  private computeGrowth(current: number, previous: number): number {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / previous) * 100;
+  }
+
+  private resolveDateRange(start?: string, end?: string): {
+    startDate: Date;
+    endDate: Date;
+    previousStartDate: Date;
+    previousEndDate: Date;
+  } {
+    const endDate = end ? new Date(end) : new Date();
+    const startDate = start ? new Date(start) : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      throw new Error('Invalid date range');
+    }
+
+    if (startDate > endDate) {
+      throw new Error('start_date cannot be after end_date');
+    }
+
+    const rangeMs = endDate.getTime() - startDate.getTime();
+    const previousEndDate = new Date(startDate.getTime() - 1);
+    const previousStartDate = new Date(previousEndDate.getTime() - rangeMs);
+
+    return { startDate, endDate, previousStartDate, previousEndDate };
+  }
 
   /**
    * List all dashboards with pagination
@@ -512,29 +554,144 @@ export class AnalyticsController {
     try {
       const start_date = req.query.start_date as string;
       const end_date = req.query.end_date as string;
-      // Removed unused: region
+      const groupBy = (req.query.group_by as string | undefined)?.toLowerCase();
+
+      const sourceFlag = (process.env.ANALYTICS_SALES_SOURCE || '').toLowerCase();
+      if (sourceFlag === 'smartbill_readmodel' && this._salesKpiQueryService) {
+        try {
+          const kpiData = await this._salesKpiQueryService.query({
+            startDate: start_date,
+            endDate: end_date,
+            groupBy,
+          });
+          res.json(successResponse(kpiData));
+          return;
+        } catch (readModelError) {
+          this._logger.warn('Read-model KPI query failed; falling back to legacy SmartBill source', {
+            error:
+              readModelError instanceof Error ? readModelError.message : String(readModelError),
+          });
+        }
+      }
+
+      if (!this._dataSource) {
+        throw new Error('Analytics data source is not configured');
+      }
+
+      const { startDate, endDate, previousStartDate, previousEndDate } = this.resolveDateRange(start_date, end_date);
+
+      const buildAggregateQuery = (indexOffset: number) => `
+        SELECT
+          COALESCE(SUM("totalWithVat"), 0) AS total_revenue,
+          COUNT(*) AS total_orders
+        FROM smartbill_invoices
+        WHERE "issueDate" >= $${indexOffset}
+          AND "issueDate" <= $${indexOffset + 1}
+          AND COALESCE(LOWER(status), '') NOT IN ('canceled', 'cancelled', 'storno')
+      `;
+
+      const buildItemsQuery = (indexOffset: number) => `
+        SELECT items
+        FROM smartbill_invoices
+        WHERE "issueDate" >= $${indexOffset}
+          AND "issueDate" <= $${indexOffset + 1}
+          AND COALESCE(LOWER(status), '') NOT IN ('canceled', 'cancelled', 'storno')
+        ORDER BY "issueDate" DESC
+        LIMIT 1000
+      `;
+
+      if (groupBy === 'month') {
+        const groupedRows = await this._dataSource.query(
+          `
+            SELECT
+              TO_CHAR(DATE_TRUNC('month', "issueDate"), 'YYYY-MM') AS period,
+              COALESCE(SUM("totalWithVat"), 0) AS total_revenue,
+              COUNT(*) AS total_orders
+            FROM smartbill_invoices
+            WHERE "issueDate" >= $1
+              AND "issueDate" <= $2
+              AND COALESCE(LOWER(status), '') NOT IN ('canceled', 'cancelled', 'storno')
+            GROUP BY DATE_TRUNC('month', "issueDate")
+            ORDER BY DATE_TRUNC('month', "issueDate") ASC
+          `,
+          [startDate, endDate],
+        );
+
+        const groupedMetrics = groupedRows.map((row: any) => {
+          const totalRevenue = this.parseNumber(row.total_revenue);
+          const totalOrders = this.parseNumber(row.total_orders);
+          return {
+            period: row.period,
+            total_revenue: totalRevenue,
+            total_orders: totalOrders,
+            avg_order_value: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+          };
+        });
+
+        res.json(successResponse(groupedMetrics));
+        return;
+      }
+
+      const [currentTotals] = await this._dataSource.query(buildAggregateQuery(1), [startDate, endDate]);
+      const [previousTotals] = await this._dataSource.query(buildAggregateQuery(1), [
+        previousStartDate,
+        previousEndDate,
+      ]);
+
+      const totalRevenue = this.parseNumber(currentTotals?.total_revenue);
+      const totalOrders = this.parseNumber(currentTotals?.total_orders);
+      const previousRevenue = this.parseNumber(previousTotals?.total_revenue);
+      const previousOrders = this.parseNumber(previousTotals?.total_orders);
+
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      const previousAov = previousOrders > 0 ? previousRevenue / previousOrders : 0;
+
+      const invoiceRows = await this._dataSource.query(buildItemsQuery(1), [startDate, endDate]);
+
+      const productRevenue = new Map<string, number>();
+      for (const invoice of invoiceRows) {
+        const items = Array.isArray(invoice.items) ? invoice.items : [];
+        for (const item of items) {
+          const name =
+            (typeof item?.name === 'string' && item.name.trim()) ||
+            (typeof item?.productName === 'string' && item.productName.trim()) ||
+            (typeof item?.description === 'string' && item.description.trim()) ||
+            'Produs necunoscut';
+          const quantity = this.parseNumber(item?.quantity ?? item?.qty ?? 1) || 1;
+          const unitPrice = this.parseNumber(item?.price ?? item?.unitPrice ?? item?.priceWithoutVat ?? 0);
+          const lineTotal = this.parseNumber(item?.total ?? item?.totalValue ?? quantity * unitPrice);
+          productRevenue.set(name, (productRevenue.get(name) || 0) + lineTotal);
+        }
+      }
+
+      const topProducts = Array.from(productRevenue.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([name, revenue], index) => ({
+          product_id: `smartbill-${index + 1}`,
+          name,
+          revenue,
+        }));
 
       const kpiData = {
         period: {
-          start_date,
-          end_date,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          source: 'smartbill',
         },
         metrics: {
-          total_revenue: 1250000,
-          revenue_growth: 15.5,
-          total_orders: 5200,
-          orders_growth: 8.2,
-          average_order_value: 240,
-          aov_change: 2.1,
-          conversion_rate: 3.5,
-          conversion_change: 0.3,
-          customer_acquisition_cost: 25,
-          cac_change: -5,
-          lifetime_value: 1500,
-          top_products: [
-            { product_id: 'prod-1', name: 'Product A', revenue: 150000 },
-            { product_id: 'prod-2', name: 'Product B', revenue: 120000 },
-          ],
+          total_revenue: totalRevenue,
+          revenue_growth: this.computeGrowth(totalRevenue, previousRevenue),
+          total_orders: totalOrders,
+          orders_growth: this.computeGrowth(totalOrders, previousOrders),
+          average_order_value: averageOrderValue,
+          aov_change: this.computeGrowth(averageOrderValue, previousAov),
+          conversion_rate: 0,
+          conversion_change: 0,
+          customer_acquisition_cost: 0,
+          cac_change: 0,
+          lifetime_value: 0,
+          top_products: topProducts,
         },
       };
 

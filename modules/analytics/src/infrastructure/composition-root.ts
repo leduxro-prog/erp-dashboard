@@ -24,10 +24,10 @@ import { TypeOrmDashboardRepository } from './repositories/TypeOrmDashboardRepos
 import { TypeOrmForecastRepository } from './repositories/TypeOrmForecastRepository';
 import { TypeOrmMetricRepository } from './repositories/TypeOrmMetricRepository';
 import { TypeOrmReportRepository } from './repositories/TypeOrmReportRepository';
-
 // Adapters
 import { OrderDataAdapter } from './adapters/OrderDataAdapter';
 import { PricingDataAdapter } from './adapters/PricingDataAdapter';
+import { SalesKpiQueryService } from '../application/services/SalesKpiQueryService';
 
 // Mock adapters for ports (to be replaced with real adapters)
 const mockInventoryDataPort = {} as IInventoryDataPort;
@@ -72,13 +72,17 @@ export function createAnalyticsRouter(context: IModuleContext): Router {
   );
 
   // Initialize controller
+  const salesKpiQueryService = new SalesKpiQueryService(dataSource);
+
   const controller = new AnalyticsController(
     getSalesDashboard,
     generateReport,
     dashboardRepository,
     reportRepository,
     metricRepository,
-    logger as any
+    logger,
+    dataSource,
+    salesKpiQueryService,
   );
 
   // Create and return configured Express router
