@@ -159,6 +159,7 @@ const ConfiguratorsPage = lazy(() =>
   import('./pages/ConfiguratorsPage').then((m) => ({ default: m.ConfiguratorsPage })),
 );
 const CRMPage = lazy(() => import('./pages/CRMPage').then((m) => ({ default: m.CRMPage })));
+const HRPage = lazy(() => import('./pages/HRPage').then((m) => ({ default: m.HRPage })));
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
@@ -683,6 +684,14 @@ export default function App() {
             element={
               <Suspense fallback={<PageLoadingFallback />}>
                 <CRMPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="hr/*"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <HRPage />
               </Suspense>
             }
           />

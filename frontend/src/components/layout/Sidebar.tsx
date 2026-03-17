@@ -15,6 +15,7 @@ import {
   Send,
   Zap,
   BarChart3,
+  Users,
   ListChecks,
   TrendingUp,
   Moon,
@@ -115,6 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'ANALYTICS',
       items: [
         { id: 'crm', label: 'CRM', icon: <BarChart3 size={18} />, href: '/crm' },
+        { id: 'hr', label: 'HR', icon: <Users size={18} />, href: '/hr' },
         { id: 'forecasting', label: 'Previziuni', icon: <TrendingUp size={18} />, href: '/analytics?tab=forecasting' },
       ],
     },
