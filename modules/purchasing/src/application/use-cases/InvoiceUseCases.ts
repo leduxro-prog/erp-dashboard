@@ -15,11 +15,16 @@ import {
   ResolveDisputeDTO,
   RecordPaymentDTO,
 } from '../dtos/InvoiceDTOs';
+import {
+  PurchasingInvoiceApprovedEvent,
+  PurchasingInvoiceEventPublisher,
+} from '../events/PurchasingEvents';
 
 export class InvoiceUseCases {
   constructor(
     private invoiceService: InvoiceService,
-    private invoiceRepository: IInvoiceRepository
+    private invoiceRepository: IInvoiceRepository,
+    private eventPublisher?: PurchasingInvoiceEventPublisher,
   ) {}
 
   async registerInvoice(dto: CreateInvoiceDTO): Promise<VendorInvoiceResponseDTO> {
@@ -111,6 +116,22 @@ export class InvoiceUseCases {
     await this.invoiceService.approveForPayment(invoiceId);
     const invoice = await this.invoiceRepository.findById(invoiceId);
     if (!invoice) throw new Error('Invoice not found');
+
+    if (this.eventPublisher) {
+      const event: PurchasingInvoiceApprovedEvent = {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        vendorId: invoice.vendorId,
+        vendorName: invoice.vendorName,
+        dueDate: invoice.dueDate?.toISOString(),
+        totalAmount: invoice.totalInvoicedAmount,
+        currency: invoice.currency,
+        approvedAt: new Date().toISOString(),
+      };
+
+      await this.eventPublisher.publishInvoiceApproved(event);
+    }
+
     return InvoiceMapper.toDTO(invoice);
   }
 

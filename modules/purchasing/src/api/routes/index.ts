@@ -21,6 +21,10 @@ export function createRoutes(
 ): Router {
   const router = Router();
 
+  router.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'healthy', module: 'purchasing' });
+  });
+
   // Requisition Routes
   router.post(
     '/requisitions',
