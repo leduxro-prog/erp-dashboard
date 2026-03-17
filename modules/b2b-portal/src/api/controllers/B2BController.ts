@@ -327,6 +327,65 @@ export class B2BController {
     return rows.length > 0 ? rows[0] : null;
   }
 
+  private async getProductGalleryImages(
+    productId: string | number,
+    fallbackPrimaryUrl?: string,
+  ): Promise<Array<{ url: string; alt_text?: string; sort_order?: number; is_primary?: boolean }>> {
+    const readDataSource = getReadDataSource(this.dataSource);
+    const rows = await readDataSource.query(
+      `
+        SELECT
+          pi.image_url,
+          pi.alt_text,
+          pi.sort_order,
+          pi.is_primary
+        FROM product_images pi
+        WHERE pi.product_id = $1
+          AND pi.image_url IS NOT NULL
+          AND pi.image_url <> ''
+        ORDER BY
+          COALESCE(pi.is_primary, false) DESC,
+          pi.sort_order ASC NULLS LAST,
+          pi.id ASC
+      `,
+      [productId],
+    );
+
+    const images: Array<{ url: string; alt_text?: string; sort_order?: number; is_primary?: boolean }> = [];
+    const seen = new Set<string>();
+
+    for (const row of rows) {
+      const url = String(row?.image_url || '').trim();
+      if (!url || seen.has(url)) {
+        continue;
+      }
+
+      const parsedSortOrder =
+        row?.sort_order !== null && row?.sort_order !== undefined
+          ? Number.parseInt(String(row.sort_order), 10)
+          : undefined;
+
+      images.push({
+        url,
+        alt_text: row?.alt_text || undefined,
+        sort_order: Number.isFinite(parsedSortOrder) ? parsedSortOrder : undefined,
+        is_primary: Boolean(row?.is_primary),
+      });
+      seen.add(url);
+    }
+
+    const primaryUrl = String(fallbackPrimaryUrl || '').trim();
+    if (primaryUrl && !seen.has(primaryUrl)) {
+      images.unshift({
+        url: primaryUrl,
+        is_primary: true,
+        sort_order: 0,
+      });
+    }
+
+    return images;
+  }
+
   private getB2BCustomerId(req: AuthenticatedRequest): string | number | undefined {
     const b2bCustomer = (req as any).b2bCustomer;
     return b2bCustomer?.customer_id ?? b2bCustomer?.id;
@@ -2426,6 +2485,10 @@ export class B2BController {
       if (projectionProduct) {
         const stockLocal = parseInt(projectionProduct.local_stock) || 0;
         const stockSupplier = parseInt(projectionProduct.supplier_stock) || 0;
+        const images = await this.getProductGalleryImages(
+          projectionProduct.id,
+          projectionProduct.primary_image_url,
+        );
 
         res.status(200).json({
           success: true,
@@ -2437,6 +2500,7 @@ export class B2BController {
             price: parseFloat(projectionProduct.price) || 0,
             currency: projectionProduct.currency || 'RON',
             image_url: projectionProduct.primary_image_url || '',
+            images,
             category:
               projectionProduct.category_root || projectionProduct.category_raw || 'Diverse',
             subcategory: this.normalizeCatalogSubcategory(
@@ -2535,6 +2599,7 @@ export class B2BController {
       const p = products[0];
       const stockLocal = parseInt(p.stock_local) || 0;
       const stockSupplier = parseInt(p.stock_supplier) || 0;
+      const images = await this.getProductGalleryImages(p.id, p.image_url);
 
       res.status(200).json({
         success: true,
@@ -2546,6 +2611,7 @@ export class B2BController {
           price: parseFloat(p.price) || 0,
           currency: p.currency || 'RON',
           image_url: p.image_url || '',
+          images,
           category: p.category_root || p.category_raw || 'Diverse',
           subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
           supplier_name: p.supplier_name || null,
