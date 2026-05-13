@@ -31,4 +31,30 @@ describe('SearchIndexModule', () => {
     expect(response.status).toBe(401);
     await module.stop();
   });
+
+  it('does not close shared redis client on stop', async () => {
+    const quit = jest.fn();
+    const disconnect = jest.fn();
+    const module = new SearchIndexModule();
+
+    await module.initialize({
+      dataSource: {} as any,
+      eventBus: { client: { quit, disconnect } } as any,
+      cacheManager: {} as any,
+      logger: {} as any,
+      config: {},
+      apiClientFactory: {} as any,
+      featureFlags: {
+        isEnabled: jest.fn().mockReturnValue(false),
+        getAll: jest.fn().mockReturnValue({}),
+        set: jest.fn(),
+      } as any,
+    });
+
+    await module.start();
+    await module.stop();
+
+    expect(quit).not.toHaveBeenCalled();
+    expect(disconnect).not.toHaveBeenCalled();
+  });
 });

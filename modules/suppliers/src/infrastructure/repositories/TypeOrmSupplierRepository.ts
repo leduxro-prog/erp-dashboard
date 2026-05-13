@@ -1,13 +1,19 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+
+import { createModuleLogger } from '@shared/utils/logger';
+
 import {
   ISupplierRepository,
   BulkUpsertResult,
   Supplier,
   SupplierProduct,
+  SupplierProductSpecification,
   SkuMapping,
   SupplierOrder,
 } from '../../domain';
 import { CategoryMarkup, ManufacturerMarkup } from '../../application/ports/ISupplierRepository';
+
+const logger = createModuleLogger('typeorm-supplier-repository');
 
 export class TypeOrmSupplierRepository implements ISupplierRepository {
   constructor(
@@ -15,6 +21,7 @@ export class TypeOrmSupplierRepository implements ISupplierRepository {
     private supplierProductRepository: Repository<any>,
     private skuMappingRepository: Repository<any>,
     private supplierOrderRepository: Repository<any>,
+    private dataSource?: DataSource,
   ) {}
 
   // Supplier operations
@@ -415,6 +422,158 @@ export class TypeOrmSupplierRepository implements ISupplierRepository {
     return { created, updated };
   }
 
+  async upsertProductSpecifications(
+    specifications: SupplierProductSpecification[],
+    options: { conflictPolicy: 'merge_non_empty'; source: string },
+  ): Promise<number> {
+    if (specifications.length === 0) {
+      return 0;
+    }
+
+    const queryRunner = this.dataSource?.createQueryRunner();
+    if (queryRunner) {
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+    }
+
+    const executor = queryRunner?.manager || this.supplierProductRepository;
+
+    try {
+      for (const spec of specifications) {
+        await executor.query(
+          `INSERT INTO product_specifications (
+             product_id,
+             brand,
+             manufacturer,
+             country_of_origin,
+             ean_code,
+             wattage,
+             lumens,
+             color_temperature,
+             cri,
+             beam_angle,
+             ip_rating,
+             efficacy,
+             dimmable,
+             dimming_type,
+             voltage_input,
+             voltage_output,
+             power_factor,
+             frequency,
+             mounting_type,
+             material,
+             color,
+             lifespan_hours,
+             warranty_years,
+             certification_ce,
+             certification_rohs,
+             certification_ul,
+             certification_etl,
+             certification_enec,
+             energy_class,
+             datasheet_url,
+             ies_file_url,
+             installation_guide_url,
+             custom_specs,
+             created_at,
+             updated_at
+           )
+           VALUES (
+             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+             $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+             $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+             $31, $32, $33::jsonb, NOW(), NOW()
+           )
+           ON CONFLICT (product_id) DO UPDATE SET
+             brand = COALESCE(NULLIF(EXCLUDED.brand, ''), product_specifications.brand),
+             manufacturer = COALESCE(NULLIF(EXCLUDED.manufacturer, ''), product_specifications.manufacturer),
+             country_of_origin = COALESCE(NULLIF(EXCLUDED.country_of_origin, ''), product_specifications.country_of_origin),
+             ean_code = COALESCE(NULLIF(EXCLUDED.ean_code, ''), product_specifications.ean_code),
+             wattage = COALESCE(EXCLUDED.wattage, product_specifications.wattage),
+             lumens = COALESCE(EXCLUDED.lumens, product_specifications.lumens),
+             color_temperature = COALESCE(EXCLUDED.color_temperature, product_specifications.color_temperature),
+             cri = COALESCE(EXCLUDED.cri, product_specifications.cri),
+             beam_angle = COALESCE(EXCLUDED.beam_angle, product_specifications.beam_angle),
+             ip_rating = COALESCE(NULLIF(EXCLUDED.ip_rating, ''), product_specifications.ip_rating),
+             efficacy = COALESCE(EXCLUDED.efficacy, product_specifications.efficacy),
+             dimmable = COALESCE(EXCLUDED.dimmable, product_specifications.dimmable),
+             dimming_type = COALESCE(NULLIF(EXCLUDED.dimming_type, ''), product_specifications.dimming_type),
+             voltage_input = COALESCE(NULLIF(EXCLUDED.voltage_input, ''), product_specifications.voltage_input),
+             voltage_output = COALESCE(NULLIF(EXCLUDED.voltage_output, ''), product_specifications.voltage_output),
+             power_factor = COALESCE(EXCLUDED.power_factor, product_specifications.power_factor),
+             frequency = COALESCE(NULLIF(EXCLUDED.frequency, ''), product_specifications.frequency),
+             mounting_type = COALESCE(NULLIF(EXCLUDED.mounting_type, ''), product_specifications.mounting_type),
+             material = COALESCE(NULLIF(EXCLUDED.material, ''), product_specifications.material),
+             color = COALESCE(NULLIF(EXCLUDED.color, ''), product_specifications.color),
+             lifespan_hours = COALESCE(EXCLUDED.lifespan_hours, product_specifications.lifespan_hours),
+             warranty_years = COALESCE(EXCLUDED.warranty_years, product_specifications.warranty_years),
+             certification_ce = COALESCE(EXCLUDED.certification_ce, product_specifications.certification_ce),
+             certification_rohs = COALESCE(EXCLUDED.certification_rohs, product_specifications.certification_rohs),
+             certification_ul = COALESCE(EXCLUDED.certification_ul, product_specifications.certification_ul),
+             certification_etl = COALESCE(EXCLUDED.certification_etl, product_specifications.certification_etl),
+             certification_enec = COALESCE(EXCLUDED.certification_enec, product_specifications.certification_enec),
+             energy_class = COALESCE(NULLIF(EXCLUDED.energy_class, ''), product_specifications.energy_class),
+             datasheet_url = COALESCE(NULLIF(EXCLUDED.datasheet_url, ''), product_specifications.datasheet_url),
+             ies_file_url = COALESCE(NULLIF(EXCLUDED.ies_file_url, ''), product_specifications.ies_file_url),
+             installation_guide_url = COALESCE(NULLIF(EXCLUDED.installation_guide_url, ''), product_specifications.installation_guide_url),
+             custom_specs = COALESCE(EXCLUDED.custom_specs, product_specifications.custom_specs),
+             updated_at = NOW()`,
+          [
+            spec.productId,
+            spec.brand ?? null,
+            spec.manufacturer ?? null,
+            spec.countryOfOrigin ?? null,
+            spec.eanCode ?? null,
+            spec.wattage ?? null,
+            spec.lumens ?? null,
+            spec.colorTemperature ?? null,
+            spec.cri ?? null,
+            spec.beamAngle ?? null,
+            spec.ipRating ?? null,
+            spec.efficacy ?? null,
+            spec.dimmable ?? null,
+            spec.dimmingType ?? null,
+            spec.voltageInput ?? null,
+            spec.voltageOutput ?? null,
+            spec.powerFactor ?? null,
+            spec.frequency ?? null,
+            spec.mountingType ?? null,
+            spec.material ?? null,
+            spec.color ?? null,
+            spec.lifespanHours ?? null,
+            spec.warrantyYears ?? null,
+            spec.certificationCe ?? null,
+            spec.certificationRohs ?? null,
+            spec.certificationUl ?? null,
+            spec.certificationEtl ?? null,
+            spec.certificationEnec ?? null,
+            spec.energyClass ?? null,
+            spec.datasheetUrl ?? null,
+            spec.iesFileUrl ?? null,
+            spec.installationGuideUrl ?? null,
+            spec.customSpecs ? JSON.stringify(spec.customSpecs) : null,
+          ],
+        );
+      }
+
+      if (queryRunner) {
+        await queryRunner.commitTransaction();
+      }
+
+      void options;
+      return specifications.length;
+    } catch (error) {
+      if (queryRunner) {
+        await queryRunner.rollbackTransaction();
+      }
+      throw error;
+    } finally {
+      if (queryRunner) {
+        await queryRunner.release();
+      }
+    }
+  }
+
   private async resolveMissingProductIds(products: SupplierProduct[]): Promise<SupplierProduct[]> {
     const unresolved = products.filter(
       (p) => !Number.isFinite(p.productId as number) && Boolean(p.supplierSku?.trim()),
@@ -764,6 +923,40 @@ export class TypeOrmSupplierRepository implements ISupplierRepository {
 
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  async getSyncReports(
+    supplierId: number,
+    limit: number,
+  ): Promise<Array<{ createdAt: Date; syncStatus: string; errorMessage?: string | null }>> {
+    try {
+      const rows = await this.supplierRepository.query(
+        `SELECT
+           created_at AS "createdAt",
+           sync_status AS "syncStatus",
+           error_message AS "errorMessage"
+         FROM supplier_sync_reports
+         WHERE supplier_id = $1
+         ORDER BY created_at DESC
+         LIMIT $2`,
+        [supplierId, limit],
+      );
+
+      return rows.map((row: any) => ({
+        createdAt: row.createdAt,
+        syncStatus: row.syncStatus,
+        errorMessage: row.errorMessage ?? null,
+      }));
+    } catch (error) {
+      if ((error as { code?: string }).code === '42P01') {
+        logger.warn('supplier_sync_reports table is not available; skipping sync report lookup', {
+          supplierId,
+        });
+        return [];
+      }
+
+      throw error;
+    }
   }
 
   // Category Markup operations

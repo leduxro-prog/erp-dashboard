@@ -95,6 +95,16 @@ export class B2BOrderController {
     this.tierService = new TierCalculationService();
   }
 
+  async downloadOrderModelPdf(_req: Request, res: Response, _next: NextFunction): Promise<void> {
+    res.status(501).json({
+      success: false,
+      error: {
+        code: 'ORDER_MODEL_PDF_NOT_IMPLEMENTED',
+        message: 'Order model PDF generation is not implemented.',
+      },
+    });
+  }
+
   private getB2BCustomerId(req: AuthenticatedRequest): string | number | undefined {
     const b2bCustomer = (req as any).b2bCustomer;
     return b2bCustomer?.customer_id ?? b2bCustomer?.id;
