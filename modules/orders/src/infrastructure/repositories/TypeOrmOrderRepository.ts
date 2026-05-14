@@ -1,6 +1,4 @@
 import { Repository, DataSource, Between, ILike, In, FindOptionsWhere } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectDataSource } from '@nestjs/typeorm';
 import { OrderEntity, OrderStatus } from '../entities/OrderEntity';
 import { OrderItemEntity } from '../entities/OrderItemEntity';
 import { OrderStatusHistoryEntity } from '../entities/OrderStatusHistoryEntity';
@@ -32,13 +30,12 @@ export interface IOrderRepository {
   getStatusHistory(orderId: string): Promise<OrderStatusHistoryEntity[]>;
 }
 
-@Injectable()
 export class TypeOrmOrderRepository implements IOrderRepository {
   private orderRepository: Repository<OrderEntity>;
   private itemRepository: Repository<OrderItemEntity>;
   private historyRepository: Repository<OrderStatusHistoryEntity>;
 
-  constructor(@InjectDataSource() private dataSource: DataSource) {
+  constructor(private dataSource: DataSource) {
     this.orderRepository = dataSource.getRepository(OrderEntity);
     this.itemRepository = dataSource.getRepository(OrderItemEntity);
     this.historyRepository = dataSource.getRepository(OrderStatusHistoryEntity);

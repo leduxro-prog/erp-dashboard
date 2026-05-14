@@ -1,8 +1,6 @@
-import { Injectable } from '@nestjs/common';
 import { RedisPool } from '@shared/cache/redis-pool';
 import { OrderEntity, OrderStatus } from '../entities/OrderEntity';
 
-@Injectable()
 export class OrderCache {
   private redisPool: RedisPool;
 

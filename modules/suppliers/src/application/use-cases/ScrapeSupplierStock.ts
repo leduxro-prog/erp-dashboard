@@ -538,6 +538,7 @@ export class ScrapeSupplierStock {
 
         // Process scraped products
         const productsToUpsert = new Map<string, SupplierProductEntity>();
+        const scrapedProductsByBatchKey = new Map<string, ScrapedProduct>();
         const specsToUpsert: SupplierProductSpecification[] = [];
 
         const flushBatch = async (): Promise<void> => {
@@ -545,8 +546,28 @@ export class ScrapeSupplierStock {
             return;
           }
 
-          await this.upsertWithRetry(Array.from(productsToUpsert.values()));
+          const batchEntries = Array.from(productsToUpsert.entries());
+          await this.upsertWithRetry(batchEntries.map(([, product]) => product));
+
+          for (const [batchKey, productEntity] of batchEntries) {
+            const scrapedProduct = scrapedProductsByBatchKey.get(batchKey);
+            if (!scrapedProduct) {
+              continue;
+            }
+
+            const spec = this.buildProductSpecification(
+              supplierId,
+              scrapedProduct,
+              productEntity.productId,
+              supplier.name,
+            );
+            if (spec) {
+              specsToUpsert.push(spec);
+            }
+          }
+
           productsToUpsert.clear();
+          scrapedProductsByBatchKey.clear();
         };
 
         for (const scrapedProduct of scrapedProducts) {
@@ -635,16 +656,7 @@ export class ScrapeSupplierStock {
           const batchKey = String(productEntity.supplierSku || '').trim().toUpperCase();
           if (batchKey.length > 0) {
             productsToUpsert.set(batchKey, productEntity);
-          }
-
-          const spec = this.buildProductSpecification(
-            supplierId,
-            scrapedProduct,
-            productEntity.productId,
-            supplier.name,
-          );
-          if (spec) {
-            specsToUpsert.push(spec);
+            scrapedProductsByBatchKey.set(batchKey, scrapedProduct);
           }
 
           if (productsToUpsert.size >= this.upsertBatchSize) {

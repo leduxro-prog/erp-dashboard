@@ -6,9 +6,10 @@ import {
     IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+import { TwoFactorAuthService } from './application/services/TwoFactorAuthService';
 import { UserService } from './application/services/UserService';
 import { UserController } from './api/controllers/UserController';
-import { UserEntity } from './domain/entities/UserEntity';
+import { UserEntity, UserRole } from './domain/entities/UserEntity';
 
 export class UsersModule implements ICypherModule {
     public readonly name = 'users';
@@ -22,6 +23,7 @@ export class UsersModule implements ICypherModule {
     private logger = createModuleLogger('users');
     private context!: IModuleContext;
     private userService!: UserService;
+    private twoFactorAuthService!: TwoFactorAuthService;
     private userController!: UserController;
     private eventBus: any; // Using any for now to avoid import issues, but explicitly typed in method
 
@@ -37,7 +39,8 @@ export class UsersModule implements ICypherModule {
 
         // Initialize Service and Controller
         this.userService = new UserService(context.dataSource);
-        this.userController = new UserController(this.userService);
+        this.twoFactorAuthService = new TwoFactorAuthService(context.dataSource.getRepository(UserEntity));
+        this.userController = new UserController(this.userService, this.twoFactorAuthService);
 
         // Initialize Router
         this.router = this.userController.getRouter();
@@ -62,14 +65,14 @@ export class UsersModule implements ICypherModule {
             }
 
             // Generate random password
-            const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+            const tempPassword = `B2B1a${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
 
             await this.userService.create({
-                username: registration.email, // Use email as username for B2B
                 email: registration.email,
                 password: tempPassword,
-                role: 'b2b_client' as any, // Using cast to avoid import cycle or enum issues
-                isActive: true,
+                first_name: registration.first_name || registration.firstName || registration.companyName || 'B2B',
+                last_name: registration.last_name || registration.lastName || 'User',
+                role: UserRole.B2B_USER,
             });
 
             this.logger.info(`Created user for B2B customer ${customerId} with email ${registration.email}`);

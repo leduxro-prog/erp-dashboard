@@ -1,5 +1,3 @@
-import { SupplierProduct } from '../../domain/entities/SupplierProduct';
-import { SkuMapping } from '../../domain/entities/SkuMapping';
 import { SupplierOrderItem } from '../../domain/entities/SupplierOrder';
 
 export interface PriceChangeAlert {
@@ -17,6 +15,8 @@ export interface ScrapeResult {
   productsFound: number;
   productsUpdated: number;
   productsCreated: number;
+  specificationsDetected: number;
+  specificationsUpdated: number;
   priceChanges: PriceChangeAlert[];
   significantPriceChanges: PriceChangeAlert[];
   errors: string[];

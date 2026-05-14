@@ -157,6 +157,45 @@ export const listBulkOrdersSchema = Joi.object({
   date_to: Joi.date().iso().optional(),
 });
 
+const stringOrStringArray = Joi.alternatives().try(
+  Joi.string().allow(''),
+  Joi.array().items(Joi.string().allow('')),
+);
+
+const numberOrNumberArray = Joi.alternatives().try(
+  Joi.number(),
+  Joi.array().items(Joi.number()),
+  Joi.string().allow(''),
+  Joi.array().items(Joi.string().allow('')),
+);
+
+/**
+ * Schema for listing B2B catalog products.
+ * Keep this aligned with B2BController.listProducts to avoid rejecting valid storefront filters.
+ */
+export const listProductsSchema = Joi.object({
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number().integer().min(1).max(120).optional(),
+  search: Joi.string().allow('').optional(),
+  category: Joi.string().allow('').optional(),
+  stock: Joi.string().valid('stock', 'local', 'supplier').allow('').optional(),
+  compact: Joi.boolean().truthy('true').truthy('1').falsy('false').falsy('0').optional(),
+  sort: Joi.string().max(50).allow('').optional(),
+  kelvin: numberOrNumberArray.optional(),
+  ip: stringOrStringArray.optional(),
+  brand: stringOrStringArray.optional(),
+  mountingType: stringOrStringArray.optional(),
+  mounting_type: stringOrStringArray.optional(),
+  stripType: stringOrStringArray.optional(),
+  strip_type: stringOrStringArray.optional(),
+  ledVoltage: numberOrNumberArray.optional(),
+  led_voltage: numberOrNumberArray.optional(),
+  lightColor: stringOrStringArray.optional(),
+  light_color: stringOrStringArray.optional(),
+  min_price: Joi.number().min(0).optional(),
+  max_price: Joi.number().min(0).optional(),
+}).unknown(false);
+
 /**
  * Validation middleware factory
  */

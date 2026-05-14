@@ -21,6 +21,9 @@ export class SupplierProductEntityDb {
   @Column({ type: 'int' })
   supplierId!: number;
 
+  @Column({ type: 'int', nullable: true })
+  productId?: number | null;
+
   @ManyToOne(() => SupplierEntityDb, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'supplierId' })
   supplier!: SupplierEntityDb;
@@ -39,6 +42,27 @@ export class SupplierProductEntityDb {
 
   @Column({ type: 'int', default: 0 })
   stockQuantity!: number;
+
+  @Column({ type: 'int', nullable: true })
+  minOrderQuantity?: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  leadTimeDays?: number | null;
+
+  @Column({ type: 'boolean', default: true })
+  isActive!: boolean;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  markupPercentage?: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  sellingPrice?: number | null;
+
+  @Column({ type: 'varchar', length: 1000, nullable: true })
+  imageUrl?: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  manufacturerId?: number | null;
 
   @Column({ type: 'timestamp' })
   lastScraped!: Date;

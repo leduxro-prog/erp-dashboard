@@ -1,6 +1,14 @@
 import { InvoiceItem } from './SmartBillInvoice';
 
-export type ProformaStatus = 'draft' | 'issued' | 'sent' | 'converted' | 'cancelled';
+export type ProformaStatus =
+  | 'draft'
+  | 'pending_external'
+  | 'requires_reconciliation'
+  | 'issued'
+  | 'sent'
+  | 'converted'
+  | 'cancelled'
+  | 'failed';
 
 /**
  * SmartBill API proforma statuses
@@ -50,6 +58,26 @@ export class SmartBillProforma {
     this.proformaNumber = proformaNumber;
     this.smartBillStatus = smartBillStatus || 'sent';
     this.status = mapSmartBillProformaStatus(this.smartBillStatus);
+  }
+
+  markPendingExternal(): void {
+    this.status = 'pending_external';
+  }
+
+  markRequiresReconciliation(): void {
+    this.status = 'requires_reconciliation';
+  }
+
+  markFailed(): void {
+    this.status = 'failed';
+  }
+
+  isExternalCreationInProgressOrUnknown(): boolean {
+    return this.status === 'pending_external' || this.status === 'requires_reconciliation';
+  }
+
+  isTerminallyBlockedForExternalCreate(): boolean {
+    return Boolean(this.smartBillId || this.proformaNumber) || this.isExternalCreationInProgressOrUnknown();
   }
 
   markSent(): void {

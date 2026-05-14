@@ -1,5 +1,10 @@
-import { Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
+import { promises as dns, LookupAddress } from 'dns';
+import http from 'http';
+import https from 'https';
+import net from 'net';
+
+import { Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 
 import { invalidateInventoryReadCacheNamespace } from '@shared/cache/inventory-read-cache';
@@ -45,6 +50,215 @@ export class B2BController {
     private readonly dataSource: DataSource,
   ) {
     this.anafValidationService = new AnafValidationService();
+  }
+
+  private isPrivatePreviewIp(address: string): boolean {
+    const normalized = address.toLowerCase();
+
+    if (normalized.startsWith('::ffff:')) {
+      return this.isPrivatePreviewIp(normalized.slice(7));
+    }
+
+    if (net.isIP(normalized) === 4) {
+      const parts = normalized.split('.').map((part) => Number(part));
+      const [first = 0, second = 0] = parts;
+
+      return (
+        first === 10 ||
+        first === 127 ||
+        (first === 172 && second >= 16 && second <= 31) ||
+        (first === 192 && second === 168) ||
+        (first === 169 && second === 254) ||
+        first === 0
+      );
+    }
+
+    if (net.isIP(normalized) === 6) {
+      return (
+        normalized === '::1' ||
+        normalized.startsWith('fc') ||
+        normalized.startsWith('fd') ||
+        normalized.startsWith('fe80:')
+      );
+    }
+
+    return true;
+  }
+
+  private async resolvePreviewHostAddresses(hostname: string): Promise<LookupAddress[]> {
+    const normalized = hostname.trim().toLowerCase();
+
+    if (
+      !normalized ||
+      normalized === 'localhost' ||
+      normalized.endsWith('.localhost') ||
+      normalized.endsWith('.local') ||
+      normalized.endsWith('.internal')
+    ) {
+      return [];
+    }
+
+    if (net.isIP(normalized)) {
+      return [{ address: normalized, family: net.isIP(normalized) as 4 | 6 }];
+    }
+
+    return dns.lookup(normalized, { all: true, verbatim: true });
+  }
+
+  async previewDocument(req: AuthenticatedRequest, res: Response, _next: NextFunction): Promise<void> {
+    const rawUrl = String(req.query?.url || '').trim();
+    let targetUrl: URL;
+
+    try {
+      targetUrl = new URL(rawUrl);
+    } catch (_error) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_DOCUMENT_URL',
+          message: 'Document preview URL is invalid.',
+        },
+      });
+      return;
+    }
+
+    if (!['http:', 'https:'].includes(targetUrl.protocol) || targetUrl.username || targetUrl.password) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_DOCUMENT_URL',
+          message: 'Document preview URL must be a public http or https URL.',
+        },
+      });
+      return;
+    }
+
+    let previewAddresses: LookupAddress[] = [];
+    try {
+      previewAddresses = await this.resolvePreviewHostAddresses(targetUrl.hostname);
+    } catch (_error) {
+      res.status(502).json({
+        success: false,
+        error: {
+          code: 'DOCUMENT_PREVIEW_FETCH_FAILED',
+          message: 'Document preview host could not be resolved.',
+        },
+      });
+      return;
+    }
+
+    if (
+      previewAddresses.length === 0 ||
+      previewAddresses.some((address) => this.isPrivatePreviewIp(address.address))
+    ) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_DOCUMENT_URL',
+          message: 'Document preview URL must not target private or internal hosts.',
+        },
+      });
+      return;
+    }
+
+    const client = targetUrl.protocol === 'https:' ? https : http;
+    const maxBytes = 5 * 1024 * 1024;
+    const lookup = (
+      hostname: string,
+      _options: unknown,
+      callback: (error: NodeJS.ErrnoException | null, address: string, family: number) => void,
+    ) => {
+      if (hostname.toLowerCase() !== targetUrl.hostname.toLowerCase()) {
+        callback(new Error('Unexpected preview host.') as NodeJS.ErrnoException, '', 4);
+        return;
+      }
+
+      const address = previewAddresses[0];
+      callback(null, address.address, address.family);
+    };
+
+    await new Promise<void>((resolve) => {
+      const upstreamReq = client.get(targetUrl, { timeout: 5000, lookup }, (upstreamRes) => {
+        const statusCode = upstreamRes.statusCode || 502;
+
+        if (statusCode >= 300 && statusCode < 400) {
+          upstreamRes.resume();
+          res.status(502).json({
+            success: false,
+            error: {
+              code: 'DOCUMENT_PREVIEW_FETCH_FAILED',
+              message: 'Document preview redirects are not supported.',
+            },
+          });
+          resolve();
+          return;
+        }
+
+        if (statusCode < 200 || statusCode >= 300) {
+          upstreamRes.resume();
+          res.status(502).json({
+            success: false,
+            error: {
+              code: 'DOCUMENT_PREVIEW_FETCH_FAILED',
+              message: 'Document preview fetch failed.',
+            },
+          });
+          resolve();
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        let receivedBytes = 0;
+        let capped = false;
+
+        upstreamRes.on('data', (chunk: Buffer) => {
+          receivedBytes += chunk.length;
+          if (receivedBytes > maxBytes) {
+            capped = true;
+            upstreamReq.destroy();
+            return;
+          }
+
+          chunks.push(chunk);
+        });
+
+        upstreamRes.on('end', () => {
+          if (capped) {
+            res.status(502).json({
+              success: false,
+              error: {
+                code: 'DOCUMENT_PREVIEW_FETCH_FAILED',
+                message: 'Document preview response is too large.',
+              },
+            });
+            resolve();
+            return;
+          }
+
+          res.setHeader('Content-Type', upstreamRes.headers['content-type'] || 'application/octet-stream');
+          res.setHeader('Cache-Control', 'private, max-age=300');
+          res.status(200).send(Buffer.concat(chunks));
+          resolve();
+        });
+      });
+
+      upstreamReq.on('timeout', () => {
+        upstreamReq.destroy(new Error('Document preview request timed out.'));
+      });
+
+      upstreamReq.on('error', () => {
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            error: {
+              code: 'DOCUMENT_PREVIEW_FETCH_FAILED',
+              message: 'Document preview fetch failed.',
+            },
+          });
+        }
+        resolve();
+      });
+    });
   }
 
   private async listProductsFromProjection(options: {
@@ -106,6 +320,10 @@ export class B2BController {
 
     if (options.stock === 'local') {
       where.push('ip.local_stock > 0');
+    }
+
+    if (options.stock === 'stock') {
+      where.push('(ip.local_stock > 0 OR ip.supplier_stock > 0)');
     }
 
     if (typeof options.minPrice === 'number' && Number.isFinite(options.minPrice)) {
@@ -327,6 +545,83 @@ export class B2BController {
     return rows.length > 0 ? rows[0] : null;
   }
 
+  private getSafeCatalogImageUrl(value: unknown): string {
+    const url = String(value || '').trim();
+    const lowerUrl = url.toLowerCase();
+    const isAbsoluteHttpUrl = lowerUrl.startsWith('https://') || lowerUrl.startsWith('http://');
+
+    if (!url) {
+      return '';
+    }
+
+    if (
+      lowerUrl.includes('pl-default-thickbox_default.jpg') ||
+      lowerUrl.includes('woocommerce-placeholder')
+    ) {
+      return '';
+    }
+
+    if (
+      !isAbsoluteHttpUrl &&
+      (lowerUrl.includes('/optimized/uploads/optimized/') ||
+        lowerUrl.includes('/uploads/optimized/') ||
+        lowerUrl.includes('/uploads/products/'))
+    ) {
+      return '';
+    }
+
+    if (!isAbsoluteHttpUrl) {
+      return '';
+    }
+
+    return url;
+  }
+
+  private isMissingProductAssetsSchemaError(error: any): boolean {
+    const code = String(error?.code || '');
+    if (code === '42P01' || code === '42703') {
+      return true;
+    }
+
+    const message = String(error?.message || '').toLowerCase();
+    return message.includes('product_assets') && message.includes('does not exist');
+  }
+
+  private async getProductAssetImageRows(
+    readDataSource: DataSource,
+    productId: string | number,
+  ): Promise<any[]> {
+    try {
+      return (
+        (await readDataSource.query(
+          `
+            SELECT
+              pa.storage_url,
+              pa.source_url,
+              pa.alt_text,
+              pa.sort_order,
+              pa.is_primary
+            FROM product_assets pa
+            WHERE pa.product_id = $1
+              AND pa.is_active = true
+              AND pa.asset_type = 'image'
+            ORDER BY
+              COALESCE(pa.is_primary, false) DESC,
+              pa.sort_order ASC NULLS LAST,
+              pa.id ASC
+          `,
+          [productId],
+        )) || []
+      );
+    } catch (error) {
+      if (this.isMissingProductAssetsSchemaError(error)) {
+        return [];
+      }
+
+      throw error;
+    }
+  }
+
   private async getProductGalleryImages(
     productId: string | number,
     fallbackPrimaryUrl?: string,
@@ -354,10 +649,10 @@ export class B2BController {
     const images: Array<{ url: string; alt_text?: string; sort_order?: number; is_primary?: boolean }> = [];
     const seen = new Set<string>();
 
-    for (const row of rows) {
-      const url = String(row?.image_url || '').trim();
+    const addImage = (row: any, rawUrl: unknown): void => {
+      const url = this.getSafeCatalogImageUrl(rawUrl);
       if (!url || seen.has(url)) {
-        continue;
+        return;
       }
 
       const parsedSortOrder =
@@ -372,9 +667,19 @@ export class B2BController {
         is_primary: Boolean(row?.is_primary),
       });
       seen.add(url);
+    };
+
+    for (const row of rows) {
+      addImage(row, row?.image_url);
     }
 
-    const primaryUrl = String(fallbackPrimaryUrl || '').trim();
+    const assetRows = await this.getProductAssetImageRows(readDataSource, productId);
+
+    for (const row of assetRows) {
+      addImage(row, this.getSafeCatalogImageUrl(row?.storage_url) || row?.source_url);
+    }
+
+    const primaryUrl = this.getSafeCatalogImageUrl(fallbackPrimaryUrl);
     if (primaryUrl && !seen.has(primaryUrl)) {
       images.unshift({
         url: primaryUrl,
@@ -2133,7 +2438,7 @@ export class B2BController {
             description: serializeCatalogDescription(p.description),
             price: parseFloat(p.price) || 0,
             currency: p.currency || 'RON',
-            image_url: p.primary_image_url || '',
+            image_url: this.getSafeCatalogImageUrl(p.primary_image_url),
             category: p.category_root || p.category_raw || 'Diverse',
             subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),
             brand: p.brand || null,
@@ -2207,6 +2512,29 @@ export class B2BController {
               AND sw2.is_active = true
               AND (sw2.code ILIKE 'SB-%' OR sw2.name ILIKE 'magazin')
               AND sl2.quantity_available > 0
+          )
+        `;
+      }
+
+      if (stock === 'stock') {
+        whereClause += `
+          AND (
+            EXISTS (
+              SELECT 1
+              FROM supplier_stock_cache sc2
+              WHERE sc2.product_id = p.id
+                AND sc2.is_available = true
+                AND sc2.quantity_available > 0
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM stock_levels sl2
+              JOIN warehouses sw2 ON sw2.id = sl2.warehouse_id
+              WHERE sl2.product_id = p.id
+                AND sw2.is_active = true
+                AND (sw2.code ILIKE 'SB-%' OR sw2.name ILIKE 'magazin')
+                AND sl2.quantity_available > 0
+            )
           )
         `;
       }
@@ -2489,6 +2817,8 @@ export class B2BController {
           projectionProduct.id,
           projectionProduct.primary_image_url,
         );
+        const primaryImageUrl =
+          this.getSafeCatalogImageUrl(projectionProduct.primary_image_url) || images[0]?.url || '';
 
         res.status(200).json({
           success: true,
@@ -2499,7 +2829,7 @@ export class B2BController {
             description: projectionProduct.description || '',
             price: parseFloat(projectionProduct.price) || 0,
             currency: projectionProduct.currency || 'RON',
-            image_url: projectionProduct.primary_image_url || '',
+            image_url: primaryImageUrl,
             images,
             category:
               projectionProduct.category_root || projectionProduct.category_raw || 'Diverse',
@@ -2600,6 +2930,7 @@ export class B2BController {
       const stockLocal = parseInt(p.stock_local) || 0;
       const stockSupplier = parseInt(p.stock_supplier) || 0;
       const images = await this.getProductGalleryImages(p.id, p.image_url);
+      const primaryImageUrl = this.getSafeCatalogImageUrl(p.image_url) || images[0]?.url || '';
 
       res.status(200).json({
         success: true,
@@ -2610,7 +2941,7 @@ export class B2BController {
           description: p.description || '',
           price: parseFloat(p.price) || 0,
           currency: p.currency || 'RON',
-          image_url: p.image_url || '',
+          image_url: primaryImageUrl,
           images,
           category: p.category_root || p.category_raw || 'Diverse',
           subcategory: this.normalizeCatalogSubcategory(p.category_raw, p.category_root),

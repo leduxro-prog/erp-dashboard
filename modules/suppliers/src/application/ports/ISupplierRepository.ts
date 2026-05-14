@@ -4,13 +4,45 @@
  */
 
 import { Supplier } from '../../domain/entities/Supplier';
-import { SupplierProduct } from '../../domain/entities/SupplierProduct';
+import {
+  SupplierProduct,
+  SupplierProductSpecification,
+} from '../../domain/entities/SupplierProduct';
 import { SkuMapping } from '../../domain/entities/SkuMapping';
 import { SupplierOrder } from '../../domain/entities/SupplierOrder';
 
 export interface BulkUpsertResult {
   updated: number;
   created: number;
+}
+
+export interface CategoryMarkup {
+  id: number;
+  supplierId: number;
+  categoryId: number;
+  categoryName: string;
+  markupPercentage: number;
+  isActive: boolean;
+}
+
+export interface ManufacturerMarkup {
+  id: number;
+  supplierId: number;
+  manufacturerId: number;
+  manufacturerName: string;
+  markupPercentage: number;
+  isActive: boolean;
+}
+
+export interface SupplierSyncReport {
+  createdAt: Date;
+  syncStatus: string;
+  errorMessage?: string | null;
+}
+
+export interface ProductSpecificationUpsertOptions {
+  conflictPolicy: 'merge_non_empty';
+  source: string;
 }
 
 /**
@@ -33,6 +65,10 @@ export interface ISupplierRepository {
   bulkUpsertProducts(
     products: SupplierProduct[],
   ): Promise<BulkUpsertResult>;
+  upsertProductSpecifications(
+    specifications: SupplierProductSpecification[],
+    options: ProductSpecificationUpsertOptions,
+  ): Promise<number>;
 
   // SKU Mapping operations
   getSkuMapping(
@@ -57,4 +93,5 @@ export interface ISupplierRepository {
   // Sync tracking
   updateLastSync(supplierId: number, syncTime: Date): Promise<void>;
   getLastSync(supplierId: number): Promise<Date | null>;
+  getSyncReports(supplierId: number, limit: number): Promise<SupplierSyncReport[]>;
 }

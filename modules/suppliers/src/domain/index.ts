@@ -4,6 +4,7 @@ export {
   SupplierProduct,
   SupplierProductEntity,
   type PriceHistoryEntry,
+  type SupplierProductSpecification,
 } from './entities/SupplierProduct';
 export { SkuMapping, SkuMappingEntity } from './entities/SkuMapping';
 export {
