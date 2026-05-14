@@ -398,7 +398,7 @@ export class TestPostgres {
   /**
    * Selects rows from a table
    */
-  public async select<T = any>(
+  public async select<T extends QueryResultRow = QueryResultRow>(
     tableName: string,
     where?: string,
     whereParams: unknown[] = [],
@@ -425,7 +425,7 @@ export class TestPostgres {
   /**
    * Selects a single row from a table
    */
-  public async selectOne<T = any>(
+  public async selectOne<T extends QueryResultRow = QueryResultRow>(
     tableName: string,
     where: string,
     whereParams: unknown[] = []
