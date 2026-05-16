@@ -18,7 +18,7 @@ const sampleItems: InvoiceItem[] = [
     sku: 'SKU001',
     quantity: 2,
     unitPrice: 100,
-    vatRate: 0.19,
+    vatRate: 0.19, // Legacy SmartBill fixture keeps historical 19% VAT sample data.
     totalWithoutVat: 200,
     vatAmount: 38,
   },

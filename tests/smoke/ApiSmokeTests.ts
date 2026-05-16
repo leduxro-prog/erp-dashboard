@@ -98,24 +98,25 @@ describe('API Smoke Tests', () => {
       const response = await getRootHealth<ReadinessCheckResult>();
 
       // /api/v1/health/ready is not part of the runtime surface; root /health is the launch probe.
-      expect([200, 403, 503]).toContain(response.status);
+      expect([200, 403]).toContain(response.status);
     });
 
     it('should respond to detailed health check', async () => {
       const response = await getRootHealth<DetailedHealthResult>();
 
       // Detailed /api/v1 health is not registered; smoke only verifies the public health surface.
-      expect([200, 403, 503]).toContain(response.status);
+      expect([200, 403]).toContain(response.status);
     });
 
-    it('database should be healthy in detailed health', async () => {
+    it('database should not be reported unhealthy when detailed checks are exposed', async () => {
       const response = await getRootHealth<DetailedHealthResult>();
 
       if (response.status === 403) return;
       expect(response.status).toBe(200);
 
       if (!isDetailedHealthResult(response.data) || !response.data.checks) {
-        // Owning runtime does not expose detailed dependency checks on public launch health.
+        // Public root /health may only expose liveness; absence of checks is explicit, not a DB assertion.
+        expect(response.data).toBeDefined();
         return;
       }
 
@@ -130,14 +131,15 @@ describe('API Smoke Tests', () => {
       }
     });
 
-    it('redis should be healthy in detailed health', async () => {
+    it('redis should not be reported unhealthy when detailed checks are exposed', async () => {
       const response = await getRootHealth<DetailedHealthResult>();
 
       if (response.status === 403) return;
       expect(response.status).toBe(200);
 
       if (!isDetailedHealthResult(response.data) || !response.data.checks) {
-        // Owning runtime does not expose detailed dependency checks on public launch health.
+        // Public root /health may only expose liveness; absence of checks is explicit, not a Redis assertion.
+        expect(response.data).toBeDefined();
         return;
       }
 
@@ -343,6 +345,7 @@ describe('API Smoke Tests', () => {
     it('should handle customer timeline endpoint', async () => {
       const response = await apiClient.get('/customers/erp/1/timeline?limit=5');
 
+      // Customer timeline is owned by the CRM/customer-history module and may be absent from launch API.
       expect([200, 401, 403, 404]).toContain(response.status);
       if (response.status === 200) {
         expect(Array.isArray(response.data.data)).toBe(true);
@@ -383,7 +386,7 @@ describe('API Smoke Tests', () => {
     });
 
     it('should return 405 for invalid methods', async () => {
-      const response = await apiClient.patch('/health/live');
+      const response = await apiClient.patch('/b2b/products/filters');
 
       expect([403, 404, 405]).toContain(response.status);
     });

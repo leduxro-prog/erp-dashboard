@@ -62,7 +62,7 @@ export interface Product extends BaseEntity {
   costPrice: number;
   /** Currency (always RON) */
   currency: Currency;
-  /** VAT rate applied (19% in Romania) */
+  /** VAT rate applied (21% in Romania) */
   vatRate: number;
   /** Weight in kg */
   weight?: number | null;

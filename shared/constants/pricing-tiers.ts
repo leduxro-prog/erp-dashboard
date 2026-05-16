@@ -3,7 +3,7 @@
  * Defines customer pricing tiers, volume discounts, and margin configurations
  */
 
-// VAT rate (19% in Romania)
+// VAT rate (21% in Romania)
 export const VAT_RATE = 0.21;
 
 // Profit margin constants

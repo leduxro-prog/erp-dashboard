@@ -60,7 +60,7 @@ export interface Quote extends BaseEntity {
   discountAmount: number;
   /** Discount percentage */
   discountPercentage: number;
-  /** VAT amount (19% in Romania) */
+  /** VAT amount (21% in Romania) */
   vat: number;
   /** Shipping cost */
   shippingCost: number;

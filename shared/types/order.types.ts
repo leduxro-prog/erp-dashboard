@@ -83,7 +83,7 @@ export interface Order extends BaseEntity {
   subtotal: number;
   /** Total discount amount */
   discountAmount: number;
-  /** VAT amount (19% in Romania) */
+  /** VAT amount (21% in Romania) */
   vat: number;
   /** Shipping cost */
   shippingCost: number;

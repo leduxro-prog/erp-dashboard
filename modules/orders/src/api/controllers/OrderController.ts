@@ -72,7 +72,7 @@ export class OrderController {
         };
       });
 
-      const taxRate = 0.21; // 19% VAT
+      const taxRate = 0.21; // 21% VAT
       const taxAmount = subtotal * taxRate;
       const grandTotal =
         subtotal + taxAmount + (req.body.shipping_cost || 0) - (req.body.discount_amount || 0);
