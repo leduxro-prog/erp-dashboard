@@ -6,6 +6,7 @@
  */
 
 import { beforeAll, afterAll, afterEach, beforeEach } from '@jest/globals';
+import { Client } from 'pg';
 import { DataSource } from 'typeorm';
 import { B2BCustomerEntity } from '@modules/b2b-portal/src/infrastructure/entities/B2BCustomerEntity';
 import { CreditTransactionEntity } from '@modules/b2b-portal/src/infrastructure/entities/CreditTransactionEntity';
@@ -13,10 +14,58 @@ import { CartEntity } from '@modules/checkout/src/domain/entities/CartEntity';
 import { CreditReservationEntity } from '@modules/checkout/src/domain/entities/CreditReservationEntity';
 import { OrderEntity } from '@modules/orders/src/infrastructure/entities/OrderEntity';
 import { OrderItemEntity } from '@modules/orders/src/infrastructure/entities/OrderItemEntity';
+import { OrderStatusHistoryEntity } from '@modules/orders/src/infrastructure/entities/OrderStatusHistoryEntity';
 import { StockReservationEntity } from '@modules/inventory/src/infrastructure/entities/StockReservationEntity';
 import { StockItemEntity } from '@modules/inventory/src/infrastructure/entities/StockItemEntity';
+import { WarehouseEntity } from '@modules/inventory/src/infrastructure/entities/WarehouseEntity';
 
 let testDataSource: DataSource | null = null;
+
+function assertSafeTestDatabaseConfig(config: { host: string; database: string }): void {
+  const safeHosts = new Set(['localhost', '127.0.0.1', '::1']);
+
+  if (process.env.NODE_ENV !== 'test') {
+    throw new Error(`Refusing to initialize test database outside NODE_ENV=test`);
+  }
+
+  if (!safeHosts.has(config.host)) {
+    throw new Error(`Refusing to initialize test database on non-local host: ${config.host}`);
+  }
+
+  if (!/^[a-zA-Z0-9_]+$/.test(config.database) || !config.database.endsWith('_test')) {
+    throw new Error(`Refusing to initialize non-test database: ${config.database}`);
+  }
+}
+
+async function ensureTestDatabaseExists(config: {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  database: string;
+}): Promise<void> {
+  assertSafeTestDatabaseConfig(config);
+
+  const maintenanceClient = new Client({
+    host: config.host,
+    port: config.port,
+    user: config.username,
+    password: config.password,
+    database: process.env.TEST_DB_MAINTENANCE_DATABASE || 'postgres',
+  });
+
+  await maintenanceClient.connect();
+  try {
+    const existing = await maintenanceClient.query('SELECT 1 FROM pg_database WHERE datname = $1', [
+      config.database,
+    ]);
+    if (existing.rowCount === 0) {
+      await maintenanceClient.query(`CREATE DATABASE ${config.database}`);
+    }
+  } finally {
+    await maintenanceClient.end();
+  }
+}
 
 /**
  * Get or create the test database connection.
@@ -28,9 +77,17 @@ export async function getTestDataSource(): Promise<DataSource> {
 
   const dbHost = process.env.TEST_DB_HOST || 'localhost';
   const dbPort = parseInt(process.env.TEST_DB_PORT || '5432', 10);
-  const dbUsername = process.env.TEST_DB_USERNAME || 'postgres';
-  const dbPassword = process.env.TEST_DB_PASSWORD || 'postgres';
+  const dbUsername = process.env.TEST_DB_USERNAME || process.env.DB_USER || 'cypher_user';
+  const dbPassword = process.env.TEST_DB_PASSWORD || process.env.DB_PASSWORD || 'cypher_secret';
   const dbDatabase = process.env.TEST_DB_DATABASE || 'cypher_erp_test';
+
+  await ensureTestDatabaseExists({
+    host: dbHost,
+    port: dbPort,
+    username: dbUsername,
+    password: dbPassword,
+    database: dbDatabase,
+  });
 
   testDataSource = new DataSource({
     type: 'postgres',
@@ -39,7 +96,7 @@ export async function getTestDataSource(): Promise<DataSource> {
     username: dbUsername,
     password: dbPassword,
     database: dbDatabase,
-    synchronize: false,
+    synchronize: true,
     dropSchema: false,
     logging: false,
     entities: [
@@ -49,8 +106,10 @@ export async function getTestDataSource(): Promise<DataSource> {
       CreditReservationEntity,
       OrderEntity,
       OrderItemEntity,
+      OrderStatusHistoryEntity,
       StockReservationEntity,
       StockItemEntity,
+      WarehouseEntity,
     ],
   });
 
@@ -78,24 +137,18 @@ export async function clearTestData(): Promise<void> {
     return;
   }
 
-  // Clear tables in dependency order (child tables first)
-  const repositories = [
-    testDataSource.getRepository(StockReservationEntity),
-    testDataSource.getRepository(CreditReservationEntity),
-    testDataSource.getRepository(OrderItemEntity),
-    testDataSource.getRepository(OrderEntity),
-    testDataSource.getRepository(CreditTransactionEntity),
-    testDataSource.getRepository(CartEntity),
-    testDataSource.getRepository(StockItemEntity),
-    testDataSource.getRepository(B2BCustomerEntity),
-  ];
+  const dbDatabase = process.env.TEST_DB_DATABASE || 'cypher_erp_test';
+  assertSafeTestDatabaseConfig({
+    host: process.env.TEST_DB_HOST || 'localhost',
+    database: dbDatabase,
+  });
 
-  for (const repo of repositories) {
-    try {
-      await repo.clear();
-    } catch (error) {
-      console.warn(`Failed to clear table: ${(error as Error).message}`);
-    }
+  const tableNames = testDataSource.entityMetadatas
+    .map((metadata) => `"${metadata.tablePath}"`)
+    .join(', ');
+
+  if (tableNames.length > 0) {
+    await testDataSource.query(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE`);
   }
 }
 

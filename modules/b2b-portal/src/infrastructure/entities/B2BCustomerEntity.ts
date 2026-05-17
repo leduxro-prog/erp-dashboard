@@ -11,6 +11,11 @@ import {
   Index,
 } from 'typeorm';
 
+const decimalNumberTransformer = {
+  to: (value: number) => value,
+  from: (value: string | null) => (value === null ? null : parseFloat(value)),
+};
+
 @Entity('b2b_customers')
 @Index('idx_b2b_customers_registration_id', ['registrationId'])
 @Index('idx_b2b_customers_cui', ['cui'])
@@ -36,10 +41,10 @@ export class B2BCustomerEntity {
   })
   tier!: string;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 12, scale: 2, transformer: decimalNumberTransformer })
   creditLimit!: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   usedCredit!: number;
 
   @Column('int', { default: 0 })
@@ -54,7 +59,7 @@ export class B2BCustomerEntity {
   @Column('int', { default: 0 })
   totalOrders!: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   totalSpent!: number;
 
   @Column('uuid', { nullable: true })

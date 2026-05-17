@@ -99,7 +99,10 @@ export interface TransactionOptions {
 /**
  * Callback function type for transaction execution
  */
-export type TransactionCallback<T> = (entityManager: EntityManager) => Promise<T>;
+export type TransactionCallback<T> = (
+  entityManager: EntityManager,
+  metadata: TransactionMetadata,
+) => Promise<T>;
 
 /**
  * Transaction Manager Configuration
@@ -205,7 +208,7 @@ export class TransactionManager {
 
           // Execute callback with transaction
           const result = await this.executeWithTimeout(
-            () => callback(activeQueryRunner.manager),
+            () => callback(activeQueryRunner.manager, metadata),
             timeoutMs - 100 // Leave some buffer for cleanup
           );
 
