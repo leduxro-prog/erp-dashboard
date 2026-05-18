@@ -15,7 +15,7 @@ export interface OrderTotalsResult {
 }
 
 export class OrderCalculationService {
-  private static readonly TAX_RATE = 0.21; // 19% VAT for Romania
+  private static readonly TAX_RATE = 0.21; // 21% VAT for Romania
 
   /**
    * Calculate complete order totals

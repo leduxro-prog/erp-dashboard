@@ -97,6 +97,7 @@ export interface ReserveCreditRequest {
 export interface CreateOrderFromCartRequest {
   cartId: string;
   customerId: string;
+  orderId?: string;
   userId?: string;
   billingAddress?: Record<string, any>;
   shippingAddress?: Record<string, any>;

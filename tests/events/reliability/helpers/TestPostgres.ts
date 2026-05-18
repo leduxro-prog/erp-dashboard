@@ -105,11 +105,11 @@ export class TestPostgres {
 
   constructor(config: TestPostgresConfig = {}, schema: string = 'test') {
     this.config = {
-      host: config.host || process.env.DB_HOST || 'localhost',
-      port: config.port || parseInt(process.env.DB_PORT || '5432', 10),
-      database: config.database || process.env.DB_NAME || 'cypher_erp_test',
-      username: config.username || process.env.DB_USER || 'cypher_user',
-      password: config.password || process.env.DB_PASSWORD || 'cypher_secret',
+      host: config.host || process.env.TEST_DB_HOST || process.env.DB_HOST || 'localhost',
+      port: config.port || parseInt(process.env.TEST_DB_PORT || process.env.DB_PORT || '5432', 10),
+      database: config.database || process.env.TEST_DB_DATABASE || 'cypher_erp_test',
+      username: config.username || process.env.TEST_DB_USERNAME || process.env.DB_USER || 'cypher_user',
+      password: config.password || process.env.TEST_DB_PASSWORD || process.env.DB_PASSWORD || 'cypher_secret',
       ssl: config.ssl || false,
       max: config.max || 20,
       idleTimeoutMillis: config.idleTimeoutMillis || 30000,
@@ -138,11 +138,11 @@ export class TestPostgres {
     });
 
     this.pool.on('connect', () => {
-      console.log('[TestPostgres] New client connected');
+      // Keep pool lifecycle quiet; events can fire after Jest has finished a test.
     });
 
     this.pool.on('remove', () => {
-      console.log('[TestPostgres] Client removed');
+      // Keep pool lifecycle quiet; events can fire after Jest has finished a test.
     });
   }
 
@@ -398,7 +398,7 @@ export class TestPostgres {
   /**
    * Selects rows from a table
    */
-  public async select<T = any>(
+  public async select<T extends QueryResultRow = QueryResultRow>(
     tableName: string,
     where?: string,
     whereParams: unknown[] = [],
@@ -425,7 +425,7 @@ export class TestPostgres {
   /**
    * Selects a single row from a table
    */
-  public async selectOne<T = any>(
+  public async selectOne<T extends QueryResultRow = QueryResultRow>(
     tableName: string,
     where: string,
     whereParams: unknown[] = []
@@ -850,7 +850,17 @@ export class TestPostgres {
  * Factory function for creating test Postgres instances
  */
 export function createTestPostgres(config?: TestPostgresConfig, schema?: string): TestPostgres {
-  return new TestPostgres(config, schema);
+  return new TestPostgres(
+    {
+      ...config,
+      host: process.env.TEST_DB_HOST || config?.host,
+      port: process.env.TEST_DB_PORT ? parseInt(process.env.TEST_DB_PORT, 10) : config?.port,
+      database: process.env.TEST_DB_DATABASE || config?.database,
+      username: process.env.TEST_DB_USERNAME || config?.username,
+      password: process.env.TEST_DB_PASSWORD || config?.password,
+    },
+    schema,
+  );
 }
 
 /**

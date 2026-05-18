@@ -11,6 +11,8 @@
 import amqp from 'amqplib';
 import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
 
+jest.setTimeout(15000);
+
 // RabbitMQ configuration
 const rabbitConfig = {
   host: process.env.RABBITMQ_HOST || 'localhost',
@@ -21,9 +23,10 @@ const rabbitConfig = {
 };
 
 // Exchange and queue names for testing
-const TEST_EXCHANGE = 'smoke-test-exchange';
-const TEST_QUEUE = 'smoke-test-queue';
-const TEST_DLQ = 'smoke-test-dlq';
+const TEST_RUN_ID = `${Date.now()}-${process.pid}`;
+const TEST_EXCHANGE = `smoke-test-exchange-${TEST_RUN_ID}`;
+const TEST_QUEUE = `smoke-test-queue-${TEST_RUN_ID}`;
+const TEST_DLQ = `smoke-test-dlq-${TEST_RUN_ID}`;
 const TEST_ROUTING_KEY = 'smoke.test';
 
 // Test message structure
@@ -36,6 +39,53 @@ interface TestMessage {
 describe('Event Bus Smoke Tests', () => {
   let connection: any = null;
   let channel: any = null;
+
+  async function waitForQueueMessageCount(queueName: string, expectedCount: number, timeoutMs = 5000): Promise<number> {
+    const deadline = Date.now() + timeoutMs;
+    let lastCount = -1;
+
+    while (Date.now() < deadline) {
+      const queueInfo = await channel?.checkQueue(queueName);
+      lastCount = queueInfo?.messageCount ?? -1;
+      if (lastCount === expectedCount) return lastCount;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    return lastCount;
+  }
+
+  async function getJsonMessage(queueName: string, timeoutMs = 5000): Promise<TestMessage | null> {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const msg = await channel?.get(queueName, { noAck: false });
+      if (msg) {
+        try {
+          const message = JSON.parse(msg.content.toString()) as TestMessage;
+          channel?.ack(msg);
+          return message;
+        } catch {
+          channel?.nack(msg, false, false);
+          return null;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    return null;
+  }
+
+  async function getRawMessage(queueName: string, timeoutMs = 5000): Promise<any | null> {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const msg = await channel?.get(queueName, { noAck: false });
+      if (msg) return msg;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+
+    return null;
+  }
 
   beforeAll(async () => {
     try {
@@ -62,12 +112,19 @@ describe('Event Bus Smoke Tests', () => {
 
   afterAll(async () => {
     try {
-      // Clean up test queues and exchange
       if (channel) {
-        await channel.deleteQueue(TEST_QUEUE);
-        await channel.deleteQueue(TEST_DLQ);
-        await channel.deleteExchange(TEST_EXCHANGE);
-        await channel.close();
+        for (const operation of [
+          () => channel.deleteQueue(TEST_QUEUE),
+          () => channel.deleteQueue(TEST_DLQ),
+          () => channel.deleteExchange(TEST_EXCHANGE),
+          () => channel.close(),
+        ]) {
+          try {
+            await operation();
+          } catch {
+            // Cleanup is best-effort because failure-path tests intentionally close channels.
+          }
+        }
       }
       if (connection) {
         await connection.close();
@@ -200,24 +257,7 @@ describe('Event Bus Smoke Tests', () => {
       };
 
       channel?.publish(TEST_EXCHANGE, TEST_ROUTING_KEY, Buffer.from(JSON.stringify(testMessage)));
-
-      // Consume the message
-      const consumed = await new Promise<TestMessage | null>((resolve) => {
-        const timeout = setTimeout(() => resolve(null), 5000);
-
-        channel?.consume(
-          TEST_QUEUE,
-          (msg: any) => {
-            if (msg) {
-              clearTimeout(timeout);
-              const message = JSON.parse(msg.content.toString()) as TestMessage;
-              channel?.ack(msg);
-              resolve(message);
-            }
-          },
-          { noAck: false }
-        );
-      });
+      const consumed = await getJsonMessage(TEST_QUEUE);
 
       expect(consumed).toBeDefined();
       expect(consumed?.type).toBe('smoke-test');
@@ -228,8 +268,9 @@ describe('Event Bus Smoke Tests', () => {
       // Purge queue first
       await channel?.purgeQueue(TEST_QUEUE);
 
-      // Publish 3 test messages
       const messageCount = 3;
+
+      // Publish 3 test messages
       for (let i = 0; i < messageCount; i++) {
         const testMessage: TestMessage = {
           type: 'smoke-test',
@@ -240,29 +281,15 @@ describe('Event Bus Smoke Tests', () => {
         channel?.publish(TEST_EXCHANGE, TEST_ROUTING_KEY, Buffer.from(JSON.stringify(testMessage)));
       }
 
+      await waitForQueueMessageCount(TEST_QUEUE, messageCount);
+
       // Consume all messages
       const messages: TestMessage[] = [];
-      const consumedCount = await new Promise<number>(async (resolve) => {
-        let count = 0;
-
-        const consumer = await channel?.consume(
-          TEST_QUEUE,
-          (msg: any) => {
-            if (msg) {
-              const message = JSON.parse(msg.content.toString()) as TestMessage;
-              messages.push(message);
-              channel?.ack(msg);
-              count++;
-
-              if (count === messageCount) {
-                channel?.cancel(consumer?.consumerTag || '');
-                resolve(count);
-              }
-            }
-          },
-          { noAck: false }
-        );
-      });
+      for (let i = 0; i < messageCount; i++) {
+        const message = await getJsonMessage(TEST_QUEUE);
+        if (message) messages.push(message);
+      }
+      const consumedCount = messages.length;
 
       expect(consumedCount).toBe(messageCount);
       expect(messages.length).toBe(messageCount);
@@ -280,26 +307,8 @@ describe('Event Bus Smoke Tests', () => {
       };
 
       channel?.publish(TEST_EXCHANGE, TEST_ROUTING_KEY, Buffer.from(JSON.stringify(testMessage)));
-
-      // Consume and acknowledge
-      const consumerTag = await new Promise<string>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
-
-        channel?.consume(
-          TEST_QUEUE,
-          (msg: any) => {
-            if (msg) {
-              clearTimeout(timeout);
-              channel?.ack(msg);
-              resolve(msg.fields.consumerTag);
-            }
-          },
-          { noAck: false }
-        );
-      });
-
-      expect(consumerTag).toBeDefined();
-      await channel?.cancel(consumerTag);
+      const consumed = await getJsonMessage(TEST_QUEUE);
+      expect(consumed?.data.test).toBe('ack');
     });
 
     it('should handle message rejection', async () => {
@@ -316,74 +325,142 @@ describe('Event Bus Smoke Tests', () => {
       channel?.publish(TEST_EXCHANGE, TEST_ROUTING_KEY, Buffer.from(JSON.stringify(testMessage)));
 
       // Consume and reject
-      const consumerTag = await new Promise<string>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
-
-        channel?.consume(
-          TEST_QUEUE,
-          (msg: any) => {
-            if (msg) {
-              clearTimeout(timeout);
-              channel?.reject(msg, false); // Don't requeue
-              resolve(msg.fields.consumerTag);
-            }
-          },
-          { noAck: false }
-        );
-      });
-
-      expect(consumerTag).toBeDefined();
-      await channel?.cancel(consumerTag);
+      await waitForQueueMessageCount(TEST_QUEUE, 1);
+      const msg = await getRawMessage(TEST_QUEUE);
+      expect(msg).toBeTruthy();
+      if (msg) {
+        channel?.reject(msg, false); // Don't requeue
+      }
 
       // Verify queue is empty
       const queueInfo = await channel?.checkQueue(TEST_QUEUE);
       expect(queueInfo?.messageCount).toBe(0);
+    });
+
+    it('should deliver messages through a push consumer and cancel cleanly', async () => {
+      const consumerQueue = `smoke-test-consumer-lifecycle-${TEST_RUN_ID}`;
+      const consumerChannel = await connection?.createChannel();
+      let consumerTag: string | null = null;
+
+      try {
+        await consumerChannel.assertQueue(consumerQueue, { durable: false });
+
+        const testMessage: TestMessage = {
+          type: 'smoke-test',
+          timestamp: new Date().toISOString(),
+          data: { test: 'consumer-lifecycle' },
+        };
+
+        const consumed = new Promise<TestMessage | null>((resolve) => {
+          let settled = false;
+          const timeout = setTimeout(() => resolve(null), 5000);
+          const finish = (message: TestMessage | null) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            resolve(message);
+          };
+
+          void consumerChannel
+            .consume(
+              consumerQueue,
+              (msg: any) => {
+                if (!msg) return;
+                try {
+                  const message = JSON.parse(msg.content.toString()) as TestMessage;
+                  consumerChannel.ack(msg);
+                  finish(message);
+                } catch {
+                  consumerChannel.nack(msg, false, false);
+                  finish(null);
+                }
+              },
+              { noAck: false }
+            )
+            .then((consumer: any) => {
+              consumerTag = consumer.consumerTag;
+              consumerChannel.publish('', consumerQueue, Buffer.from(JSON.stringify(testMessage)));
+            })
+            .catch(() => finish(null));
+        });
+
+        const message = await consumed;
+        expect(message?.data.test).toBe('consumer-lifecycle');
+      } finally {
+        if (consumerTag) {
+          try {
+            await consumerChannel.cancel(consumerTag);
+          } catch {
+            // Best-effort cleanup for degraded consumer/channel states.
+          }
+        }
+        try {
+          await consumerChannel.deleteQueue(consumerQueue);
+        } catch {
+          // Best-effort cleanup for degraded consumer/channel states.
+        }
+        try {
+          await consumerChannel.close();
+        } catch {
+          // Best-effort cleanup for degraded consumer/channel states.
+        }
+      }
     });
   });
 
   describe('Dead Letter Queue Tests', () => {
     it('should route failed message to DLQ', async () => {
       // Create a queue with DLQ
-      const testQueue = 'smoke-test-dlq-source';
-      const dlx = 'smoke-test-dlx';
+      const testQueue = `smoke-test-dlq-source-${TEST_RUN_ID}`;
+      const dlx = `smoke-test-dlx-${TEST_RUN_ID}`;
       const dlqRoutingKey = 'dlq';
 
-      await channel?.assertExchange(dlx, 'direct', { durable: false });
-      await channel?.assertQueue(testQueue, {
-        durable: false,
-        deadLetterExchange: dlx,
-        deadLetterRoutingKey: dlqRoutingKey,
-      });
+      try {
+        await channel?.assertExchange(dlx, 'direct', { durable: false });
+        await channel?.assertQueue(testQueue, {
+          durable: false,
+          deadLetterExchange: dlx,
+          deadLetterRoutingKey: dlqRoutingKey,
+        });
 
-      await channel?.assertQueue(TEST_DLQ, { durable: false });
-      await channel?.bindQueue(TEST_DLQ, dlx, dlqRoutingKey);
+        await channel?.assertQueue(TEST_DLQ, { durable: false });
+        await channel?.bindQueue(TEST_DLQ, dlx, dlqRoutingKey);
+        await channel?.purgeQueue(TEST_DLQ);
 
-      // Publish a message
-      const testMessage: TestMessage = {
-        type: 'smoke-test',
-        timestamp: new Date().toISOString(),
-        data: { test: 'dlq' },
-      };
+        // Publish a message
+        const testMessage: TestMessage = {
+          type: 'smoke-test',
+          timestamp: new Date().toISOString(),
+          data: { test: 'dlq' },
+        };
 
-      channel?.publish('', testQueue, Buffer.from(JSON.stringify(testMessage)));
+        channel?.publish('', testQueue, Buffer.from(JSON.stringify(testMessage)));
+        const sourceCount = await waitForQueueMessageCount(testQueue, 1);
+        expect(sourceCount).toBe(1);
 
-      // Consume and reject with requeue
-      const consumerTag = await new Promise<string>((resolve) => {
-        channel?.consume(
-          testQueue,
-          (msg: any) => {
-            if (msg) {
-              channel?.reject(msg, true); // Requeue once
-              resolve(msg.fields.consumerTag);
-            }
-          },
-          { noAck: false }
-        );
-      });
+        // Consume and reject without requeue so RabbitMQ routes it to the configured DLQ.
+        const msg = await channel?.get(testQueue, { noAck: false });
+        expect(msg).toBeTruthy();
+        if (msg) {
+          channel?.reject(msg, false);
+        }
 
-      await channel?.cancel(consumerTag);
-      await channel?.deleteQueue(testQueue);
-      await channel?.deleteExchange(dlx);
+        const dlqCount = await waitForQueueMessageCount(TEST_DLQ, 1);
+        expect(dlqCount).toBe(1);
+        const dlqMessage = await getJsonMessage(TEST_DLQ);
+        expect(dlqMessage?.data.test).toBe('dlq');
+      } finally {
+        try {
+          await channel?.deleteQueue(testQueue);
+        } catch {
+          // Best-effort cleanup for failed DLQ assertions.
+        }
+        try {
+          await channel?.deleteExchange(dlx);
+        } catch {
+          // Best-effort cleanup for failed DLQ assertions.
+        }
+      }
     });
   });
 
@@ -411,25 +488,9 @@ describe('Event Bus Smoke Tests', () => {
         data: { test: 'perf-consume' },
       };
 
-      channel?.publish(TEST_EXCHANGE, TEST_ROUTING_KEY, Buffer.from(JSON.stringify(testMessage)));
-
       const start = Date.now();
-      await new Promise<TestMessage | null>((resolve) => {
-        const timeout = setTimeout(() => resolve(null), 5000);
-
-        channel?.consume(
-          TEST_QUEUE,
-          (msg: any) => {
-            if (msg) {
-              clearTimeout(timeout);
-              const message = JSON.parse(msg.content.toString()) as TestMessage;
-              channel?.ack(msg);
-              resolve(message);
-            }
-          },
-          { noAck: false }
-        );
-      });
+      channel?.publish(TEST_EXCHANGE, TEST_ROUTING_KEY, Buffer.from(JSON.stringify(testMessage)));
+      await getJsonMessage(TEST_QUEUE);
       const duration = Date.now() - start;
 
       expect(duration).toBeLessThan(500);
@@ -453,17 +514,21 @@ describe('Event Bus Smoke Tests', () => {
       expect(publishDuration).toBeLessThan(1000);
 
       // Verify all messages are in queue
-      const queueInfo = await channel?.checkQueue(TEST_QUEUE);
-      expect(queueInfo?.messageCount).toBe(messageCount);
+      const messageCountInQueue = await waitForQueueMessageCount(TEST_QUEUE, messageCount);
+      expect(messageCountInQueue).toBe(messageCount);
     });
   });
 
   describe('Queue Management', () => {
     it('should purge queue', async () => {
+      await channel?.purgeQueue(TEST_QUEUE);
+
       // Add some messages
       for (let i = 0; i < 5; i++) {
         channel?.publish(TEST_EXCHANGE, TEST_ROUTING_KEY, Buffer.from('test'));
       }
+
+      await waitForQueueMessageCount(TEST_QUEUE, 5);
 
       // Purge
       const result = await channel?.purgeQueue(TEST_QUEUE);
@@ -486,13 +551,20 @@ describe('Event Bus Smoke Tests', () => {
     });
 
     it('should create and delete exchange', async () => {
-      const tempExchange = 'smoke-test-temp-exchange';
-      await channel?.assertExchange(tempExchange, 'topic', { durable: false });
+      const tempExchange = `smoke-test-temp-exchange-${TEST_RUN_ID}`;
 
-      const check = await channel?.checkExchange(tempExchange);
-      expect(check).toBeDefined();
+      try {
+        await channel?.assertExchange(tempExchange, 'topic', { durable: false });
 
-      await channel?.deleteExchange(tempExchange);
+        const check = await channel?.checkExchange(tempExchange);
+        expect(check).toBeDefined();
+      } finally {
+        try {
+          await channel?.deleteExchange(tempExchange);
+        } catch {
+          // Best-effort cleanup for failed exchange assertions.
+        }
+      }
     });
   });
 

@@ -5,12 +5,10 @@ import request from 'supertest';
 import { createOrderRoutes } from '../../modules/orders/src/api/routes/order.routes';
 import { createInventoryRoutes } from '../../modules/inventory/src/api/routes/inventory.routes';
 import { createSmartBillRoutes } from '../../modules/smartbill/src/api/routes/smartbill.routes';
-import metaAdsRouter from '../../modules/meta-ads/src/api/routes/meta-ads.routes';
 import { createSeoModuleCompositionRoot } from '../../modules/seo-automation/src/infrastructure/composition-root';
 import SettingsModule from '../../modules/settings/src/settings-module';
 import { createB2BRoutes } from '../../modules/b2b-portal/src/api/routes/b2b.routes';
 import { UserController } from '../../modules/users/src/api/controllers/UserController';
-import { authenticate, requireRole } from '../../shared/middleware/auth.middleware';
 
 type RouteExpectation = {
   name: string;
@@ -68,16 +66,6 @@ function buildUsersRouter() {
   );
 
   return controller.getRouter();
-}
-
-function buildMetaAdsRouter() {
-  const router = express.Router();
-
-  router.use(authenticate);
-  router.use(requireRole(['admin', 'manager']));
-  router.use(metaAdsRouter);
-
-  return router;
 }
 
 function buildB2BRouter() {
@@ -314,7 +302,6 @@ async function buildApp(): Promise<Express> {
     'syncInvoiceStatus',
     'checkInvoicePaymentStatus',
   ]) as never));
-  app.use('/api/v1/meta-ads', buildMetaAdsRouter());
   app.use('/api/v1/settings', await buildSettingsRouter());
   app.use('/api/v1/b2b', buildB2BRouter());
   app.use('/api/v1/seo', await buildSeoRouter());
@@ -354,12 +341,6 @@ describe('Public surface policy', () => {
         name: 'smartbill invoices stay private',
         method: 'post',
         path: '/api/v1/smartbill/invoices',
-        expectedStatus: 401,
-      },
-      {
-        name: 'meta ads status stays private',
-        method: 'get',
-        path: '/api/v1/meta-ads/status',
         expectedStatus: 401,
       },
       {

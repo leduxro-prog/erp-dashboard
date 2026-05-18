@@ -106,7 +106,7 @@ export const BusinessSettingsKeys = {
   BANK_IBAN: 'bank_iban',
   /** Default currency (RON) */
   DEFAULT_CURRENCY: 'default_currency',
-  /** VAT rate (19%) */
+  /** VAT rate (21%) */
   VAT_RATE: 'vat_rate',
   /** Default payment terms (days) */
   DEFAULT_PAYMENT_TERMS_DAYS: 'default_payment_terms_days',

@@ -109,7 +109,6 @@ export class TransactionTestHelper {
       subtotal,
       discountRate: 0,
       discountAmount: 0,
-      taxRate,
       taxAmount,
       shippingCost,
       total,
@@ -321,7 +320,7 @@ export class TransactionTestHelper {
     expect(customer).toBeDefined();
     expect(customer?.creditLimit).toBe(expectedCreditLimit);
     expect(customer?.usedCredit).toBe(expectedUsedCredit);
-    expect(customer?.creditLimit - customer?.usedCredit).toBeGreaterThanOrEqual(0);
+    expect(customer!.creditLimit - customer!.usedCredit).toBeGreaterThanOrEqual(0);
   }
 
   /**

@@ -183,23 +183,12 @@ function buildFixture(): AppSettings {
       selectedDirection: 'hybrid_commerce',
       brandName: 'LEDUX',
       website: 'https://ledux.ro',
-      promise: 'Iluminat potrivit, livrare rapida, recomandari tehnice clare.',
-      toneOfVoice: ['clar', 'aplicat'],
-      valuePillars: ['expertiza tehnica', 'stoc real'],
-      forbiddenPhrases: ['cel mai ieftin garantat'],
+      promise: 'Solutii LED disponibile rapid pentru proiecte rezidentiale si comerciale.',
+      positioning: 'Magazin B2B/B2C pentru iluminat LED cu stoc si consultanta.',
+      tone: ['clar', 'comercial', 'de incredere'],
       seo: {
-        titleSuffix: 'Ledux.ro',
-        metaDescriptionCta: 'Verifica stocul in timp real.',
-        focusKeywords: ['iluminat led'],
-        categoryIntentMap: {
-          'corpuri-de-iluminat-interior': 'transactional',
-        },
-      },
-      ai: {
-        enforceBrandGuardrails: true,
-        defaultTemperature: 0.2,
-        maxTokens: 900,
-        preferredModel: 'gemini-2.5-flash',
+        titleSuffix: 'Ledux.ro - solutii LED in stoc',
+        metaDescriptionCta: 'Comanda online sau cere suport pentru alegerea produselor LED potrivite.',
       },
     },
   };

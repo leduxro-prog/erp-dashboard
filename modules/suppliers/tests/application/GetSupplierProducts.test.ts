@@ -25,6 +25,8 @@ describe('GetSupplierProducts Use Case', () => {
     isActive: true,
     credentials: { username: 'u', password: 'p' },
     syncFrequency: 4,
+    defaultMarkupPercentage: 0,
+    markupType: 'percentage',
     lastSync: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),

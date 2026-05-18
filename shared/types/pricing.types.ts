@@ -156,7 +156,7 @@ export interface PriceResult {
   totalDiscountPercentage: number;
   /** Final price before VAT */
   finalPrice: number;
-  /** VAT rate (19%) */
+  /** VAT rate (21%) */
   vatRate: number;
   /** VAT amount */
   vat: number;

@@ -94,6 +94,7 @@ export class TestRabbitMQ {
   private connection: ChannelModel | null = null;
   private channel: ConfirmChannel | null = null;
   private reconnectAttempts: number = 0;
+  private successfulReconnections: number = 0;
   private maxReconnectAttempts: number = 10;
   private reconnectDelay: number = 1000;
 
@@ -107,6 +108,7 @@ export class TestRabbitMQ {
 
   private connectionErrors: number = 0;
   private isSimulatingFailure: boolean = false;
+  private isCleaningUp: boolean = false;
 
   constructor(config: TestRabbitMQConfig = {}) {
     this.config = {
@@ -130,30 +132,44 @@ export class TestRabbitMQ {
     this.connection.on('error', (err) => {
       this.connectionErrors++;
       console.error(`[TestRabbitMQ] Connection error:`, err.message);
-      if (!this.isSimulatingFailure) {
+      if (!this.isSimulatingFailure && !this.isCleaningUp) {
         this.handleReconnect();
       }
     });
 
     this.connection.on('close', () => {
       console.log('[TestRabbitMQ] Connection closed');
-      if (!this.isSimulatingFailure) {
+      if (!this.isSimulatingFailure && !this.isCleaningUp) {
         this.handleReconnect();
       }
     });
 
-    this.channel = await this.connection.createConfirmChannel();
+    const channel = await this.connection.createConfirmChannel();
+    this.channel = channel;
 
-    this.channel.on('error', (err) => {
+    channel.on('error', (err) => {
       console.error(`[TestRabbitMQ] Channel error:`, err.message);
     });
 
-    this.channel.on('close', () => {
+    channel.on('close', () => {
       console.log('[TestRabbitMQ] Channel closed');
+      if (this.channel === channel) {
+        this.channel = null;
+      }
     });
 
-    await this.channel.prefetch(10);
+    await channel.prefetch(10);
     this.reconnectAttempts = 0;
+  }
+
+  private async ensureConnected(): Promise<void> {
+    if (!this.connection || !this.channel) {
+      await this.connect();
+    }
+  }
+
+  private isChannelClosedError(error: unknown): boolean {
+    return error instanceof Error && /Channel closed|Connection closed|IllegalOperationError/.test(error.message);
   }
 
   /**
@@ -201,9 +217,7 @@ export class TestRabbitMQ {
    * Declares a test exchange
    */
   public async declareExchange(exchange: TestExchange): Promise<void> {
-    if (!this.channel) {
-      await this.connect();
-    }
+    await this.ensureConnected();
 
     await this.channel!.assertExchange(
       exchange.name,
@@ -219,9 +233,7 @@ export class TestRabbitMQ {
    * Declares a test queue
    */
   public async declareQueue(queue: TestQueue): Promise<Replies.AssertQueue> {
-    if (!this.channel) {
-      await this.connect();
-    }
+    await this.ensureConnected();
 
     const result = await this.channel!.assertQueue(
       queue.name,
@@ -257,9 +269,7 @@ export class TestRabbitMQ {
     content: any,
     options: Options.Publish = {}
   ): Promise<PublishResult> {
-    if (!this.channel) {
-      await this.connect();
-    }
+    await this.ensureConnected();
 
     const startTime = Date.now();
 
@@ -275,18 +285,20 @@ export class TestRabbitMQ {
         }
       );
 
-      this.publishLatencies.push(Date.now() - startTime);
-
       if (!sequence) {
+        this.publishLatencies.push(Math.max(1, Date.now() - startTime));
         return {
           success: false,
           error: new Error('Publish failed - buffer full or channel closed'),
         };
       }
 
+      await this.channel!.waitForConfirms();
+      this.publishLatencies.push(Math.max(1, Date.now() - startTime));
+
       return { success: true };
     } catch (error) {
-      this.publishLatencies.push(Date.now() - startTime);
+      this.publishLatencies.push(Math.max(1, Date.now() - startTime));
       return {
         success: false,
         error: error as Error,
@@ -321,11 +333,20 @@ export class TestRabbitMQ {
     handler: (msg: ConsumeMessage | null) => void,
     options: Options.Consume = {}
   ): Promise<Replies.Consume> {
-    if (!this.channel) {
-      await this.connect();
-    }
+    await this.ensureConnected();
 
-    const result = await this.channel!.consume(queue, handler, options);
+    let result: Replies.Consume;
+    try {
+      result = await this.channel!.consume(queue, handler, options);
+    } catch (error) {
+      if (!this.isChannelClosedError(error)) {
+        throw error;
+      }
+
+      this.channel = null;
+      await this.connect();
+      result = await this.channel!.consume(queue, handler, options);
+    }
     this.consumers.set(result.consumerTag, handler);
 
     console.log(`[TestRabbitMQ] Started consuming from queue: ${queue} (${result.consumerTag})`);
@@ -384,6 +405,7 @@ export class TestRabbitMQ {
    */
   public async cancelConsumer(consumerTag: string): Promise<void> {
     if (!this.channel) {
+      this.consumers.delete(consumerTag);
       return;
     }
 
@@ -392,7 +414,16 @@ export class TestRabbitMQ {
       this.consumers.delete(consumerTag);
       console.log(`[TestRabbitMQ] Cancelled consumer: ${consumerTag}`);
     } catch (error) {
-      console.error(`[TestRabbitMQ] Failed to cancel consumer:`, error);
+      this.consumers.delete(consumerTag);
+      if (!this.isCleaningUp) {
+        console.error(`[TestRabbitMQ] Failed to cancel consumer:`, error);
+      }
+    }
+  }
+
+  public async cancelAllConsumers(): Promise<void> {
+    for (const consumerTag of Array.from(this.consumers.keys())) {
+      await this.cancelConsumer(consumerTag);
     }
   }
 
@@ -400,9 +431,7 @@ export class TestRabbitMQ {
    * Gets message count in a queue
    */
   public async getQueueMessageCount(queue: string): Promise<number> {
-    if (!this.channel) {
-      await this.connect();
-    }
+    await this.ensureConnected();
 
     try {
       const result = await this.channel!.checkQueue(queue);
@@ -416,16 +445,24 @@ export class TestRabbitMQ {
    * Purges a queue
    */
   public async purgeQueue(queue: string): Promise<number> {
-    if (!this.channel) {
-      await this.connect();
-    }
+    await this.ensureConnected();
 
     try {
       const result = await this.channel!.purgeQueue(queue);
       console.log(`[TestRabbitMQ] Purged queue: ${queue} (${result.messageCount} messages)`);
       return result.messageCount;
     } catch (error) {
-      console.error(`[TestRabbitMQ] Failed to purge queue:`, error);
+      if (this.isChannelClosedError(error)) {
+        this.channel = null;
+        await this.connect();
+        const result = await this.channel!.purgeQueue(queue);
+        console.log(`[TestRabbitMQ] Purged queue: ${queue} (${result.messageCount} messages)`);
+        return result.messageCount;
+      }
+
+      if (!this.isCleaningUp) {
+        console.error(`[TestRabbitMQ] Failed to purge queue:`, error);
+      }
       return 0;
     }
   }
@@ -434,9 +471,7 @@ export class TestRabbitMQ {
    * Deletes a queue
    */
   public async deleteQueue(queue: string, options: Options.DeleteQueue = {}): Promise<Replies.DeleteQueue> {
-    if (!this.channel) {
-      await this.connect();
-    }
+    await this.ensureConnected();
 
     const result = await this.channel!.deleteQueue(queue, options);
     this.queues.delete(queue);
@@ -450,9 +485,7 @@ export class TestRabbitMQ {
    * Deletes an exchange
    */
   public async deleteExchange(exchange: string, options: Options.DeleteExchange = {}): Promise<void> {
-    if (!this.channel) {
-      await this.connect();
-    }
+    await this.ensureConnected();
 
     await this.channel!.deleteExchange(exchange, options);
     this.exchanges.delete(exchange);
@@ -477,6 +510,7 @@ export class TestRabbitMQ {
 
     console.log('[TestRabbitMQ] Restoring connection');
     await this.connect();
+    this.successfulReconnections++;
   }
 
   /**
@@ -490,6 +524,13 @@ export class TestRabbitMQ {
     console.log(`[TestRabbitMQ] Simulating channel failure for ${duration}ms`);
     const originalChannel = this.channel;
     this.channel = null;
+    this.consumers.clear();
+
+    try {
+      await originalChannel.close();
+    } catch {
+      // The channel may already be closing as part of the simulated failure.
+    }
 
     await new Promise((resolve) => setTimeout(resolve, duration));
 
@@ -531,7 +572,7 @@ export class TestRabbitMQ {
       messagesConsumed: this.consumeLatencies.length,
       messagesFailed: this.connectionErrors,
       connectionErrors: this.connectionErrors,
-      reconnections: this.reconnectAttempts,
+      reconnections: this.successfulReconnections,
       avgPublishLatency: this.publishLatencies.length > 0
         ? totalPublishLatency / this.publishLatencies.length
         : 0,
@@ -549,6 +590,7 @@ export class TestRabbitMQ {
     this.consumeLatencies = [];
     this.connectionErrors = 0;
     this.reconnectAttempts = 0;
+    this.successfulReconnections = 0;
   }
 
   /**
@@ -556,11 +598,10 @@ export class TestRabbitMQ {
    */
   public async cleanup(): Promise<void> {
     console.log('[TestRabbitMQ] Cleaning up test resources');
+    this.isCleaningUp = true;
 
     // Cancel all consumers
-    for (const consumerTag of Array.from(this.consumers.keys())) {
-      await this.cancelConsumer(consumerTag);
-    }
+    await this.cancelAllConsumers();
 
     // Delete all queues
     for (const queueName of Array.from(this.queues.keys())) {
@@ -584,12 +625,16 @@ export class TestRabbitMQ {
 
     // Close connection
     if (this.channel) {
-      await this.channel.close();
+      try {
+        await this.channel.close();
+      } catch {}
       this.channel = null;
     }
 
     if (this.connection) {
-      await this.connection.close();
+      try {
+        await this.connection.close();
+      } catch {}
       this.connection = null;
     }
 
@@ -598,6 +643,7 @@ export class TestRabbitMQ {
     this.consumers.clear();
     this.consumedMessages.clear();
     this.resetStats();
+    this.isCleaningUp = false;
 
     console.log('[TestRabbitMQ] Cleanup complete');
   }

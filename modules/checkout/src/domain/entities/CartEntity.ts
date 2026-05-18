@@ -13,6 +13,11 @@ import {
   Index,
 } from 'typeorm';
 
+const decimalNumberTransformer = {
+  to: (value: number) => value,
+  from: (value: string | null) => (value === null ? null : parseFloat(value)),
+};
+
 export enum CartStatus {
   ACTIVE = 'ACTIVE',
   PROCESSING = 'PROCESSING',
@@ -54,22 +59,22 @@ export class CartEntity {
   @Column('jsonb')
   items!: CartItem[];
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   subtotal!: number;
 
-  @Column('decimal', { precision: 5, scale: 2, default: 0 })
+  @Column('decimal', { precision: 5, scale: 2, default: 0, transformer: decimalNumberTransformer })
   discountRate!: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   discountAmount!: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   taxAmount!: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   shippingCost!: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   total!: number;
 
   @Column('text', { nullable: true })

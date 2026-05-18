@@ -232,8 +232,8 @@ check_prerequisites() {
         exit 1
     fi
 
-    # Check if we're in a git repository
-    if [ ! -d "$PROJECT_ROOT/.git" ]; then
+    # Check if we're in a git repository. Worktrees store .git as a file.
+    if ! git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
         log_error "Not in a git repository"
         exit 1
     fi

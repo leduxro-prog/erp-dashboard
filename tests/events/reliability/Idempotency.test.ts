@@ -490,6 +490,10 @@ describe('Idempotency Validation', () => {
           { name: 'constraint_id', type: 'UUID', nullable: false, constraints: ['UNIQUE'] },
         ],
       });
+      await pg.query(
+        `CREATE UNIQUE INDEX idx_order_step_unique
+         ON idempotency_test.order_processing_steps (order_id, step_name)`
+      );
 
       const completeStep = async (stepName: string): Promise<boolean> => {
         const constraintId = crypto.randomUUID();
@@ -497,7 +501,7 @@ describe('Idempotency Validation', () => {
           `INSERT INTO idempotency_test.order_processing_steps
            (order_id, step_name, constraint_id)
            VALUES ($1, $2, $3)
-           ON CONFLICT (constraint_id) DO NOTHING
+           ON CONFLICT (order_id, step_name) DO NOTHING
            RETURNING id`,
           [orderId, stepName, constraintId]
         );
@@ -619,7 +623,7 @@ describe('Idempotency Validation', () => {
 
       await pg.query(
         `INSERT INTO idempotency_test.processed_events (event_id, event_type)
-         VALUES ($1, $2)
+         VALUES ($1, COALESCE($2, 'unknown'))
          ON CONFLICT (event_id) DO UPDATE SET
            processing_count = processed_events.processing_count + 1`,
         [eventId, null]
@@ -628,7 +632,7 @@ describe('Idempotency Validation', () => {
       // Try again with null
       await pg.query(
         `INSERT INTO idempotency_test.processed_events (event_id, event_type)
-         VALUES ($1, $2)
+         VALUES ($1, COALESCE($2, 'unknown'))
          ON CONFLICT (event_id) DO UPDATE SET
            processing_count = processed_events.processing_count + 1`,
         [eventId, null]

@@ -87,7 +87,7 @@ export class Order {
     this.shippingCost = props.shippingCost || 0;
     this.grandTotal = props.grandTotal;
     this.currency = props.currency || 'RON';
-    this.taxRate = props.taxRate || 0.21; // 19% VAT for Romania
+    this.taxRate = props.taxRate || 0.21; // 21% VAT for Romania
     this.paymentTerms = props.paymentTerms;
     this.paymentStatus = props.paymentStatus || 'pending';
     this.proformaNumber = props.proformaNumber;

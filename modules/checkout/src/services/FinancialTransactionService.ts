@@ -231,7 +231,7 @@ export class FinancialTransactionService {
       const orderNumber = await this.generateOrderNumber(em);
 
       // Step 3: Create order
-      const orderId = uuidv4();
+      const orderId = request.orderId ?? uuidv4();
       const now = new Date();
       const taxRate = cart.subtotal > 0 ? (cart.taxAmount / cart.subtotal) * 100 : 0;
 
@@ -322,7 +322,7 @@ export class FinancialTransactionService {
       },
     };
 
-    return this.transactionManager.executeInTransaction(async (em: EntityManager) => {
+    const result = await this.transactionManager.executeInTransaction(async (em: EntityManager) => {
       // Step 1: Find active reservation
       const reservation = await em.findOne(CreditReservationEntity, {
         where: { orderId: request.orderId, status: CreditReservationStatus.ACTIVE },
@@ -334,10 +334,6 @@ export class FinancialTransactionService {
 
       // Step 2: Check if reservation has expired
       if (new Date() > reservation.expiresAt) {
-        // Mark as expired
-        reservation.status = CreditReservationStatus.EXPIRED;
-        await em.save(reservation);
-
         // Release credit back to customer
         await this.releaseCreditInternal(
           em,
@@ -346,7 +342,13 @@ export class FinancialTransactionService {
           'Reservation expired during capture',
         );
 
-        throw new Error(`Credit reservation has expired for order: ${request.orderId}`);
+        reservation.status = CreditReservationStatus.EXPIRED;
+        await em.save(reservation);
+
+        return {
+          expired: true,
+          message: `Credit reservation has expired for order: ${request.orderId}`,
+        } as unknown as CreditCaptureResult;
       }
 
       // Step 3: Get customer with lock
@@ -414,6 +416,17 @@ export class FinancialTransactionService {
         remainingCredit: customer.creditLimit - customer.usedCredit,
       };
     }, txOptions);
+
+    if (result.success && (result.data as any)?.expired) {
+      return {
+        ...result,
+        success: false,
+        data: undefined,
+        error: new Error((result.data as any).message),
+      };
+    }
+
+    return result;
   }
 
   /**

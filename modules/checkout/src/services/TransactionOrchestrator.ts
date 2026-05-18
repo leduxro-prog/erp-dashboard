@@ -126,6 +126,7 @@ export class TransactionOrchestrator {
 
       // Step 2: Reserve Credit (if enabled)
       let reservationId: string | undefined;
+      let reservedOrderId: string | undefined;
       if (options.reserveCredit !== false) {
         state.status = CheckoutStatus.CREDIT_RESERVED;
         const reserveCreditResult = await this.executeStep(
@@ -134,6 +135,7 @@ export class TransactionOrchestrator {
           async () => this.reserveCreditStep(cartId, customerId)
         );
         reservationId = reserveCreditResult.data?.reservationId;
+        reservedOrderId = reserveCreditResult.data?.orderId;
       }
 
       // Step 3: Reserve Stock (if enabled)
@@ -151,7 +153,7 @@ export class TransactionOrchestrator {
       const orderResult = await this.executeStep(
         state,
         CheckoutStepName.CREATE_ORDER,
-        async () => this.createOrderStep(cartId, customerId)
+        async () => this.createOrderStep(cartId, customerId, reservedOrderId)
       );
 
       // Step 5: Capture Payment (if credit was reserved)
@@ -249,6 +251,11 @@ export class TransactionOrchestrator {
 
       if (result.error) {
         step.error = result.error;
+      }
+
+      if (!result.success) {
+        state.steps.set(stepName, step);
+        throw new Error(result.error || `Checkout step failed: ${stepName}`);
       }
 
       // Register compensation if step completed successfully
@@ -513,11 +520,13 @@ export class TransactionOrchestrator {
    */
   private async createOrderStep(
     cartId: string,
-    customerId: string
+    customerId: string,
+    orderId?: string
   ): Promise<{ success: boolean; data?: { orderId: string; orderNumber: string }; error?: string }> {
     const result = await this.financialTransactionService.createOrder({
       cartId,
       customerId,
+      orderId,
     });
 
     if (result.success && result.data) {

@@ -17,6 +17,7 @@ import { FinancialTransactionService } from '@modules/checkout/src/services/Fina
 import { TransactionOrchestrator } from '@modules/checkout/src/services/TransactionOrchestrator';
 import { TransactionTestHelper } from './helpers';
 import { getTestDataSource, clearTestData } from './setup';
+import { OrderStatus } from '@modules/orders/src/infrastructure/entities/OrderEntity';
 
 describe('Checkout Flow Transaction Tests', () => {
   let dataSource: DataSource;
@@ -81,7 +82,7 @@ describe('Checkout Flow Transaction Tests', () => {
       expect(completedSteps.length).toBeGreaterThan(0);
 
       // Verify order exists in database
-      await helper.verifyOrderStatus(result.orderId!, 'PENDING' as any);
+      await helper.verifyOrderStatus(result.orderId!, OrderStatus.ORDER_CONFIRMED);
     });
 
     test('should properly reserve credit for order', async () => {
@@ -224,7 +225,7 @@ describe('Checkout Flow Transaction Tests', () => {
       const reservation = await dataSource
         .getRepository('CreditReservationEntity')
         .findOne({ where: { orderId } });
-      expect(reservation).toBeUndefined();
+      expect(reservation).toBeNull();
     });
 
     test('should handle inactive customer', async () => {
@@ -549,22 +550,20 @@ describe('Checkout Flow Transaction Tests', () => {
       // Arrange
       const customer = await helper.createTestCustomer({ creditLimit: 10000 });
       const cart = await helper.createTestCart(customer.id);
-      const orderId = helper.generateId();
-
-      // Reserve credit first
-      const reserveResult = await financialService.reserveCredit({
-        customerId: customer.id,
-        orderId,
-        amount: cart.total,
-      });
-      expect(reserveResult.success).toBe(true);
-
       // Create order
       const orderResult = await financialService.createOrder({
         cartId: cart.id,
         customerId: customer.id,
       });
       expect(orderResult.success).toBe(true);
+
+      // Reserve credit for the created order.
+      const reserveResult = await financialService.reserveCredit({
+        customerId: customer.id,
+        orderId: orderResult.data!.orderId!,
+        amount: cart.total,
+      });
+      expect(reserveResult.success).toBe(true);
 
       // Act
       const rollbackResult = await financialService.rollbackOrder({
@@ -582,29 +581,27 @@ describe('Checkout Flow Transaction Tests', () => {
       await helper.verifyCustomerCredit(customer.id, 10000, 0);
 
       // Verify order cancelled
-      await helper.verifyOrderStatus(orderResult.data!.orderId!, 'CANCELLED' as any);
+      await helper.verifyOrderStatus(orderResult.data!.orderId!, OrderStatus.CANCELLED);
     });
 
     test('should rollback order without releasing credit', async () => {
       // Arrange
       const customer = await helper.createTestCustomer({ creditLimit: 10000 });
       const cart = await helper.createTestCart(customer.id);
-      const orderId = helper.generateId();
-
-      // Reserve credit first
-      const reserveResult = await financialService.reserveCredit({
-        customerId: customer.id,
-        orderId,
-        amount: cart.total,
-      });
-      expect(reserveResult.success).toBe(true);
-
       // Create order
       const orderResult = await financialService.createOrder({
         cartId: cart.id,
         customerId: customer.id,
       });
       expect(orderResult.success).toBe(true);
+
+      // Reserve credit for the created order.
+      const reserveResult = await financialService.reserveCredit({
+        customerId: customer.id,
+        orderId: orderResult.data!.orderId!,
+        amount: cart.total,
+      });
+      expect(reserveResult.success).toBe(true);
 
       // Act - Rollback without releasing credit
       const rollbackResult = await financialService.rollbackOrder({
@@ -622,7 +619,7 @@ describe('Checkout Flow Transaction Tests', () => {
       await helper.verifyCustomerCredit(customer.id, 10000, cart.total);
 
       // Verify order cancelled
-      await helper.verifyOrderStatus(orderResult.data!.orderId!, 'CANCELLED' as any);
+      await helper.verifyOrderStatus(orderResult.data!.orderId!, OrderStatus.CANCELLED);
     });
   });
 });

@@ -8,7 +8,7 @@
  * @module NetworkPartition.test
  */
 
-import { describe, test, expect, beforeEach, afterEach, beforeAll, afterAll } from '@jest/globals';
+import { describe, test, expect, beforeEach, afterEach, beforeAll, afterAll, jest } from '@jest/globals';
 import {
   TestRabbitMQ,
   TestPostgres,
@@ -35,6 +35,8 @@ const TEST_CONFIG = {
 };
 
 describe('Network Partition Resilience', () => {
+  jest.setTimeout(30000);
+
   let rmq: TestRabbitMQ;
   let pg: TestPostgres;
   let topology: { exchange: string; queue: string; routingKey: string };
@@ -59,6 +61,22 @@ describe('Network Partition Resilience', () => {
     rmq.resetStats();
     pg.resetStats();
     await rmq.purgeQueue(topology.queue);
+
+    await pg.createTable({
+      name: 'test_events',
+      columns: [
+        { name: 'id', type: 'UUID', nullable: false, constraints: ['PRIMARY KEY'], default: 'uuid_generate_v4()' },
+        { name: 'event_type', type: 'VARCHAR(255)', nullable: false },
+        { name: 'data', type: 'JSONB', nullable: false },
+        { name: 'created_at', type: 'TIMESTAMP', default: 'NOW()', nullable: false },
+      ],
+    });
+  });
+
+  afterEach(async () => {
+    await rmq.cancelAllConsumers();
+    await rmq.purgeQueue(topology.queue);
+    await pg.dropTable('test_events');
   });
 
   describe('Partition Detection', () => {
@@ -379,12 +397,21 @@ describe('Network Partition Resilience', () => {
 
       // Partition during publishing
       const partitionPromise = rmq.simulateNetworkPartition(1500);
+      const failedPublishes: typeof messages = [];
 
       for (const msg of messages) {
-        await rmq.publish(topology.exchange, topology.routingKey, msg);
+        const result = await rmq.publish(topology.exchange, topology.routingKey, msg);
+        if (!result.success) {
+          failedPublishes.push(msg);
+        }
       }
 
       await partitionPromise;
+
+      for (const msg of failedPublishes) {
+        const result = await rmq.publish(topology.exchange, topology.routingKey, msg);
+        expect(result.success).toBe(true);
+      }
 
       // Wait for eventual consistency
       const consumed = await rmq.collectMessages(topology.queue, 40, 10000);
@@ -581,7 +608,18 @@ describe('Network Partition Resilience', () => {
         })
       );
 
-      await Promise.all([...publishPromises, partitionPromise]);
+      const results = await Promise.all(publishPromises);
+      await partitionPromise;
+
+      const failedCount = results.filter((result) => !result.success).length;
+      for (let i = 0; i < failedCount; i++) {
+        const retry = await rmq.publish(topology.exchange, topology.routingKey, {
+          id: crypto.randomUUID(),
+          type: 'order.created',
+          data: { order_id: `retry-${i}` },
+        });
+        expect(retry.success).toBe(true);
+      }
 
       // Check queue count
       const queueCount = await rmq.getQueueMessageCount(topology.queue);

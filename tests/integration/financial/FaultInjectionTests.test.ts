@@ -66,7 +66,14 @@ describe('Fault Injection Tests', () => {
       const cart = await helper.createTestCart(customer.id);
       const orderId = helper.generateId();
 
-      // Reserve credit
+      const orderResult = await financialService.createOrder({
+        cartId: cart.id,
+        customerId: customer.id,
+        orderId,
+      });
+      expect(orderResult.success).toBe(true);
+
+      // Reserve credit for the order that rollback will cancel.
       const reserveResult = await financialService.reserveCredit({
         customerId: customer.id,
         orderId,
@@ -316,8 +323,7 @@ describe('Fault Injection Tests', () => {
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error?.message).toContain('timeout') ||
-        expect(result.error?.message).toContain('failed');
+      expect(result.error?.message.toLowerCase()).toContain('timeout');
 
       // Verify credit unchanged (rolled back)
       await helper.verifyCustomerCredit(customer.id, 10000, 0);
@@ -569,7 +575,14 @@ describe('Fault Injection Tests', () => {
       // Get initial state
       const initialCredit = customer.creditLimit - customer.usedCredit;
 
-      // Reserve credit
+      const orderResult = await financialService.createOrder({
+        cartId: cart.id,
+        customerId: customer.id,
+        orderId,
+      });
+      expect(orderResult.success).toBe(true);
+
+      // Reserve credit for the order that rollback will cancel.
       const reserveResult = await financialService.reserveCredit({
         customerId: customer.id,
         orderId,
@@ -602,7 +615,7 @@ describe('Fault Injection Tests', () => {
 
       // Act - Use transaction manager directly to test savepoints
       const result = await transactionManager.executeInTransaction(
-        async (em) => {
+        async (em, metadata) => {
           // Reserve credit
           const reserveResult = await financialService.reserveCredit({
             customerId: customer.id,
@@ -613,7 +626,7 @@ describe('Fault Injection Tests', () => {
 
           // Create savepoint
           const savepointResult = await transactionManager.createSavepoint(
-            result.metadata.transactionId,
+            metadata.transactionId,
             'test_savepoint',
           );
           expect(savepointResult.success).toBe(true);
@@ -623,7 +636,7 @@ describe('Fault Injection Tests', () => {
 
           // Rollback to savepoint
           await transactionManager.rollbackToSavepoint(
-            result.metadata.transactionId,
+            metadata.transactionId,
             savepointResult.savepointId,
           );
 
