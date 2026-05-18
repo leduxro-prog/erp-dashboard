@@ -3,8 +3,8 @@
  * Enterprise endpoints for Shopping monitoring and management.
  */
 
-import { Router, Request, Response } from 'express';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router, Request, Response } from 'express';
 
 const logger = createModuleLogger('google-shopping-api');
 const router = Router();

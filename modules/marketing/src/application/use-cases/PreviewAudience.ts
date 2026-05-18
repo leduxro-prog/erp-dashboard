@@ -5,13 +5,13 @@
  * @module Application/UseCases
  */
 
+import { SegmentFilterCriteria } from '../../domain/entities/AudienceSegment';
 import { IAudienceSegmentRepository } from '../../domain/repositories/IAudienceSegmentRepository';
 import { ICustomerConsentRepository } from '../../domain/repositories/ICustomerConsentRepository';
 import {
   AudienceSegmentationService,
   CustomerSegmentData,
 } from '../../domain/services/AudienceSegmentationService';
-import { SegmentFilterCriteria } from '../../domain/entities/AudienceSegment';
 
 /**
  * Input for PreviewAudience use-case

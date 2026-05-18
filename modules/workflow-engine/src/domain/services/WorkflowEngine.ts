@@ -3,8 +3,8 @@
  * Handles workflow orchestration, state transitions, and approval logic
  */
 
-import { WorkflowTemplate, IWorkflowStep } from '../entities/WorkflowTemplate';
 import { WorkflowInstance, WorkflowInstanceStatus, IWorkflowInstanceStep, IApprovalDecision } from '../entities/WorkflowInstance';
+import { WorkflowTemplate, IWorkflowStep } from '../entities/WorkflowTemplate';
 
 export interface IApprovalContext {
   approvalDecision: {

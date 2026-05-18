@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { DepartmentService } from '../../domain/services/DepartmentService';
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { Request, Response, NextFunction } from 'express';
+
+import { DepartmentService } from '../../domain/services/DepartmentService';
 
 export class DepartmentController {
     constructor(private departmentService: DepartmentService) { }

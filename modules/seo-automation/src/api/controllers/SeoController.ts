@@ -1,13 +1,14 @@
+
+import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { loadBrandStrategySync } from '@shared/utils/brand-strategy';
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
-import { successResponse, errorResponse } from '@shared/utils/response';
-import { loadBrandStrategySync } from '@shared/utils/brand-strategy';
-import { SeoModuleCompositionRoot } from '../../infrastructure/composition-root';
 import { SeoEntityType } from '../../domain/entities/SeoIssue';
 import { MetadataEntityType, SeoLocale } from '../../domain/entities/SeoMetadata';
 import { StructuredData, SchemaType } from '../../domain/entities/StructuredData';
 import { SeoAuditResult } from '../../domain/entities/SeoAuditResult';
+import { SeoModuleCompositionRoot } from '../../infrastructure/composition-root';
 
 type SitemapEngine = 'google' | 'bing' | 'yandex';
 

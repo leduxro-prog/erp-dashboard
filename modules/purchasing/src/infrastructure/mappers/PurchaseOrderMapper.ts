@@ -1,13 +1,13 @@
 import {
-  PurchaseOrder,
-  POLine,
-  PORevision,
-} from '../../domain/entities/PurchaseOrder';
-import {
   PurchaseOrderResponseDTO,
   POLineResponseDTO,
   PORevisionResponseDTO,
 } from '../../application/dtos/PurchaseOrderDTOs';
+import {
+  PurchaseOrder,
+  POLine,
+  PORevision,
+} from '../../domain/entities/PurchaseOrder';
 
 export class PurchaseOrderMapper {
   static toDTO(po: PurchaseOrder): PurchaseOrderResponseDTO {

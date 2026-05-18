@@ -1,4 +1,6 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import axios, { AxiosInstance } from 'axios';
+
 import {
   IWhatsAppBusinessApi,
   SendTextMessageRequest,
@@ -7,7 +9,6 @@ import {
   MessageSendResponse,
   TemplateStatusUpdate,
 } from '../../domain/ports/IWhatsAppBusinessApi';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('meta-whatsapp-client');
 

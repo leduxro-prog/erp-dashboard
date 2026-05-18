@@ -13,8 +13,9 @@
  * @module B2B Portal - Infrastructure Services
  */
 
-import { Logger } from 'winston';
 import { createHmac, randomBytes } from 'crypto';
+
+import { Logger } from 'winston';
 
 export interface B2BPortalConfig {
   /**

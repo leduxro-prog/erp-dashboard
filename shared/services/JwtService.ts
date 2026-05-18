@@ -1,5 +1,6 @@
-import jwt from 'jsonwebtoken';
 import { Response } from 'express';
+import jwt from 'jsonwebtoken';
+
 import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('jwt-service');

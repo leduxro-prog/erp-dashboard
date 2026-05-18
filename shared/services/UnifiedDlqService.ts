@@ -13,8 +13,8 @@
  *   - Metrics export for monitoring
  */
 
-import { DataSource } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource } from 'typeorm';
 
 const logger = createModuleLogger('unified-dlq');
 

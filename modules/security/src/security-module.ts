@@ -12,10 +12,15 @@
  * @module @cypher/security
  */
 
+import { createModuleLogger } from '@shared/utils/logger';
 import { Application } from 'express';
 import jwt from 'jsonwebtoken';
-import { createModuleLogger } from '@shared/utils/logger';
-import { getJwtParser, JwtParser } from './utils/JwtParser';
+
+import {
+  preventIdor,
+  verifyResourceOwnership,
+  getAuthenticatedCustomerId,
+} from './middleware/IdorPrevention';
 import {
   jwtAuth,
   requireRole,
@@ -23,11 +28,6 @@ import {
   getCustomerIdFromContext,
   verifyOwnership,
 } from './middleware/JwtAuth';
-import {
-  preventIdor,
-  verifyResourceOwnership,
-  getAuthenticatedCustomerId,
-} from './middleware/IdorPrevention';
 import {
   validateRequest,
   preventCustomerIdInjection,
@@ -38,6 +38,7 @@ import {
   SchemaBuilder,
 } from './middleware/RequestValidator';
 import { SecurityConfig } from './types/AuthContext';
+import { getJwtParser, JwtParser } from './utils/JwtParser';
 
 const logger = createModuleLogger('security-module');
 

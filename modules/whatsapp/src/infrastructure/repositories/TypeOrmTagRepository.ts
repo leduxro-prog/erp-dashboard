@@ -1,4 +1,5 @@
 import { DataSource, Repository, Like } from 'typeorm';
+
 import { WhatsAppTag } from '../../domain/entities/WhatsAppTag';
 import { ITagRepository } from '../../domain/repositories/ITagRepository';
 import { WhatsAppTagEntity } from '../entities/WhatsAppTagEntity';

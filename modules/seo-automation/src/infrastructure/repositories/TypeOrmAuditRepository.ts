@@ -1,4 +1,5 @@
 import { DataSource, Repository } from 'typeorm';
+
 import { SeoAuditResult, AuditType } from '../../domain/entities/SeoAuditResult';
 import {
   SeoIssue,

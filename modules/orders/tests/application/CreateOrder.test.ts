@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import {
-  CreateOrder,
-  IEventPublisher,
-  IProductService,
-  IStockService,
-} from '../../src/application/use-cases/CreateOrder';
+
 import { CreateOrderInput } from '../../src/application/dtos';
 import {
   InvalidOrderInputError,
   InsufficientStockError,
   StockReservationError,
 } from '../../src/application/errors';
+import {
+  CreateOrder,
+  IEventPublisher,
+  IProductService,
+  IStockService,
+} from '../../src/application/use-cases/CreateOrder';
 import {
   IOrderRepository,
   Order,

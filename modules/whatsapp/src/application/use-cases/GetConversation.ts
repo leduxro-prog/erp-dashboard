@@ -6,11 +6,13 @@
  * @module whatsapp/application/use-cases
  */
 
-import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
-import { IMessageRepository } from '../../domain/repositories/IMessageRepository';
+import { NotFoundError } from '@shared/errors';
+
 import { WhatsAppConversation } from '../../domain/entities/WhatsAppConversation';
 import { WhatsAppMessage } from '../../domain/entities/WhatsAppMessage';
-import { NotFoundError } from '@shared/errors';
+import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
+import { IMessageRepository } from '../../domain/repositories/IMessageRepository';
+
 
 /**
  * Get conversation request DTO.

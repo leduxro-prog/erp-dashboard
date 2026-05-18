@@ -8,8 +8,8 @@
  * Also attempts to match SmartBill clients to existing ERP customers by CUI/email.
  */
 
-import { DataSource } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource } from 'typeorm';
 
 const logger = createModuleLogger('SyncSmartBillCustomers');
 

@@ -1,4 +1,5 @@
 import { Queue, Worker } from 'bullmq';
+
 import { ExpireOverdueQuotes, ILogger } from '../../application/use-cases/ExpireOverdueQuotes';
 
 export class QuoteExpirationJob {

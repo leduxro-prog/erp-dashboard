@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   Index,
 } from 'typeorm';
+
 import { OrderEntity, OrderStatus } from './OrderEntity';
 
 @Entity('order_status_history')

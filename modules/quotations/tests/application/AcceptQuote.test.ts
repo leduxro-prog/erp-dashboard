@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+import { QuoteExpiredError, QuoteNotFoundError } from '../../src/application/errors/QuoteErrors';
 import { AcceptQuote } from '../../src/application/use-cases/AcceptQuote';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 import { Quote, QuoteStatus } from '../../src/domain/entities/Quote';
-import { QuoteExpiredError, QuoteNotFoundError } from '../../src/application/errors/QuoteErrors';
 
 const makeQuote = (overrides: Partial<Quote> = {}): Quote => {
   const quote = new Quote(

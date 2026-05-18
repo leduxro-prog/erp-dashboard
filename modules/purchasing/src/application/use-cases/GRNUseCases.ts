@@ -1,3 +1,7 @@
+import { GoodsReceiptNote, GRNLine, GRNStatus } from '../../domain/entities/GoodsReceiptNote';
+import { IGRNRepository } from '../../domain/repositories/IGRNRepository';
+import { GRNService } from '../../domain/services/GRNService';
+import { GRNMapper } from '../../infrastructure/mappers/GRNMapper';
 import {
   CreateGRNDTO,
   GRNResponseDTO,
@@ -5,10 +9,6 @@ import {
   InspectGRNDTO,
   RequestReturnDTO,
 } from '../dtos/GRNDTOs';
-import { GoodsReceiptNote, GRNLine, GRNStatus } from '../../domain/entities/GoodsReceiptNote';
-import { GRNService } from '../../domain/services/GRNService';
-import { IGRNRepository } from '../../domain/repositories/IGRNRepository';
-import { GRNMapper } from '../../infrastructure/mappers/GRNMapper';
 
 export class GRNUseCases {
   constructor(private grnService: GRNService, private grnRepository: IGRNRepository) {}

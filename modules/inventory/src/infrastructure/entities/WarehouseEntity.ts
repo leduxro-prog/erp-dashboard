@@ -25,7 +25,16 @@ export class WarehouseEntity {
   @Column('boolean', { default: true })
   is_active!: boolean;
 
-  @Column('varchar', { nullable: true })
+  @Column('varchar', { length: 100, nullable: true })
+  city!: string | null;
+
+  @Column('varchar', { length: 100, nullable: true })
+  region!: string | null;
+
+  @Column('varchar', { length: 20, nullable: true, name: 'postal_code' })
+  postal_code!: string | null;
+
+  @Column('varchar', { nullable: true, name: 'smartbill_id' })
   smartbill_id!: string;
 
   @CreateDateColumn()

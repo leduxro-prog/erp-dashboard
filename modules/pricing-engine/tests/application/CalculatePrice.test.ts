@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { CalculatePrice } from '../../src/application/use-cases/CalculatePrice';
+
+import { ProductNotFoundError } from '../../src/application/errors/pricing.errors';
 import {
   IPriceRepository,
   ProductPrice,
@@ -7,7 +8,7 @@ import {
   VolumeDiscountRule,
 } from '../../src/application/ports/IPriceRepository';
 import { ITierRepository, CustomerTierRecord } from '../../src/application/ports/ITierRepository';
-import { ProductNotFoundError } from '../../src/application/errors/pricing.errors';
+import { CalculatePrice } from '../../src/application/use-cases/CalculatePrice';
 
 const makeProductPrice = (price: number, productId: number = 1): ProductPrice => ({
   productId,

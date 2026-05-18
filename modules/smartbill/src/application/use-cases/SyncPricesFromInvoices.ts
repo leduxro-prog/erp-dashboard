@@ -1,5 +1,5 @@
-import { DataSource } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource } from 'typeorm';
 
 const logger = createModuleLogger('SyncPricesFromInvoices');
 

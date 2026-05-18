@@ -1,7 +1,8 @@
+import { createModuleLogger } from '@shared/utils/logger';
+
 import { BankTransaction } from '../../domain/entities/BankTransaction';
 import { PaymentMatch } from '../../domain/entities/PaymentMatch';
 import { IBankingRepository } from '../../infrastructure/repositories/IBankingRepository';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('banking-matching');
 

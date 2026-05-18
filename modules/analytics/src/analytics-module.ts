@@ -1,4 +1,3 @@
-import { Router } from 'express';
 // import { Logger } from 'winston';
 import {
   ICypherModule,
@@ -7,6 +6,8 @@ import {
   IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router } from 'express';
+
 import { createAnalyticsRouter } from './infrastructure/composition-root';
 
 const logger = createModuleLogger('analytics');
@@ -123,7 +124,7 @@ export default class AnalyticsModule implements ICypherModule {
       // Cache initialization would happen here
 
       logger.debug('Creating composition root');
-      this.router = createAnalyticsRouter(context.dataSource);
+      this.router = createAnalyticsRouter(context);
 
       logger.info('Analytics module initialized successfully');
     } catch (error) {

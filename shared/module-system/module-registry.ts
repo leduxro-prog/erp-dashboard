@@ -1,10 +1,11 @@
+import { createModuleLogger } from '../utils/logger';
+
 import {
   ICypherModule,
   IModuleContext,
   ISystemHealth,
   ISystemMetrics,
 } from './module.interface';
-import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('module-registry');
 const OPTIONAL_UNLOADED_DEPENDENCIES: Record<string, string[]> = {

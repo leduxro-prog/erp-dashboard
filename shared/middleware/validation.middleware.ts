@@ -6,6 +6,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
+
 import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('validation-middleware');

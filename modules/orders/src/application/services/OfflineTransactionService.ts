@@ -1,8 +1,8 @@
 
-import { TypeOrmOrderRepository } from '../../infrastructure/repositories/TypeOrmOrderRepository';
 import { IInventoryRepository } from '../../../../inventory/src/domain/ports/IInventoryRepository';
-import { OrderStatus, PaymentStatus } from '../../infrastructure/entities/OrderEntity';
 import { StockMovementType, ReferenceType } from '../../../../inventory/src/infrastructure/entities/StockMovementEntity';
+import { OrderStatus, PaymentStatus } from '../../infrastructure/entities/OrderEntity';
+import { TypeOrmOrderRepository } from '../../infrastructure/repositories/TypeOrmOrderRepository';
 
 export interface OfflineTransaction {
     orderNumber: string;

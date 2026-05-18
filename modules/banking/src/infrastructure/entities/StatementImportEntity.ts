@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+
 import { BankAccountEntity } from './BankAccountEntity';
 
 @Entity('bank_statement_imports')

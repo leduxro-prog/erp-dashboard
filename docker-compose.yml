@@ -45,7 +45,7 @@ services:
           memory: 256M
       labels:
         - 'com.cypher.service=frontend'
-        - 'com.cypher.environment=${NODE_ENV:-development}'
+        - 'com.cypher.environment=${DEPLOYMENT_INTENT:-local}'
         - 'com.cypher.version=${VERSION:-0.1.0}'
     logging:
       driver: 'json-file'
@@ -67,7 +67,8 @@ services:
     expose:
       - '3000'
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: ${NODE_ENV:-development}
+      DEPLOYMENT_INTENT: ${DEPLOYMENT_INTENT:-local}
       PORT: 3000
       API_PREFIX: ${API_PREFIX:-/api/v1}
       APP_NAME: ${APP_NAME:-CYPHER ERP}
@@ -75,6 +76,8 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-https://erp.ledux.ro}
       B2B_FRONTEND_URL: ${B2B_FRONTEND_URL:-https://b2b.ledux.ro}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://erp.ledux.ro}
+      CANONICAL_SHOP_URL: ${CANONICAL_SHOP_URL:-}
+      LEGACY_STOREFRONT_URL: ${LEGACY_STOREFRONT_URL:-}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.ledux.ro}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       VERSION: ${VERSION:-0.1.0}
@@ -87,6 +90,8 @@ services:
       DB_USERNAME: ${DB_USERNAME:-${DB_USER:-cypher_user}}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       DB_SSL: ${DB_SSL:-false}
+      DATABASE_SSL_MODE: ${DATABASE_SSL_MODE:-disable}
+      DATABASE_SSL_REJECT_UNAUTHORIZED: ${DATABASE_SSL_REJECT_UNAUTHORIZED:-true}
       DB_LOGGING: ${DB_LOGGING:-false}
       # Per-instance pool limits. Keep conservative when scaling app replicas.
       DB_POOL_MIN: ${DB_POOL_MIN:-3}
@@ -110,7 +115,7 @@ services:
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER:-admin}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
 
       # JWT Authentication
@@ -268,7 +273,7 @@ services:
         window: 120s
       labels:
         - 'com.cypher.service=app'
-        - 'com.cypher.environment=${NODE_ENV:-production}'
+        - 'com.cypher.environment=${DEPLOYMENT_INTENT:-local}'
         - 'com.cypher.version=${VERSION:-0.1.0}'
 
     logging:
@@ -350,7 +355,7 @@ services:
         window: 120s
       labels:
         - 'com.cypher.service=db'
-        - 'com.cypher.environment=${NODE_ENV:-production}'
+        - 'com.cypher.environment=${DEPLOYMENT_INTENT:-local}'
 
     logging:
       driver: 'json-file'
@@ -402,7 +407,7 @@ services:
         window: 60s
       labels:
         - 'com.cypher.service=redis'
-        - 'com.cypher.environment=${NODE_ENV:-production}'
+        - 'com.cypher.environment=${DEPLOYMENT_INTENT:-local}'
 
     logging:
       driver: 'json-file'
@@ -453,7 +458,7 @@ services:
         window: 120s
       labels:
         - 'com.cypher.service=meilisearch'
-        - 'com.cypher.environment=${NODE_ENV:-production}'
+        - 'com.cypher.environment=${DEPLOYMENT_INTENT:-local}'
 
     logging:
       driver: 'json-file'
@@ -510,7 +515,7 @@ services:
         window: 60s
       labels:
         - 'com.cypher.service=pgadmin'
-        - 'com.cypher.environment=${NODE_ENV:-production}'
+        - 'com.cypher.environment=${DEPLOYMENT_INTENT:-local}'
 
     logging:
       driver: 'json-file'
@@ -572,7 +577,7 @@ services:
         window: 120s
       labels:
         - 'com.cypher.service=ai-service'
-        - 'com.cypher.environment=${NODE_ENV:-production}'
+        - 'com.cypher.environment=${DEPLOYMENT_INTENT:-local}'
 
     logging:
       driver: 'json-file'
@@ -650,7 +655,7 @@ services:
 
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}
       RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
 
       # Memory and disk thresholds
@@ -690,7 +695,7 @@ services:
         window: 180s
       labels:
         - 'com.cypher.service=rabbitmq'
-        - 'com.cypher.environment=${NODE_ENV:-production}'
+        - 'com.cypher.environment=${DEPLOYMENT_INTENT:-local}'
 
     logging:
       driver: 'json-file'

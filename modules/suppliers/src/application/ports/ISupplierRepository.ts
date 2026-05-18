@@ -3,12 +3,12 @@
  * Defines the contract for Supplier data persistence
  */
 
-import { Supplier } from '../../domain/entities/Supplier';
 import {
   SupplierProduct,
   SupplierProductSpecification,
 } from '../../domain/entities/SupplierProduct';
 import { SkuMapping } from '../../domain/entities/SkuMapping';
+import { Supplier } from '../../domain/entities/Supplier';
 import { SupplierOrder } from '../../domain/entities/SupplierOrder';
 
 export interface BulkUpsertResult {

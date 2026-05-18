@@ -40,6 +40,9 @@ export interface ProductData {
   price?: number;
   features?: string[];
   sku?: string;
+  wattage?: number;
+  color_temperature?: number;
+  ip_rating?: string;
 }
 
 /**
@@ -164,8 +167,15 @@ export class MetaTagGenerator {
    * @internal
    */
   private generateProductTitle(product: ProductData): string {
+    let suffix = '';
+    if (product.wattage) suffix += ` ${product.wattage}W`;
+    if (product.color_temperature) suffix += ` ${product.color_temperature}K`;
+    if (product.ip_rating && product.ip_rating !== 'IP20') suffix += ` ${product.ip_rating}`;
+    
     const category = product.category ? ` - ${product.category}` : '';
-    return `${product.name}${category} | ${this.brandSuffix}`;
+    const mainTitle = `${product.name}${suffix}${category}`;
+    
+    return `${mainTitle} | ${this.brandSuffix}`;
   }
 
   /**

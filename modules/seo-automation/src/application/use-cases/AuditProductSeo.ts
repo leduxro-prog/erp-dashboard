@@ -36,16 +36,19 @@
  * // Returns: { auditResult, score, issues, recommendations }
  */
 
-import { Logger } from 'winston';
+import { IEventBus } from '@shared/module-system/module.interface';
 import { v4 as uuidv4 } from 'uuid';
+import { Logger } from 'winston';
+
 import { SeoAuditResult, AuditType } from '../../domain/entities/SeoAuditResult';
 import { SeoIssue, SeoIssueType, SeoIssueSeverity, SeoEntityType } from '../../domain/entities/SeoIssue';
+import { MetadataNotFoundError } from '../../domain/errors/seo.errors';
+import { IAuditRepository } from '../../domain/repositories/IAuditRepository';
 import { ISeoMetadataRepository } from '../../domain/repositories/ISeoMetadataRepository';
 import { IStructuredDataRepository } from '../../domain/repositories/IStructuredDataRepository';
-import { IAuditRepository } from '../../domain/repositories/IAuditRepository';
 import { SeoScoreCalculator } from '../../domain/services/SeoScoreCalculator';
-import { IEventBus } from '@shared/module-system/module.interface';
-import { MetadataNotFoundError } from '../../domain/errors/seo.errors';
+
+
 
 /**
  * Audit input parameters

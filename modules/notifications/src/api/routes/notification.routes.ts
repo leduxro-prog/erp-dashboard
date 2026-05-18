@@ -2,10 +2,11 @@
  * Notification API Routes
  * Defines all notification endpoints
  */
+import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import { Router } from 'express';
+
 import { NotificationsCompositionRoot } from '../../infrastructure/composition-root';
 import { NotificationController } from '../controllers/NotificationController';
-import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 
 /**
  * Create and configure notification routes

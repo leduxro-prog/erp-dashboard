@@ -12,6 +12,7 @@
  */
 
 import { Logger } from 'winston';
+
 import {
   B2BPortalOrderStatus,
   B2BPortalInvoiceStatus,

@@ -1,10 +1,10 @@
 import { Logger } from 'winston';
+
 import { Dashboard, DashboardDTO, LayoutType } from '../../domain/entities/Dashboard';
 import { DashboardWidget, WidgetType, DataSourceType } from '../../domain/entities/DashboardWidget';
 import { IDashboardRepository } from '../../domain/repositories/IDashboardRepository';
 import { IOrderDataPort } from '../ports/IOrderDataPort';
 import { IPricingDataPort } from '../ports/IPricingDataPort';
-// import { DashboardNotFoundError } from '../../domain/errors/analytics.errors';
 
 /**
  * GetSalesDashboard Use-Case
@@ -29,12 +29,14 @@ export class GetSalesDashboard {
    * @param orderDataPort - Port for fetching order data
    * @param pricingDataPort - Port for fetching pricing data
    * @param logger - Structured logger
+   * @param cacheManager - Optional cache manager for data optimization
    */
   constructor(
     private readonly dashboardRepository: IDashboardRepository,
     private readonly orderDataPort: IOrderDataPort,
     private readonly pricingDataPort: IPricingDataPort,
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly cacheManager?: any
   ) { }
 
   /**
@@ -53,6 +55,7 @@ export class GetSalesDashboard {
     try {
       const startOfMonth = this.getStartOfMonth();
       const today = new Date();
+      const cacheKey = `sales_dashboard_data:${startOfMonth.toISOString().split('T')[0]}:${today.toISOString().split('T')[0]}`;
 
       // Try to fetch existing sales dashboard
       let dashboard = await this.dashboardRepository.findById('sales-dashboard-system');
@@ -63,22 +66,41 @@ export class GetSalesDashboard {
         await this.dashboardRepository.save(dashboard);
       }
 
-      // Fetch fresh data for widgets
-      const orderMetrics = await this.orderDataPort.getOrderMetrics({
-        startDate: startOfMonth,
-        endDate: today,
-      });
+      // Try to get data from cache
+      let analyticsData: any;
+      if (this.cacheManager) {
+        analyticsData = await this.cacheManager.get(cacheKey);
+      }
 
-      const tierRevenue = await this.pricingDataPort.getRevenueByTier({
-        startDate: startOfMonth,
-        endDate: today,
-      });
+      if (!analyticsData) {
+        this.logger.debug('Fetching fresh data for sales dashboard');
+        
+        // Fetch fresh data for widgets
+        const orderMetrics = await this.orderDataPort.getOrderMetrics({
+          startDate: startOfMonth,
+          endDate: today,
+        });
 
-      // Update widget caches with fresh data
-      this.updateWidgetCaches(dashboard, {
-        orderMetrics,
-        tierRevenue,
-      });
+        const tierRevenue = await this.pricingDataPort.getRevenueByTier({
+          startDate: startOfMonth,
+          endDate: today,
+        });
+
+        analyticsData = {
+          orderMetrics,
+          tierRevenue,
+        };
+
+        // Cache for 15 minutes (900 seconds)
+        if (this.cacheManager) {
+          await this.cacheManager.set(cacheKey, analyticsData, 'write-through', 900);
+        }
+      } else {
+        this.logger.debug('Using cached data for sales dashboard');
+      }
+
+      // Update widget caches with fetched or cached data
+      this.updateWidgetCaches(dashboard, analyticsData);
 
       this.logger.info('Sales dashboard retrieved successfully', {
         userId,

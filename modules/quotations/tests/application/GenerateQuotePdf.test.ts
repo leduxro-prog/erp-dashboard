@@ -1,4 +1,9 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+import {
+  QuoteNotFoundError,
+  QuotePdfGenerationError,
+} from '../../src/application/errors/QuoteErrors';
 import {
   GenerateQuotePdf,
   ICompanyDetailsProvider,
@@ -6,10 +11,6 @@ import {
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 import { IQuotePdfGenerator } from '../../src/domain/services/IQuotePdfGenerator';
 import { Quote } from '../../src/domain/entities/Quote';
-import {
-  QuoteNotFoundError,
-  QuotePdfGenerationError,
-} from '../../src/application/errors/QuoteErrors';
 
 const makeQuote = (overrides: Partial<Quote> = {}): Quote => {
   const quote = new Quote(

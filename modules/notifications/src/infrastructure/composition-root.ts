@@ -2,35 +2,35 @@
  * Composition Root
  * Dependency injection setup for notifications module
  */
-import { DataSource, Repository } from 'typeorm';
-import { Logger } from 'winston';
 import { Router } from 'express';
+import { DataSource, Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { Logger } from 'winston';
 
 // Domain layer
+import { GetNotificationHistory } from '../application/use-cases/GetNotificationHistory';
+import { ProcessNotificationQueue } from '../application/use-cases/ProcessNotificationQueue';
+import { SendBulkNotification } from '../application/use-cases/SendBulkNotification';
+import { SendNotification } from '../application/use-cases/SendNotification';
 import { NotificationDispatcher } from '../domain/services/NotificationDispatcher';
 import { TemplateEngine } from '../domain/services/TemplateEngine';
 
 // Infrastructure layer - Repositories
-import { TypeOrmNotificationRepository } from './repositories/TypeOrmNotificationRepository';
-import { TypeOrmTemplateRepository } from './repositories/TypeOrmTemplateRepository';
-import { TypeOrmPreferenceRepository } from './repositories/TypeOrmPreferenceRepository';
+import { ResendEmailAdapter } from './adapters/ResendEmailAdapter';
 import { NotificationBatchEntity } from './entities/NotificationBatchEntity';
 
 // Infrastructure layer - Providers
 import { NodemailerEmailProvider } from './providers/NodemailerEmailProvider';
 import { TwilioSmsProvider } from './providers/TwilioSmsProvider';
-import { WhatsAppBusinessProvider } from './providers/WhatsAppBusinessProvider';
 import { WebPushProvider } from './providers/WebPushProvider';
+import { WhatsAppBusinessProvider } from './providers/WhatsAppBusinessProvider';
+import { TypeOrmNotificationRepository } from './repositories/TypeOrmNotificationRepository';
+import { TypeOrmPreferenceRepository } from './repositories/TypeOrmPreferenceRepository';
+import { TypeOrmTemplateRepository } from './repositories/TypeOrmTemplateRepository';
 
 // Infrastructure layer - Adapters
-import { ResendEmailAdapter } from './adapters/ResendEmailAdapter';
 
 // Application layer - Use cases
-import { SendNotification } from '../application/use-cases/SendNotification';
-import { SendBulkNotification } from '../application/use-cases/SendBulkNotification';
-import { ProcessNotificationQueue } from '../application/use-cases/ProcessNotificationQueue';
-import { GetNotificationHistory } from '../application/use-cases/GetNotificationHistory';
 
 export interface CompositionRootDependencies {
   dataSource: DataSource;

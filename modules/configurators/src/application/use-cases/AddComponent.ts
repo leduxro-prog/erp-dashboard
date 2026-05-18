@@ -1,9 +1,6 @@
 import { Logger } from 'winston';
+
 import { ConfigurationItem, ConfiguratorSession } from '../../domain/entities/ConfiguratorSession';
-import { CompatibilityEngine } from '../../domain/services/CompatibilityEngine';
-import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
-import { IRuleRepository } from '../../domain/repositories/IRuleRepository';
-import { ICatalogRepository } from '../../domain/repositories/ICatalogRepository';
 import {
   SessionExpiredError,
   ComponentNotFoundError,
@@ -12,6 +9,10 @@ import {
   SessionNotFoundError,
   InvalidSessionStatusError,
 } from '../../domain/errors/configurator.errors';
+import { ICatalogRepository } from '../../domain/repositories/ICatalogRepository';
+import { IRuleRepository } from '../../domain/repositories/IRuleRepository';
+import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
+import { CompatibilityEngine } from '../../domain/services/CompatibilityEngine';
 
 /**
  * AddComponent Use-Case

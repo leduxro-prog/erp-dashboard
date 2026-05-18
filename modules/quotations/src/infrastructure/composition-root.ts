@@ -1,20 +1,24 @@
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
+
 import { QuotationController } from '../api/controllers/QuotationController';
 import { createQuotationRoutes } from '../api/routes/quotation.routes';
-import { CreateQuote } from '../application/use-cases/CreateQuote';
-import { SendQuote, IEmailService } from '../application/use-cases/SendQuote';
-import { AcceptQuote } from '../application/use-cases/AcceptQuote';
-import { RejectQuote } from '../application/use-cases/RejectQuote';
-import { ConvertToOrder, IOrderService, IEventPublisher } from '../application/use-cases/ConvertToOrder';
-import { GenerateQuotePdf, ICompanyDetailsProvider } from '../application/use-cases/GenerateQuotePdf';
-import { ListQuotes } from '../application/use-cases/ListQuotes';
-import { GetQuote } from '../application/use-cases/GetQuote';
-import { TypeOrmQuoteRepository } from './repositories/TypeOrmQuoteRepository';
-import { QuoteEntity } from './entities/QuoteEntity';
-import { QuoteCache } from './cache/QuoteCache';
 import { QuoteAnalyticsService } from '../application/services/QuoteAnalyticsService';
+import { AcceptQuote } from '../application/use-cases/AcceptQuote';
+import { ConvertToOrder, IOrderService, IEventPublisher } from '../application/use-cases/ConvertToOrder';
+import { CreateQuote } from '../application/use-cases/CreateQuote';
+import { GenerateQuotePdf, ICompanyDetailsProvider } from '../application/use-cases/GenerateQuotePdf';
+import { GetQuote } from '../application/use-cases/GetQuote';
+import { ListQuotes } from '../application/use-cases/ListQuotes';
+import { RejectQuote } from '../application/use-cases/RejectQuote';
+import { SendQuote, IEmailService } from '../application/use-cases/SendQuote';
+
 import { QuoteWorkflowService } from './automation/QuoteWorkflowService';
+import { QuoteCache } from './cache/QuoteCache';
+import { QuoteEntity } from './entities/QuoteEntity';
+import { TypeOrmQuoteRepository } from './repositories/TypeOrmQuoteRepository';
+
+
 
 /**
  * Composition Root for Quotations Module

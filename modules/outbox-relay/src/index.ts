@@ -12,14 +12,16 @@
  * @module outbox-relay
  */
 
-import yargs from 'yargs/yargs';
+import { v4 as uuidv4 } from 'uuid';
 import { hideBin } from 'yargs/helpers';
-import { OutboxRelay, RelayStatus } from './OutboxRelay';
+import yargs from 'yargs/yargs';
+
+import { getConfig, getConfigManager } from './Config';
+import { HealthCheckServer, createHealthCheckServer } from './HealthCheck';
 import { OutboxLogger, createLogger } from './logger';
 import { OutboxMetrics, getMetrics } from './Metrics';
-import { HealthCheckServer, createHealthCheckServer } from './HealthCheck';
-import { getConfig, getConfigManager } from './Config';
-import { v4 as uuidv4 } from 'uuid';
+import { OutboxRelay, RelayStatus } from './OutboxRelay';
+
 
 /**
  * Application context

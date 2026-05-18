@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+
 import { Forecast } from '../../domain/entities/Forecast';
 import { IForecastRepository } from '../../domain/repositories/IForecastRepository';
 

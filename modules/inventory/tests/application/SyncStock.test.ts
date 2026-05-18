@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+import { StockSyncError } from '../../src/application/errors/inventory.errors';
 import {
   SmartBillSyncService,
   SupplierSyncService,
   SyncStock,
 } from '../../src/application/use-cases/SyncStock';
-import { StockSyncError } from '../../src/application/errors/inventory.errors';
 
 describe('SyncStock Use Case', () => {
   let useCase: SyncStock;

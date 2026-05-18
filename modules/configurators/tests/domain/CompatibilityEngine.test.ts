@@ -1,7 +1,8 @@
 import { describe, it, expect } from '@jest/globals';
-import { CompatibilityEngine } from '../../src/domain/services/CompatibilityEngine';
+
 import { CompatibilityRule } from '../../src/domain/entities/CompatibilityRule';
 import { ConfigurationItem, ConfiguratorSession } from '../../src/domain/entities/ConfiguratorSession';
+import { CompatibilityEngine } from '../../src/domain/services/CompatibilityEngine';
 
 /**
  * CompatibilityEngine Service Tests

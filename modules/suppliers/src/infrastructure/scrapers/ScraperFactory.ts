@@ -1,7 +1,8 @@
-import { BaseScraper } from './BaseScraper';
+import { SupplierCode } from '../../domain';
+
 import { AcaLightingScraper } from './AcaLightingScraper';
-import { MasterledScraper } from './MasterledScraper';
 import { AreluxScraper } from './AreluxScraper';
+import { BaseScraper } from './BaseScraper';
 import { BraytronScraper } from './BraytronScraper';
 import { FslScraper } from './FslScraper';
 import { MplPowerScraper } from './MplPowerScraper';
@@ -10,7 +11,7 @@ import { LedProfilesScraper } from './LedProfilesScraper';
 import { VipelectroScraper } from './VipelectroScraper';
 import { BusinessCentralScraper } from './BusinessCentralScraper';
 import { SampleSupplierApiScraper } from './SampleSupplierApiScraper';
-import { SupplierCode } from '../../domain';
+import { MasterledScraper } from './MasterledScraper';
 
 export class ScraperFactory {
   private browser?: any;

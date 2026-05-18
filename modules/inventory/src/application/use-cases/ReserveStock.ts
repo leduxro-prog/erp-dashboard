@@ -1,15 +1,17 @@
+import { v4 as uuidv4 } from 'uuid';
+
+import { StockReservation } from '../../domain/entities';
 import { IInventoryRepository } from '../../domain/ports/IInventoryRepository';
 import {
   StockFulfillmentService,
 } from '../../domain/services';
-import { StockReservation } from '../../domain/entities';
 import {
   ReservationResultDTO,
   ReservationItemResultDTO,
   ReservationItemDTO,
 } from '../dtos/inventory.dtos';
 import { ProductNotFoundError } from '../errors/inventory.errors';
-import { v4 as uuidv4 } from 'uuid';
+
 
 export class ReserveStock {
   private readonly fulfillmentService = new StockFulfillmentService();

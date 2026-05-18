@@ -1,4 +1,6 @@
+import { successResponse, errorResponse } from '@shared/utils/response';
 import { Request, Response } from 'express';
+
 import {
   ScrapeSupplierStock,
   MapSku,
@@ -10,9 +12,8 @@ import {
   InvalidOrderError,
 } from '../../application';
 import { ISupplierRepository } from '../../application/ports/ISupplierRepository';
-import { ScraperFactory } from '../../infrastructure/scrapers/ScraperFactory';
 import { SupplierSyncJob } from '../../infrastructure/jobs/SupplierSyncJob';
-import { successResponse, errorResponse } from '@shared/utils/response';
+import { ScraperFactory } from '../../infrastructure/scrapers/ScraperFactory';
 
 export class SupplierController {
   constructor(

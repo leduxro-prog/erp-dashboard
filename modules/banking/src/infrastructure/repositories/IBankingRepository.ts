@@ -1,7 +1,7 @@
 import { BankAccount } from '../../domain/entities/BankAccount';
-import { StatementImport } from '../../domain/entities/StatementImport';
 import { BankTransaction } from '../../domain/entities/BankTransaction';
 import { PaymentMatch } from '../../domain/entities/PaymentMatch';
+import { StatementImport } from '../../domain/entities/StatementImport';
 
 export interface IBankingRepository {
   // Bank Accounts

@@ -11,10 +11,11 @@
  * 5. Size limits and constraints
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { createModuleLogger } from '@shared/utils/logger';
 import { ValidationError } from '@shared/errors/BaseError';
+import { createModuleLogger } from '@shared/utils/logger';
+import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
+
 import { SecurityRequest, ValidationOptions } from '../types/AuthContext';
 
 const logger = createModuleLogger('request-validator-middleware');

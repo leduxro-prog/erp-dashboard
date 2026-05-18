@@ -1,3 +1,7 @@
+import { MatchStatus } from '../../domain/entities/ThreeWayMatch';
+import { IMatchRepository } from '../../domain/repositories/IMatchRepository';
+import { MatchingService } from '../../domain/services/MatchingService';
+import { MatchMapper } from '../../infrastructure/mappers/MatchMapper';
 import {
   CreateThreeWayMatchDTO,
   ThreeWayMatchResponseDTO,
@@ -5,10 +9,6 @@ import {
   ResolveExceptionDTO,
   MatchAnalyticsDTO,
 } from '../dtos/MatchDTOs';
-import { MatchingService } from '../../domain/services/MatchingService';
-import { IMatchRepository } from '../../domain/repositories/IMatchRepository';
-import { MatchMapper } from '../../infrastructure/mappers/MatchMapper';
-import { MatchStatus } from '../../domain/entities/ThreeWayMatch';
 
 export class MatchingUseCases {
   constructor(

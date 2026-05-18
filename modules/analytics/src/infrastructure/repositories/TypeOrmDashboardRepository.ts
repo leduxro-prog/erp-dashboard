@@ -1,4 +1,5 @@
 import { DataSource } from 'typeorm';
+
 import { Dashboard } from '../../domain/entities/Dashboard';
 import { IDashboardRepository, PaginatedResult } from '../../domain/repositories/IDashboardRepository';
 

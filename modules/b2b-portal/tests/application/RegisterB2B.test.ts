@@ -3,6 +3,7 @@
  * Tests B2B registration with CUI/IBAN validation
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { RegisterB2B, RegisterB2BInput, RegisterB2BOutput } from '../../src/application/use-cases/RegisterB2B';
 import { RegistrationExistsError, InvalidCuiError, InvalidIbanError } from '../../src/domain/errors/b2b.errors';
 

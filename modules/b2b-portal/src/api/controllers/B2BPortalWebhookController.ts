@@ -8,10 +8,11 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { DataSource } from 'typeorm';
+
 import { B2BPortalApiClient } from '../../infrastructure/services/B2BPortalApiClient';
 import { B2BPortalStatusMapper } from '../../infrastructure/services/B2BPortalStatusMapper';
-import { DataSource } from 'typeorm';
+
 
 export interface B2BWebhookPayload {
   /**

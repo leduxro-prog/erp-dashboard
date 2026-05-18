@@ -10,10 +10,11 @@
  * - Audit logging for all transactions
  */
 
+import logger from '@shared/utils/logger';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import type { IsolationLevel } from 'typeorm/driver/types/IsolationLevel';
 import { v4 as uuidv4 } from 'uuid';
-import logger from '@shared/utils/logger';
+
 import { TransactionLogger } from '../utils/TransactionLogger';
 
 /**

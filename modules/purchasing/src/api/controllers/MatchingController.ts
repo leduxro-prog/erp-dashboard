@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
-import { MatchingUseCases } from '../../application/use-cases/MatchingUseCases';
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { Request, Response } from 'express';
+
+import { MatchingUseCases } from '../../application/use-cases/MatchingUseCases';
 
 export class MatchingController {
   constructor(private matchingUseCases: MatchingUseCases) { }

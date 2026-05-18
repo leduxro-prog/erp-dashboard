@@ -2,10 +2,11 @@
  * Cancel Order Use Case
  * Cancels an order with validation, stock release, and event publishing
  */
+import { createModuleLogger } from '@shared/utils/logger';
+
 import { IOrderRepository } from '../../domain';
 import { CancelOrderInput } from '../dtos';
 import { OrderNotFoundError, OrderCancellationError } from '../errors';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('cancel-order');
 

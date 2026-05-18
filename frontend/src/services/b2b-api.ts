@@ -402,6 +402,51 @@ class B2BApiClient {
     return this.unwrapData(response.data);
   }
 
+  async getB2BTeam() {
+    const response = await this.client.get('/b2b/team');
+    return this.unwrapData(response.data);
+  }
+
+  async inviteTeamMember(data: any) {
+    const response = await this.client.post('/b2b/team/invite', data);
+    return this.unwrapData(response.data);
+  }
+
+  async removeTeamMember(id: string) {
+    const response = await this.client.delete(`/b2b/team/${id}`);
+    return this.unwrapData(response.data);
+  }
+
+  async getB2BProjects() {
+    const response = await this.client.get('/b2b/projects');
+    return this.unwrapData(response.data);
+  }
+
+  async createB2BProject(data: any) {
+    const response = await this.client.post('/b2b/projects', data);
+    return this.unwrapData(response.data);
+  }
+
+  async getB2BProjectDetails(id: string) {
+    const response = await this.client.get(`/b2b/projects/${id}`);
+    return this.unwrapData(response.data);
+  }
+
+  async addProductToProject(projectId: string, data: any) {
+    const response = await this.client.post(`/b2b/projects/${projectId}/items`, data);
+    return this.unwrapData(response.data);
+  }
+
+  async convertProjectToCart(projectId: string) {
+    const response = await this.client.post(`/b2b/projects/${projectId}/convert`);
+    return this.unwrapData(response.data);
+  }
+
+  async getProductPricing(productId: string | number) {
+    const response = await this.client.get(`/b2b/products/${productId}/pricing`);
+    return this.unwrapData(response.data);
+  }
+
   async getNewProducts() {
     const response = await this.client.get('/b2b/products/new');
     return this.unwrapData(response.data);

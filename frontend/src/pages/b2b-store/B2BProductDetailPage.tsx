@@ -19,6 +19,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { b2bApi } from '../../services/b2b-api';
 import { ResponsiveImage } from '../../components/ui/ResponsiveImage';
 import { trackViewItem } from '../../services/retargeting';
 import {
@@ -53,6 +54,12 @@ interface Product {
 }
 
 type ResourcePreviewType = 'pdf' | 'image' | null;
+
+type PricingTier = {
+  quantity: number;
+  net_price: number;
+  total_discount: number;
+};
 
 const getResourcePreviewType = (url: string): ResourcePreviewType => {
   try {
@@ -582,6 +589,7 @@ export const B2BProductDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedTab, setSelectedTab] = useState<'specs' | 'pricing' | 'delivery'>('specs');
+  const [pricingTable, setPricingTable] = useState<PricingTier[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [previewDoc, setPreviewDoc] = useState<{
     label: string;
@@ -593,6 +601,7 @@ export const B2BProductDetailPage: React.FC = () => {
   useEffect(() => {
     const abortController = new AbortController();
     fetchProduct(abortController.signal);
+    void fetchPricing();
 
     return () => {
       abortController.abort();
@@ -618,6 +627,30 @@ export const B2BProductDetailPage: React.FC = () => {
   useEffect(() => {
     setSelectedImageIndex(0);
   }, [product?.id]);
+
+  const fetchPricing = async () => {
+    if (!id) {
+      return;
+    }
+
+    try {
+      const response = await b2bApi.getProductPricing(id);
+      const nextPricing = response?.pricing_table;
+      if (Array.isArray(nextPricing)) {
+        setPricingTable(
+          nextPricing
+            .map((tier: any) => ({
+              quantity: Number(tier.quantity),
+              net_price: Number(tier.net_price),
+              total_discount: Number(tier.total_discount || 0),
+            }))
+            .filter((tier) => Number.isFinite(tier.quantity) && Number.isFinite(tier.net_price)),
+        );
+      }
+    } catch (err) {
+      console.error('Failed to fetch pricing:', err);
+    }
+  };
 
   const fetchProduct = async (signal?: AbortSignal) => {
     try {
@@ -812,18 +845,18 @@ export const B2BProductDetailPage: React.FC = () => {
     product.manufacturer,
   );
 
-  const tieredPricing = [
-    { range: '1 — 9 buc', price: product.price, discount: '—' },
-    { range: '10 — 49 buc', price: +(product.price * 0.95).toFixed(2), discount: '-5%' },
-    { range: '50 — 99 buc', price: +(product.price * 0.9).toFixed(2), discount: '-10%' },
-    { range: '100+ buc', price: +(product.price * 0.85).toFixed(2), discount: '-15%' },
+  const pricingRows: PricingTier[] = pricingTable.length > 0 ? pricingTable : [
+    { quantity: 1, net_price: product.price, total_discount: 0 },
+    { quantity: 10, net_price: +(product.price * 0.95).toFixed(2), total_discount: 5 },
+    { quantity: 50, net_price: +(product.price * 0.9).toFixed(2), total_discount: 10 },
+    { quantity: 100, net_price: +(product.price * 0.85).toFixed(2), total_discount: 15 },
   ];
 
   const getCurrentTierPrice = () => {
-    if (quantity >= 100) return tieredPricing[3].price;
-    if (quantity >= 50) return tieredPricing[2].price;
-    if (quantity >= 10) return tieredPricing[1].price;
-    return tieredPricing[0].price;
+    const applicableTier = [...pricingRows]
+      .sort((a, b) => b.quantity - a.quantity)
+      .find((tier) => quantity >= tier.quantity);
+    return applicableTier?.net_price ?? product.price;
   };
 
   const specRowsBase = [
@@ -1367,28 +1400,28 @@ export const B2BProductDetailPage: React.FC = () => {
                 style={{ color: '#666', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
               >
                 <span>Cantitate</span>
-                <span className="text-center">Preț / Buc</span>
-                <span className="text-right">Discount</span>
+                <span className="text-center">Preț / Buc (Net)</span>
+                <span className="text-right">Discount Total</span>
               </div>
-              {tieredPricing.map((tier, idx) => (
+              {pricingRows.map((tier, idx) => (
                 <div
-                  key={tier.range}
+                  key={tier.quantity}
                   className="grid grid-cols-3 items-center px-6 py-4"
                   style={{
                     borderBottom:
-                      idx < tieredPricing.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                      idx < pricingRows.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
                     background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
                   }}
                 >
-                  <span className="text-sm text-white font-medium">{tier.range}</span>
+                  <span className="text-sm text-white font-medium">{tier.quantity}+ buc</span>
                   <span className="text-sm font-bold text-center" style={{ color: '#daa520' }}>
-                    {tier.price.toFixed(2)} {product.currency}
+                    {tier.net_price.toFixed(2)} {product.currency}
                   </span>
                   <span
                     className="text-sm text-right font-semibold"
-                    style={{ color: tier.discount !== '—' ? '#daa520' : '#555' }}
+                    style={{ color: tier.total_discount > 0 ? '#10b981' : '#555' }}
                   >
-                    {tier.discount}
+                    {tier.total_discount > 0 ? `-${tier.total_discount}%` : '—'}
                   </span>
                 </div>
               ))}

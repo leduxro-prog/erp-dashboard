@@ -1,8 +1,9 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { Queue, Worker, QueueOptions, WorkerOptions } from 'bullmq';
 import Redis from 'ioredis';
-import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
+
 import { SyncItem } from '../../domain/entities/SyncItem';
-import { createModuleLogger } from '@shared/utils/logger';
+import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
 
 /**
  * RetryFailedJob - Periodic job for retrying failed WooCommerce sync items

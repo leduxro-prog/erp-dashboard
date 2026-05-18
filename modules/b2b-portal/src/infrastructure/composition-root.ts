@@ -1,15 +1,23 @@
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
 
-import {
-  IB2BCustomerRepository,
-  IRegistrationRepository,
-  ISavedCartRepository,
-  IBulkOrderRepository,
-  ICreditTransactionRepository,
-  IB2BSyncEventRepository,
-} from '../domain/repositories';
 
+
+
+
+import { B2BCartController } from '../api/controllers/B2BCartController';
+import { B2BCheckoutController } from '../api/controllers/B2BCheckoutController';
+import { B2BController } from '../api/controllers/B2BController';
+import { B2BCustomerController } from '../api/controllers/B2BCustomerController';
+import { B2BFavoritesController } from '../api/controllers/B2BFavoritesController';
+import { B2BInvoiceController } from '../api/controllers/B2BInvoiceController';
+import { B2BOrderController } from '../api/controllers/B2BOrderController';
+import { B2BPaymentController } from '../api/controllers/B2BPaymentController';
+import { B2BPortalSyncController } from '../api/controllers/B2BPortalSyncController';
+import { B2BPortalWebhookController } from '../api/controllers/B2BPortalWebhookController';
+import { B2BTeamController } from '../api/controllers/B2BTeamController';
+import { B2BProjectController } from '../api/controllers/B2BProjectController';
+import { createB2BRoutes } from '../api/routes/b2b.routes';
 import {
   RegisterB2B,
   ReviewRegistration,
@@ -19,33 +27,26 @@ import {
   SyncInvoiceStatusFromB2B,
   SyncInvoiceToB2BPortal,
 } from '../application/use-cases';
+import {
+  IB2BCustomerRepository,
+  IRegistrationRepository,
+  ISavedCartRepository,
+  IBulkOrderRepository,
+  ICreditTransactionRepository,
+  IB2BSyncEventRepository,
+} from '../domain/repositories';
+import { CreditService } from '../domain/services/CreditService';
+import { CuiValidationService } from '../domain/services/CuiValidationService';
+import { TierCalculationService } from '../domain/services/TierCalculationService';
 
+import { NotificationServiceAdapter } from './adapters/NotificationServiceAdapter';
+import { OrderServiceAdapter } from './adapters/OrderServiceAdapter';
 import { TypeOrmB2BCustomerRepository } from './repositories/TypeOrmB2BCustomerRepository';
-import { TypeOrmRegistrationRepository } from './repositories/TypeOrmRegistrationRepository';
-import { TypeOrmSavedCartRepository } from './repositories/TypeOrmSavedCartRepository';
+import { TypeOrmB2BSyncEventRepository } from './repositories/TypeOrmB2BSyncEventRepository';
 import { TypeOrmBulkOrderRepository } from './repositories/TypeOrmBulkOrderRepository';
 import { TypeOrmCreditTransactionRepository } from './repositories/TypeOrmCreditTransactionRepository';
-import { TypeOrmB2BSyncEventRepository } from './repositories/TypeOrmB2BSyncEventRepository';
-
-import { OrderServiceAdapter } from './adapters/OrderServiceAdapter';
-import { NotificationServiceAdapter } from './adapters/NotificationServiceAdapter';
-
-import { B2BController } from '../api/controllers/B2BController';
-import { B2BOrderController } from '../api/controllers/B2BOrderController';
-import { B2BCartController } from '../api/controllers/B2BCartController';
-import { B2BCheckoutController } from '../api/controllers/B2BCheckoutController';
-import { B2BInvoiceController } from '../api/controllers/B2BInvoiceController';
-import { B2BCustomerController } from '../api/controllers/B2BCustomerController';
-import { B2BPaymentController } from '../api/controllers/B2BPaymentController';
-import { B2BFavoritesController } from '../api/controllers/B2BFavoritesController';
-import { B2BPortalWebhookController } from '../api/controllers/B2BPortalWebhookController';
-import { B2BPortalSyncController } from '../api/controllers/B2BPortalSyncController';
-
-import { createB2BRoutes } from '../api/routes/b2b.routes';
-
-import { CuiValidationService } from '../domain/services/CuiValidationService';
-import { CreditService } from '../domain/services/CreditService';
-import { TierCalculationService } from '../domain/services/TierCalculationService';
+import { TypeOrmRegistrationRepository } from './repositories/TypeOrmRegistrationRepository';
+import { TypeOrmSavedCartRepository } from './repositories/TypeOrmSavedCartRepository';
 import { B2BPortalApiClient } from './services/B2BPortalApiClient';
 import { B2BPortalStatusMapper } from './services/B2BPortalStatusMapper';
 
@@ -76,9 +77,11 @@ export function createB2BPortalRouter(
   const bulkOrderRepository: IBulkOrderRepository = new TypeOrmBulkOrderRepository(dataSource);
   const creditTransactionRepository: ICreditTransactionRepository =
     new TypeOrmCreditTransactionRepository(dataSource);
+  /*
   const syncEventRepository: IB2BSyncEventRepository = new TypeOrmB2BSyncEventRepository(
     dataSource,
   );
+  */
 
   const orderPort = new OrderServiceAdapter(dataSource);
   const notificationPort = new NotificationServiceAdapter(dataSource);
@@ -139,14 +142,10 @@ export function createB2BPortalRouter(
     publishEvent,
   );
 
-  // B2B Portal Sync Use Cases
-  let syncOrderStatusFromB2B: SyncOrderStatusFromB2B | undefined;
-  let syncOrderToB2BPortal: SyncOrderToB2BPortal | undefined;
-  let syncInvoiceStatusFromB2B: SyncInvoiceStatusFromB2B | undefined;
-  let syncInvoiceToB2BPortal: SyncInvoiceToB2BPortal | undefined;
-
+  /* 
+  // B2B Portal Sync Use Cases (TODO: wire to controllers)
   if (apiClient) {
-    syncOrderStatusFromB2B = new SyncOrderStatusFromB2B(
+    new SyncOrderStatusFromB2B(
       syncEventRepository,
       apiClient,
       statusMapper,
@@ -154,7 +153,7 @@ export function createB2BPortalRouter(
       publishEvent,
     );
 
-    syncOrderToB2BPortal = new SyncOrderToB2BPortal(
+    new SyncOrderToB2BPortal(
       syncEventRepository,
       apiClient,
       statusMapper,
@@ -162,7 +161,7 @@ export function createB2BPortalRouter(
       publishEvent,
     );
 
-    syncInvoiceStatusFromB2B = new SyncInvoiceStatusFromB2B(
+    new SyncInvoiceStatusFromB2B(
       syncEventRepository,
       apiClient,
       statusMapper,
@@ -170,7 +169,7 @@ export function createB2BPortalRouter(
       publishEvent,
     );
 
-    syncInvoiceToB2BPortal = new SyncInvoiceToB2BPortal(
+    new SyncInvoiceToB2BPortal(
       syncEventRepository,
       apiClient,
       statusMapper,
@@ -178,6 +177,7 @@ export function createB2BPortalRouter(
       publishEvent,
     );
   }
+  */
 
   // Controllers
   const b2bController = new B2BController(
@@ -192,19 +192,19 @@ export function createB2BPortalRouter(
     dataSource,
   );
 
-  const b2bOrderController = new B2BOrderController(dataSource);
+  const orderController = new B2BOrderController(dataSource);
 
-  const b2bCartController = new B2BCartController(dataSource, customerRepository);
+  const cartController = new B2BCartController(dataSource, customerRepository);
 
-  const b2bCheckoutController = new B2BCheckoutController(dataSource);
+  const checkoutController = new B2BCheckoutController(dataSource);
 
-  const b2bInvoiceController = new B2BInvoiceController(dataSource);
+  const invoiceController = new B2BInvoiceController(dataSource);
 
-  const b2bCustomerController = new B2BCustomerController(dataSource);
+  const customerController = new B2BCustomerController(dataSource);
 
-  const b2bPaymentController = new B2BPaymentController(dataSource);
+  const paymentController = new B2BPaymentController(dataSource);
 
-  const b2bFavoritesController = new B2BFavoritesController(dataSource);
+  const favoritesController = new B2BFavoritesController(dataSource);
 
   // Webhook controller (created if B2B Portal is configured)
   const webhookController = apiClient
@@ -214,17 +214,22 @@ export function createB2BPortalRouter(
   // Sync controller (always available for status queries)
   const syncController = new B2BPortalSyncController(dataSource);
 
+  const teamController = new B2BTeamController(dataSource);
+  const projectController = new B2BProjectController(dataSource);
+
   return createB2BRoutes(
     b2bController,
-    b2bOrderController,
-    b2bCartController,
-    b2bCheckoutController,
-    b2bInvoiceController,
-    b2bCustomerController,
-    b2bPaymentController,
-    b2bFavoritesController,
+    orderController,
+    cartController,
+    checkoutController,
+    invoiceController,
+    customerController,
+    paymentController,
+    favoritesController,
     webhookController,
     syncController,
+    teamController,
+    projectController,
   );
 }
 

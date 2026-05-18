@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { PayrollService } from '../../domain/services/PayrollService';
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { Request, Response, NextFunction } from 'express';
+
+import { PayrollService } from '../../domain/services/PayrollService';
 
 export class PayrollController {
     constructor(private payrollService: PayrollService) { }

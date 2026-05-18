@@ -6,6 +6,7 @@
  */
 
 import { B2BCustomer, B2BCustomerTier } from '../entities/B2BCustomer';
+
 import { PaginatedResult, PaginationParams } from './IRegistrationRepository';
 
 /**

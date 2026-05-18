@@ -10,9 +10,11 @@
  */
 
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+
 import { CircuitBreaker, CircuitBreakerStats, CircuitState } from '../utils/circuit-breaker';
-import { TokenBucketRateLimiter, RateLimiterMetrics } from './rate-limiter';
 import { createModuleLogger } from '../utils/logger';
+
+import { TokenBucketRateLimiter, RateLimiterMetrics } from './rate-limiter';
 
 const logger = createModuleLogger('api-client');
 

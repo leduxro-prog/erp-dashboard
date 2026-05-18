@@ -3,6 +3,7 @@
  * Tests queue processing with retries and batch handling
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { ProcessNotificationQueue } from '../../src/application/use-cases/ProcessNotificationQueue';
 
 describe('ProcessNotificationQueue Use Case', () => {

@@ -7,16 +7,17 @@
  */
 
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { ValidationError } from '@shared/errors';
 import { Logger } from 'winston';
+
 import { SendMessage, SendMessageRequest } from '../../../src/application/use-cases/SendMessage';
-import { IMessageRepository } from '../../../src/domain/repositories/IMessageRepository';
-import { IConversationRepository } from '../../../src/domain/repositories/IConversationRepository';
-import { IWhatsAppBusinessApi } from '../../../src/domain/ports/IWhatsAppBusinessApi';
 import {
   InvalidPhoneError,
   ConversationClosedError,
 } from '../../../src/domain/errors/whatsapp.errors';
-import { ValidationError } from '@shared/errors';
+import { IWhatsAppBusinessApi } from '../../../src/domain/ports/IWhatsAppBusinessApi';
+import { IConversationRepository } from '../../../src/domain/repositories/IConversationRepository';
+import { IMessageRepository } from '../../../src/domain/repositories/IMessageRepository';
 
 // Mock repositories and API
 const createMockMessageRepository = (): jest.Mocked<IMessageRepository> => ({

@@ -5,14 +5,12 @@
  * @module B2B Portal - Application
  */
 
-import { SavedCart } from '../../domain/entities/SavedCart';
-import { B2BCustomer } from '../../domain/entities/B2BCustomer';
-import { CreditTransaction } from '../../domain/entities/CreditTransaction';
-import { ISavedCartRepository } from '../../domain/repositories/ISavedCartRepository';
+import { NotFoundError } from '@shared/errors/BaseError';
+
+import { CartNotFoundError, EmptyCartError } from '../../domain/errors/b2b.errors';
 import { IB2BCustomerRepository } from '../../domain/repositories/IB2BCustomerRepository';
 import { ICreditTransactionRepository } from '../../domain/repositories/ICreditTransactionRepository';
-import { CartNotFoundError, EmptyCartError } from '../../domain/errors/b2b.errors';
-import { NotFoundError } from '@shared/errors/BaseError';
+import { ISavedCartRepository } from '../../domain/repositories/ISavedCartRepository';
 import { CreditService } from '../../domain/services/CreditService';
 import { IOrderPort } from '../ports';
 

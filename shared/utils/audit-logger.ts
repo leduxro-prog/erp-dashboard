@@ -3,8 +3,10 @@
  * Winston-based structured audit logging with file rotation and retention
  */
 
-import winston from 'winston';
 import path from 'path';
+
+import winston from 'winston';
+
 import { IAuditLogger, AuditEvent, AuditChanges } from '../interfaces/audit-logger.interface';
 
 /**

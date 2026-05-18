@@ -1,4 +1,5 @@
 import { Repository } from 'typeorm';
+
 import { ChartOfAccount, AccountType } from '../../domain/entities/ChartOfAccount';
 import { IChartOfAccountRepository } from '../../domain/repositories/IChartOfAccountRepository';
 import { ChartOfAccountEntity } from '../entities/ChartOfAccountEntity';

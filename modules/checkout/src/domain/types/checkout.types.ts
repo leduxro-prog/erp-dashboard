@@ -4,9 +4,10 @@
  * Common types used across the checkout module.
  */
 
-import { CreditReservationStatus } from '../entities/CreditReservationEntity';
-import { CartStatus } from '../entities/CartEntity';
 import { OrderStatus, PaymentStatus } from '@modules/orders/src/infrastructure/entities/OrderEntity';
+
+import { CartStatus } from '../entities/CartEntity';
+import { CreditReservationStatus } from '../entities/CreditReservationEntity';
 
 /**
  * Credit reservation result

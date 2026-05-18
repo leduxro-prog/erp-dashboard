@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
+
+import { authRateLimiter } from '../../../../../src/middleware/rate-limiter';
+import { ForgotB2BPassword } from '../../application/use-cases/ForgotB2BPassword';
 import { LoginB2BCustomer } from '../../application/use-cases/LoginB2BCustomer';
 import { RefreshB2BToken } from '../../application/use-cases/RefreshB2BToken';
-import { ForgotB2BPassword } from '../../application/use-cases/ForgotB2BPassword';
 import { ResetB2BPassword } from '../../application/use-cases/ResetB2BPassword';
 import {
   validateBody,
@@ -10,7 +12,6 @@ import {
   b2bForgotPasswordSchema,
   b2bResetPasswordSchema,
 } from '../validators/b2b-auth.validators';
-import { authRateLimiter } from '../../../../../src/middleware/rate-limiter';
 
 export class B2BAuthController {
   private router: Router;

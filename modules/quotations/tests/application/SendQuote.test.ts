@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+import { QuoteExpiredError, QuoteNotFoundError } from '../../src/application/errors/QuoteErrors';
 import {
   SendQuote,
   IEmailService,
@@ -6,7 +8,6 @@ import {
 } from '../../src/application/use-cases/SendQuote';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 import { Quote } from '../../src/domain/entities/Quote';
-import { QuoteExpiredError, QuoteNotFoundError } from '../../src/application/errors/QuoteErrors';
 
 const makeQuote = (overrides: Partial<Quote> = {}): Quote => {
   const quote = new Quote(

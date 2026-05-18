@@ -1,44 +1,42 @@
-import { Repository } from 'typeorm';
-import { Router } from 'express';
 import {
   ICypherModule,
   IModuleContext,
   IModuleHealth,
   IModuleMetrics,
 } from '@shared/module-system/module.interface';
+import { Router } from 'express';
+import { Repository } from 'typeorm';
 
+
+import { SmartBillController } from './api/controllers/SmartBillController';
+import { createSmartBillRoutes as createSmartBillRoutesFromController } from './api/routes/smartbill.routes';
+import { CustomerMatchingService } from './application/services/CustomerMatchingService';
+import { SyncMonitorService } from './application/services/SyncMonitorService';
+import { ConvertProformaToInvoiceUseCase } from './application/use-cases/ConvertProformaToInvoice';
+import { CreateInvoiceUseCase } from './application/use-cases/CreateInvoice';
+import { CreateB2BProformaUseCase } from './application/use-cases/CreateB2BProforma';
+import { CreateProformaUseCase } from './application/use-cases/CreateProforma';
+import { CreateProformaFromQuoteUseCase } from './application/use-cases/CreateProformaFromQuote';
+import { GetWarehousesUseCase } from './application/use-cases/GetWarehouses';
+import { ImportPricesFromExcelUseCase } from './application/use-cases/ImportPricesFromExcel';
+import { RegisterCatalogProductUseCase } from './application/use-cases/RegisterCatalogProduct';
+import { SyncInvoiceStatusUseCase } from './application/use-cases/SyncInvoiceStatus';
+import { SyncPricesFromInvoicesUseCase } from './application/use-cases/SyncPricesFromInvoices';
+import { SyncSmartBillCustomers } from './application/use-cases/SyncSmartBillCustomers';
+import { SyncStockUseCase } from './application/use-cases/SyncStock';
 import {
   SmartBillApiClient,
   SmartBillApiClientConfig,
 } from './infrastructure/api-client/SmartBillApiClient';
-import { TypeOrmSmartBillRepository } from './infrastructure/repositories/TypeOrmSmartBillRepository';
-import { OrderServiceConnector } from './infrastructure/services/OrderServiceConnector';
-
-import { CreateInvoiceUseCase } from './application/use-cases/CreateInvoice';
-import { CreateProformaUseCase } from './application/use-cases/CreateProforma';
-import { CreateProformaFromQuoteUseCase } from './application/use-cases/CreateProformaFromQuote';
-import { CreateB2BProformaUseCase } from './application/use-cases/CreateB2BProforma';
-import { SyncStockUseCase } from './application/use-cases/SyncStock';
-import { GetWarehousesUseCase } from './application/use-cases/GetWarehouses';
-import { SyncPricesFromInvoicesUseCase } from './application/use-cases/SyncPricesFromInvoices';
-import { ImportPricesFromExcelUseCase } from './application/use-cases/ImportPricesFromExcel';
-import { SyncSmartBillCustomers } from './application/use-cases/SyncSmartBillCustomers';
-import { ConvertProformaToInvoiceUseCase } from './application/use-cases/ConvertProformaToInvoice';
-import { SyncInvoiceStatusUseCase } from './application/use-cases/SyncInvoiceStatus';
-import { RegisterCatalogProductUseCase } from './application/use-cases/RegisterCatalogProduct';
-import { CustomerMatchingService } from './application/services/CustomerMatchingService';
-import { SyncMonitorService } from './application/services/SyncMonitorService';
-
-import { SmartBillController } from './api/controllers/SmartBillController';
-import { createSmartBillRoutes as createSmartBillRoutesFromController } from './api/routes/smartbill.routes';
-
-import { StockSyncJob } from './infrastructure/jobs/StockSyncJob';
-import { CustomerSyncJob } from './infrastructure/jobs/CustomerSyncJob';
-import { PriceSyncJob } from './infrastructure/jobs/PriceSyncJob';
-import { InvoiceStatusSyncJob } from './infrastructure/jobs/InvoiceStatusSyncJob';
 import { SmartBillInvoiceEntity } from './infrastructure/entities/SmartBillInvoiceEntity';
 import { SmartBillProformaEntity } from './infrastructure/entities/SmartBillProformaEntity';
 import { SmartBillStockSyncEntity } from './infrastructure/entities/SmartBillStockSyncEntity';
+import { CustomerSyncJob } from './infrastructure/jobs/CustomerSyncJob';
+import { InvoiceStatusSyncJob } from './infrastructure/jobs/InvoiceStatusSyncJob';
+import { PriceSyncJob } from './infrastructure/jobs/PriceSyncJob';
+import { StockSyncJob } from './infrastructure/jobs/StockSyncJob';
+import { TypeOrmSmartBillRepository } from './infrastructure/repositories/TypeOrmSmartBillRepository';
+import { OrderServiceConnector } from './infrastructure/services/OrderServiceConnector';
 
 // Convenience re-export (controller-based routes)
 export { createSmartBillRoutes as createSmartBillRouter } from './infrastructure/composition-root';

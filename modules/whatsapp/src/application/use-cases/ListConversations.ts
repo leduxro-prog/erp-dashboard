@@ -8,14 +8,14 @@
  */
 
 import {
+  WhatsAppConversation,
+  ConversationStatus,
+} from '../../domain/entities/WhatsAppConversation';
+import {
   IConversationRepository,
   ConversationFilter,
 } from '../../domain/repositories/IConversationRepository';
 import { PaginatedResult } from '../../domain/repositories/IMessageRepository';
-import {
-  WhatsAppConversation,
-  ConversationStatus,
-} from '../../domain/entities/WhatsAppConversation';
 
 /**
  * List conversations request DTO.

@@ -1,3 +1,7 @@
+import { PurchaseOrder, POLine, POStatus } from '../../domain/entities/PurchaseOrder';
+import { IPurchaseOrderRepository } from '../../domain/repositories/IPurchaseOrderRepository';
+import { PurchaseOrderService } from '../../domain/services/PurchaseOrderService';
+import { PurchaseOrderMapper } from '../../infrastructure/mappers/PurchaseOrderMapper';
 import {
   CreatePurchaseOrderDTO,
   PurchaseOrderResponseDTO,
@@ -7,10 +11,6 @@ import {
   AmendPurchaseOrderDTO,
   UpdatePOLineDTO,
 } from '../dtos/PurchaseOrderDTOs';
-import { PurchaseOrder, POLine, POStatus } from '../../domain/entities/PurchaseOrder';
-import { PurchaseOrderService } from '../../domain/services/PurchaseOrderService';
-import { IPurchaseOrderRepository } from '../../domain/repositories/IPurchaseOrderRepository';
-import { PurchaseOrderMapper } from '../../infrastructure/mappers/PurchaseOrderMapper';
 
 export class PurchaseOrderUseCases {
   constructor(

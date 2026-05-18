@@ -1,4 +1,13 @@
 import {
+  VendorInvoice,
+  InvoiceLine,
+  InvoiceStatus,
+  DisputeStatus,
+} from '../../domain/entities/VendorInvoice';
+import { IInvoiceRepository } from '../../domain/repositories/IInvoiceRepository';
+import { InvoiceService } from '../../domain/services/InvoiceService';
+import { InvoiceMapper } from '../../infrastructure/mappers/InvoiceMapper';
+import {
   CreateInvoiceDTO,
   VendorInvoiceResponseDTO,
   PaginatedInvoiceResponseDTO,
@@ -6,15 +15,6 @@ import {
   ResolveDisputeDTO,
   RecordPaymentDTO,
 } from '../dtos/InvoiceDTOs';
-import {
-  VendorInvoice,
-  InvoiceLine,
-  InvoiceStatus,
-  DisputeStatus,
-} from '../../domain/entities/VendorInvoice';
-import { InvoiceService } from '../../domain/services/InvoiceService';
-import { IInvoiceRepository } from '../../domain/repositories/IInvoiceRepository';
-import { InvoiceMapper } from '../../infrastructure/mappers/InvoiceMapper';
 
 export class InvoiceUseCases {
   constructor(

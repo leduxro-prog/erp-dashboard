@@ -16,8 +16,9 @@ import promClient, {
   collectDefaultMetrics,
   DefaultMetricsCollectorConfiguration,
 } from 'prom-client';
-import { OutboxLogger } from './logger';
+
 import { getConfig, MetricsConfig } from './Config';
+import { OutboxLogger } from './logger';
 
 /**
  * Event types for metrics

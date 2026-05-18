@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+
 import { SettingsService } from '../../application/services/SettingsService';
 import { getBrandVisualShortlist } from '@shared/utils/brand-strategy';
 

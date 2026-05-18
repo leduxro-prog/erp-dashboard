@@ -1,10 +1,10 @@
-import { ProductSyncMapping } from '../../domain/entities/ProductSyncMapping';
 import {
   CreateProductPayload,
   UpdateProductPayload,
   PulledOrder,
   WooCommerceProduct,
 } from '../../application/dtos/woocommerce.dtos';
+import { ProductSyncMapping } from '../../domain/entities/ProductSyncMapping';
 import { WooCommerceOrder } from '../api-client/WooCommerceApiClient';
 
 export interface InternalProduct {

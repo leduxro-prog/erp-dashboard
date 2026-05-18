@@ -1,4 +1,5 @@
 import { RedisPool } from '@shared/cache/redis-pool';
+
 import { OrderEntity, OrderStatus } from '../entities/OrderEntity';
 
 export class OrderCache {

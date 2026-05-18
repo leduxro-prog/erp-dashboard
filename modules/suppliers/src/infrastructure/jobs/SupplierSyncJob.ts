@@ -1,9 +1,9 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { Queue, Worker, Job, QueueOptions } from 'bullmq';
 import Redis from 'ioredis';
 import { ScrapeSupplierStock } from '../../application';
 import { ISupplierRepository } from '../../domain';
 import { ScraperFactory } from '../scrapers/ScraperFactory';
-import { createModuleLogger } from '@shared/utils/logger';
 
 /**
  * Data for supplier sync job

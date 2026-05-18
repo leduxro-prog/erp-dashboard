@@ -1,12 +1,12 @@
+import { InvoiceCreationError } from '../../src/application/errors/smartbill.errors';
 import {
   CreateInvoiceUseCase,
   ISmartBillApiClient,
   IEventBus,
   IOrderService,
 } from '../../src/application/use-cases/CreateInvoice';
-import { ISmartBillRepository } from '../../src/domain/repositories/ISmartBillRepository';
 import { SmartBillInvoice, InvoiceItem } from '../../src/domain/entities/SmartBillInvoice';
-import { InvoiceCreationError } from '../../src/application/errors/smartbill.errors';
+import { ISmartBillRepository } from '../../src/domain/repositories/ISmartBillRepository';
 
 describe('CreateInvoiceUseCase', () => {
   let useCase: CreateInvoiceUseCase;

@@ -1,16 +1,18 @@
+import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import { Router } from 'express';
-import { DataSource } from 'typeorm';
 import Redis from 'ioredis';
+import { DataSource } from 'typeorm';
+
 import { PricingController } from '../api/controllers/PricingController';
 import { createPricingRoutes } from '../api/routes/pricing.routes';
-import { CalculatePrice } from '../application/use-cases/CalculatePrice';
 import { CalculateOrderPricing } from '../application/use-cases/CalculateOrderPricing';
-import { ManagePromotions } from '../application/use-cases/ManagePromotions';
+import { CalculatePrice } from '../application/use-cases/CalculatePrice';
 import { GetTierPricing } from '../application/use-cases/GetTierPricing';
+import { ManagePromotions } from '../application/use-cases/ManagePromotions';
 import { ManageTiers } from '../application/use-cases/ManageTiers';
+
 import { TypeOrmPriceRepository } from './repositories/TypeOrmPriceRepository';
 import { TypeOrmTierRepository } from './repositories/TypeOrmTierRepository';
-import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 
 /**
  * Composition Root for Pricing Engine Module

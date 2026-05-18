@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { EmployeeService } from '../../domain/services/EmployeeService';
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { Request, Response, NextFunction } from 'express';
+
+import { EmployeeService } from '../../domain/services/EmployeeService';
 
 export class EmployeeController {
     constructor(private employeeService: EmployeeService) { }

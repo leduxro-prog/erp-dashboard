@@ -1,9 +1,10 @@
-import { Response, NextFunction } from 'express';
+import { ValidationError } from '@shared/errors/BaseError';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
 import { B2BAuthenticatedRequest } from '@shared/middleware/b2b-auth.middleware';
-import { B2BCheckoutService, CheckoutRequest } from '../../domain/services/B2BCheckoutService';
-import { ValidationError } from '@shared/errors/BaseError';
+import { Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
+
+import { B2BCheckoutService, CheckoutRequest } from '../../domain/services/B2BCheckoutService';
 
 export class B2BCheckoutController {
   private checkoutService: B2BCheckoutService;

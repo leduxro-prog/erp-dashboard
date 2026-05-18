@@ -6,9 +6,9 @@
  * @module whatsapp/application/use-cases
  */
 
-import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
-import { PaginatedResult } from '../../domain/repositories/IMessageRepository';
 import { WhatsAppTemplate, TemplateStatus } from '../../domain/entities/WhatsAppTemplate';
+import { PaginatedResult } from '../../domain/repositories/IMessageRepository';
+import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
 
 /**
  * List templates request DTO.

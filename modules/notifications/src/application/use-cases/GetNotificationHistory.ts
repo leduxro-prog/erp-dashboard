@@ -5,6 +5,7 @@
  * Application service for data retrieval
  */
 import { Logger } from 'winston';
+
 import { INotificationRepository, PaginationOptions } from '../../domain/repositories/INotificationRepository';
 import { NotificationHistoryDTO } from '../dtos/notification.dtos';
 

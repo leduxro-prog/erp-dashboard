@@ -1,6 +1,7 @@
-import { Redis } from 'ioredis';
-import { HandleSyncEvent, SyncEvent } from '../../application/use-cases/HandleSyncEvent';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Redis } from 'ioredis';
+
+import { HandleSyncEvent, SyncEvent } from '../../application/use-cases/HandleSyncEvent';
 
 const logger = createModuleLogger('sync-event-handler');
 

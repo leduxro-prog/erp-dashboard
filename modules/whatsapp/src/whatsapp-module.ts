@@ -7,7 +7,6 @@
  * @module whatsapp
  */
 
-import { Router } from 'express';
 import {
   ICypherModule,
   IModuleContext,
@@ -16,8 +15,10 @@ import {
   IHealthStatus,
 } from '@shared/module-system';
 import { createModuleLogger } from '@shared/utils/logger';
-import { createWhatsAppRouter } from './infrastructure/composition-root';
+import { Router } from 'express';
+
 import { IWhatsAppBusinessApi } from './domain/ports/IWhatsAppBusinessApi';
+import { createWhatsAppRouter } from './infrastructure/composition-root';
 import { MetaWhatsAppClient } from './infrastructure/external/MetaWhatsAppClient';
 
 const logger = createModuleLogger('whatsapp');

@@ -8,11 +8,11 @@
  * @module OutboxProcessor
  */
 
-import { OutboxRepository, OutboxEvent, OutboxStatus } from './OutboxRepository';
-import { RabbitMQPublisher, PublishResult } from './Publisher';
+import { getConfig, RetryConfig, BatchConfig, RelayConfig } from './Config';
 import { OutboxLogger } from './logger';
 import { OutboxMetrics, ProcessingResult } from './Metrics';
-import { getConfig, RetryConfig, BatchConfig, RelayConfig } from './Config';
+import { OutboxRepository, OutboxEvent, OutboxStatus } from './OutboxRepository';
+import { RabbitMQPublisher, PublishResult } from './Publisher';
 
 /**
  * Processing result for a batch of events

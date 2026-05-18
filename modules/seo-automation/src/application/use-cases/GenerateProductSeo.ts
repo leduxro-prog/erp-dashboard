@@ -40,21 +40,22 @@
  * // Returns: { metadata, structuredData, score }
  */
 
+import { IEventBus } from '@shared/module-system/module.interface';
+import { loadBrandStrategySync } from '@shared/utils/brand-strategy';
 import { Logger } from 'winston';
+import { v4 as uuidv4 } from 'uuid';
+
+import { SeoEntityType } from '../../domain/entities/SeoIssue';
 import { SeoMetadata } from '../../domain/entities/SeoMetadata';
 import { StructuredData, SchemaType } from '../../domain/entities/StructuredData';
-import { SeoEntityType } from '../../domain/entities/SeoIssue';
+import { ProductNotFoundError } from '../../domain/errors/seo.errors';
 import { ISeoMetadataRepository } from '../../domain/repositories/ISeoMetadataRepository';
 import { IStructuredDataRepository } from '../../domain/repositories/IStructuredDataRepository';
 import { MetaTagGenerator } from '../../domain/services/MetaTagGenerator';
+import { SeoScoreCalculator } from '../../domain/services/SeoScoreCalculator';
 import { SlugGenerator } from '../../domain/services/SlugGenerator';
 import { StructuredDataGenerator } from '../../domain/services/StructuredDataGenerator';
-import { SeoScoreCalculator } from '../../domain/services/SeoScoreCalculator';
 import { IProductPort } from '../ports/IProductPort';
-import { IEventBus } from '@shared/module-system/module.interface';
-import { ProductNotFoundError } from '../../domain/errors/seo.errors';
-import { loadBrandStrategySync } from '@shared/utils/brand-strategy';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Input parameters for use case
@@ -146,6 +147,9 @@ export class GenerateProductSeo {
         price: product.price,
         features: product.features,
         sku: product.sku,
+        wattage: (product as any).wattage,
+        color_temperature: (product as any).color_temperature,
+        ip_rating: (product as any).ip_rating,
       });
 
       const trimToLength = (value: string | undefined, max: number): string =>
@@ -174,6 +178,9 @@ export class GenerateProductSeo {
         brand: brandStrategy.brandName || 'Ledux',
         sku: product.sku,
         category: product.category,
+        color: (product as any).color,
+        material: (product as any).material,
+        wattage: (product as any).wattage,
       });
 
       // Step 5: Calculate score

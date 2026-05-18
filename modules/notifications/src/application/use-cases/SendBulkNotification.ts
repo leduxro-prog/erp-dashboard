@@ -4,17 +4,18 @@
  *
  * Application service for batch notification sending
  */
+import { v4 as uuidv4 } from 'uuid';
 import { Logger } from 'winston';
+
 import { Notification } from '../../domain/entities/Notification';
 import { NotificationBatch } from '../../domain/entities/NotificationBatch';
-import { INotificationRepository } from '../../domain/repositories/INotificationRepository';
-import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
-import { SendBulkNotificationDTO, SendBulkNotificationResponseDTO } from '../dtos/notification.dtos';
 import {
   TemplateNotFoundError,
   InvalidChannelError,
 } from '../../domain/errors/notification.errors';
-import { v4 as uuidv4 } from 'uuid';
+import { INotificationRepository } from '../../domain/repositories/INotificationRepository';
+import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
+import { SendBulkNotificationDTO, SendBulkNotificationResponseDTO } from '../dtos/notification.dtos';
 
 interface NotificationBatchRepositoryPort {
   create(data: Record<string, unknown>): unknown;

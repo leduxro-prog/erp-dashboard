@@ -3,6 +3,7 @@
  * Tests bulk sending of notifications with batching and error handling
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { SendBulkNotification } from '../../src/application/use-cases/SendBulkNotification';
 import { InvalidChannelError, TemplateNotFoundError } from '../../src/domain/errors/notification.errors';
 

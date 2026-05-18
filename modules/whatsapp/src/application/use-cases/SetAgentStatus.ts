@@ -6,8 +6,9 @@
  * @module whatsapp/application/use-cases
  */
 
-import { IAgentRepository } from '../../domain/repositories/IAgentRepository';
 import { NotFoundError } from '@shared/errors';
+
+import { IAgentRepository } from '../../domain/repositories/IAgentRepository';
 
 /**
  * Set agent status request DTO.

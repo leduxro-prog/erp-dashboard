@@ -1,14 +1,15 @@
 import { Logger } from 'winston';
+
 import { ConfiguratorSession } from '../../domain/entities/ConfiguratorSession';
-import { PriceCalculationService } from '../../domain/services/PriceCalculationService';
-import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
-import { IPricingPort } from '../ports/IPricingPort';
 import {
   SessionExpiredError,
   SessionNotFoundError,
   InvalidSessionStatusError,
   EmptyConfigurationError,
 } from '../../domain/errors/configurator.errors';
+import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
+import { PriceCalculationService } from '../../domain/services/PriceCalculationService';
+import { IPricingPort } from '../ports/IPricingPort';
 
 /**
  * CalculateConfigurationPrice Use-Case

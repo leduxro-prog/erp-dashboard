@@ -11,8 +11,9 @@
  *   Output: "📉 SUGESTIE LICHIDARE: [Name] - Blochează capital."
  */
 
-import { DataSource } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource } from 'typeorm';
+
 import { SmartInventoryAlert, AlertType } from '../../application/dtos/SmartInventoryAlert';
 
 const logger = createModuleLogger('smart-inventory');

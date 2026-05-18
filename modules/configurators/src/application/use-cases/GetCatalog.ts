@@ -1,4 +1,5 @@
 import { Logger } from 'winston';
+
 import { ComponentCatalog } from '../../domain/entities/ComponentCatalog';
 import { ICatalogRepository } from '../../domain/repositories/ICatalogRepository';
 import { IInventoryPort } from '../ports/IInventoryPort';

@@ -1,24 +1,33 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import multer from 'multer';
 import { createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
-import { B2BController } from '../controllers/B2BController';
-import { B2BOrderController } from '../controllers/B2BOrderController';
+
+import { asyncHandler } from '@shared/middleware/async-handler';
+import { authenticate, requireRole, AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { authenticateB2B } from '@shared/middleware/b2b-auth.middleware';
+import { Router, Request, Response, NextFunction } from 'express';
+import multer from 'multer';
+
 import { B2BCartController } from '../controllers/B2BCartController';
 import { B2BCheckoutController } from '../controllers/B2BCheckoutController';
-import { B2BInvoiceController } from '../controllers/B2BInvoiceController';
+import { B2BController } from '../controllers/B2BController';
 import { B2BCustomerController } from '../controllers/B2BCustomerController';
-import { B2BPaymentController } from '../controllers/B2BPaymentController';
 import { B2BFavoritesController } from '../controllers/B2BFavoritesController';
-import { B2BPortalWebhookController } from '../controllers/B2BPortalWebhookController';
+import { B2BInvoiceController } from '../controllers/B2BInvoiceController';
+import { B2BOrderController } from '../controllers/B2BOrderController';
+import { B2BPaymentController } from '../controllers/B2BPaymentController';
 import { B2BPortalSyncController } from '../controllers/B2BPortalSyncController';
+import { B2BPortalWebhookController } from '../controllers/B2BPortalWebhookController';
+import { B2BTeamController } from '../controllers/B2BTeamController';
+import { B2BProjectController } from '../controllers/B2BProjectController';
 import {
-  authenticate,
-  requireRole,
-  AuthenticatedRequest,
-} from '@shared/middleware/auth.middleware';
-import { authenticateB2B } from '@shared/middleware/b2b-auth.middleware';
-import { asyncHandler } from '@shared/middleware/async-handler';
+  createB2BOrderSchema,
+  validateStockSchema,
+  saveCustomerAddressSchema,
+} from '../validators/b2b-checkout.validators';
+import {
+  addFavoriteSchema,
+  addAllToCartSchema,
+} from '../validators/b2b-favorites.validators';
 import {
   validationMiddleware,
   queryValidationMiddleware,
@@ -34,12 +43,6 @@ import {
   listBulkOrdersSchema,
   listProductsSchema,
 } from '../validators/b2b.validators';
-import {
-  createB2BOrderSchema,
-  validateStockSchema,
-  saveCustomerAddressSchema,
-} from '../validators/b2b-checkout.validators';
-import { addFavoriteSchema, addAllToCartSchema } from '../validators/b2b-favorites.validators';
 import { SettingsService } from '../../../../settings/src/application/services/SettingsService';
 import { createModuleLogger } from '../../../../../shared/utils/logger';
 import type {
@@ -229,12 +232,66 @@ export function createB2BRoutes(
   favoritesController?: B2BFavoritesController,
   webhookController?: B2BPortalWebhookController,
   syncController?: B2BPortalSyncController,
-  settingsService: Pick<SettingsService, 'getPublicSettings'> = new SettingsService(
-    catalogPolicyLogger,
-  ),
+  settingsServiceOrTeamController:
+    | Pick<SettingsService, 'getPublicSettings'>
+    | B2BTeamController = new SettingsService(catalogPolicyLogger),
+  teamControllerOrProjectController?: B2BTeamController | B2BProjectController,
+  projectController?: B2BProjectController,
 ): Router {
   const router = Router();
+  const hasSettingsService = (
+    value: Pick<SettingsService, 'getPublicSettings'> | B2BTeamController,
+  ): value is Pick<SettingsService, 'getPublicSettings'> =>
+    typeof (value as Pick<SettingsService, 'getPublicSettings'>).getPublicSettings === 'function';
+  const settingsService = hasSettingsService(settingsServiceOrTeamController)
+    ? settingsServiceOrTeamController
+    : new SettingsService(catalogPolicyLogger);
+  const resolvedTeamController = hasSettingsService(settingsServiceOrTeamController)
+    ? (teamControllerOrProjectController as B2BTeamController | undefined)
+    : settingsServiceOrTeamController;
+  const resolvedProjectController = hasSettingsService(settingsServiceOrTeamController)
+    ? projectController
+    : (teamControllerOrProjectController as B2BProjectController | undefined);
   const catalogVisibilityMiddleware = enforceCatalogVisibility(settingsService);
+
+  /**
+   * B2B Team Management
+   */
+  if (resolvedTeamController) {
+    router.get('/team', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedTeamController.listTeam(req, res)
+    ));
+    router.post('/team/invite', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedTeamController.inviteMember(req, res)
+    ));
+    router.put('/team/:id', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedTeamController.updateMember(req, res)
+    ));
+    router.delete('/team/:id', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedTeamController.removeMember(req, res)
+    ));
+  }
+
+  /**
+   * B2B Collaborative Projects
+   */
+  if (resolvedProjectController) {
+    router.get('/projects', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.listProjects(req, res)
+    ));
+    router.post('/projects', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.createProject(req, res)
+    ));
+    router.get('/projects/:id', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.getProject(req, res)
+    ));
+    router.post('/projects/:id/items', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.addItem(req, res)
+    ));
+    router.post('/projects/:id/convert', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.convertToCart(req, res)
+    ));
+  }
 
   /**
    * POST /register

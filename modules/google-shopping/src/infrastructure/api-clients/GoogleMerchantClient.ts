@@ -13,8 +13,9 @@
  * For production, consider using the official googleapis npm package.
  */
 
-import { createModuleLogger } from '@shared/utils/logger';
 import crypto from 'crypto';
+
+import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('google-merchant');
 

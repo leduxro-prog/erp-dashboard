@@ -1,26 +1,30 @@
+import { createModuleLogger } from '@shared/utils/logger';
+import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
-import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
+
 import { WooCommerceController } from '../api/controllers/WooCommerceController';
 import { createWooCommerceRoutes } from '../api/routes/woocommerce.routes';
-import { SyncProduct, InternalProduct } from '../application/use-cases/SyncProduct';
+import { PullOrders } from '../application/use-cases/PullOrders';
 import {
   SyncAllProducts,
   InternalProduct as AllProductsInternalProduct,
 } from '../application/use-cases/SyncAllProducts';
-import { SyncStock } from '../application/use-cases/SyncStock';
-import { SyncPrice, PriceInfo } from '../application/use-cases/SyncPrice';
 import { SyncCategories, InternalCategory } from '../application/use-cases/SyncCategories';
-import { PullOrders } from '../application/use-cases/PullOrders';
-import { TypeOrmSyncRepository } from './repositories/TypeOrmSyncRepository';
+import { SyncPrice, PriceInfo } from '../application/use-cases/SyncPrice';
+import { SyncProduct, InternalProduct } from '../application/use-cases/SyncProduct';
+import { SyncStock } from '../application/use-cases/SyncStock';
 import {
   IWooCommerceClient,
   WooCommerceProductData,
   WooCommerceOrderData,
 } from '../domain/ports/IWooCommerceClient';
 import { IWooCommerceMapper } from '../domain/ports/IWooCommerceMapper';
+
 import { createWebhookIdempotencyMiddleware } from './middleware/webhook-idempotency';
-import { createModuleLogger } from '@shared/utils/logger';
+import { TypeOrmSyncRepository } from './repositories/TypeOrmSyncRepository';
+
+
 
 const logger = createModuleLogger('woocommerce-composition');
 

@@ -4,15 +4,16 @@
  */
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { NotificationsCompositionRoot } from '../../infrastructure/composition-root';
+
 import { SendNotificationDTO, SendBulkNotificationDTO } from '../../application/dtos/notification.dtos';
-import { ResendEmailAdapter } from '../../infrastructure/adapters/ResendEmailAdapter';
-import { NotificationTemplate } from '../../domain/entities/NotificationTemplate';
 import {
   NotificationPreference,
   NotificationChannel,
   NotificationFrequency,
 } from '../../domain/entities/NotificationPreference';
+import { NotificationTemplate } from '../../domain/entities/NotificationTemplate';
+import { ResendEmailAdapter } from '../../infrastructure/adapters/ResendEmailAdapter';
+import { NotificationsCompositionRoot } from '../../infrastructure/composition-root';
 import { NotificationBatchEntity } from '../../infrastructure/entities/NotificationBatchEntity';
 
 // Use intersection type instead of interface to avoid extension conflicts

@@ -8,7 +8,6 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
 import { DataSource } from 'typeorm';
 
 export interface SyncStatusResponse {

@@ -7,12 +7,14 @@
  * @module HealthCheck
  */
 
-import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
-import { OutboxLogger } from './logger';
-import { OutboxRelay, HealthStatus } from './OutboxRelay';
+
+import express, { Request, Response, NextFunction } from 'express';
+
 import { getConfig, HealthCheckConfig } from './Config';
+import { OutboxLogger } from './logger';
 import { OutboxMetrics } from './Metrics';
+import { OutboxRelay, HealthStatus } from './OutboxRelay';
 
 /**
  * Health check response interface

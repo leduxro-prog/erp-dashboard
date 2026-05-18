@@ -7,8 +7,9 @@
  * @module whatsapp/application/use-cases
  */
 
-import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
 import { NotFoundError } from '@shared/errors';
+
+import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
 
 /**
  * Delete template request DTO.

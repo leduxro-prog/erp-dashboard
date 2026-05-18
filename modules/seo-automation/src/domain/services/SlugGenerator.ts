@@ -90,7 +90,7 @@ export class SlugGenerator {
    * @returns Unique slug (original or with numeric suffix)
    */
   generateUnique(text: string, existingSlugs: string[]): string {
-    let slug = this.generate(text);
+    const slug = this.generate(text);
 
     if (!existingSlugs.includes(slug)) {
       return slug;

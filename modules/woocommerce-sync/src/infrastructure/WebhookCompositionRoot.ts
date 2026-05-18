@@ -3,16 +3,18 @@
  * Orchestrates webhook intake, transformation, outbox publishing, retry, and DLQ
  */
 
+import { createModuleLogger } from '@shared/utils/logger';
 import { Router, Request, Response } from 'express';
 import { DataSource } from 'typeorm';
-import { WebhookReliabilityService } from '../application/services/WebhookReliabilityService';
-import { WebhookEventTransformer } from '../application/transformers/WebhookEventTransformer';
-import { OutboxEventPublisher } from './outbox/OutboxEventPublisher';
-import { WebhookRetryWorker } from './workers/WebhookRetryWorker';
-import { DeadLetterQueueManager } from './dlq/DeadLetterQueueManager';
+
 import { WooCommerceWebhookController } from '../api/controllers/WooCommerceWebhookController';
 import { createWooCommerceWebhookRoutes } from '../api/routes/woocommerce-webhook.routes';
-import { createModuleLogger } from '@shared/utils/logger';
+import { WebhookReliabilityService } from '../application/services/WebhookReliabilityService';
+import { WebhookEventTransformer } from '../application/transformers/WebhookEventTransformer';
+
+import { DeadLetterQueueManager } from './dlq/DeadLetterQueueManager';
+import { OutboxEventPublisher } from './outbox/OutboxEventPublisher';
+import { WebhookRetryWorker } from './workers/WebhookRetryWorker';
 
 const logger = createModuleLogger('webhook-composition-root');
 

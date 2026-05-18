@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+
 import { AppDataSource } from '../../src/data-source';
 import { getEventBus } from '../utils/event-bus';
 import logger from '../utils/logger';

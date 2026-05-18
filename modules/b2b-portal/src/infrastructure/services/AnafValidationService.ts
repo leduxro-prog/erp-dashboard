@@ -1,6 +1,6 @@
-import axios, { AxiosError } from 'axios';
-import { createModuleLogger } from '@shared/utils/logger';
 import { RedisPool } from '@shared/cache/redis-pool';
+import { createModuleLogger } from '@shared/utils/logger';
+import axios, { AxiosError } from 'axios';
 import type { RedisClientType } from 'redis';
 
 const logger = createModuleLogger('anaf-validation-service');

@@ -1,6 +1,7 @@
+import { v4 as uuidv4 } from 'uuid';
+
 import { SyncResultDTO } from '../dtos/inventory.dtos';
 import { StockSyncError } from '../errors/inventory.errors';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface SmartBillSyncService {
   sync(): Promise<{ itemsProcessed: number; itemsUpdated: number; errors: string[] }>;

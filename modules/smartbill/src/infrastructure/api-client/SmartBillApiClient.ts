@@ -1,8 +1,9 @@
-import { SmartBillApiError } from '../../application/errors/smartbill.errors';
 import { ApiClient } from '@shared/api/api-client';
 import { ApiClientFactory } from '@shared/api/api-client-factory';
 import { createModuleLogger } from '@shared/utils/logger';
 import axios, { AxiosInstance } from 'axios';
+
+import { SmartBillApiError } from '../../application/errors/smartbill.errors';
 
 const logger = createModuleLogger('smartbill-api-client');
 

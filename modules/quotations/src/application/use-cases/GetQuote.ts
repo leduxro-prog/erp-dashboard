@@ -1,5 +1,5 @@
-import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 import { Quote } from '../../domain/entities/Quote';
+import { IQuoteRepository } from '../../domain/repositories/IQuoteRepository';
 import { QuoteNotFoundError } from '../errors/QuoteErrors';
 
 export class GetQuote {

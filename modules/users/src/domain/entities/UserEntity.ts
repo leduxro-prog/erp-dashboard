@@ -1,12 +1,14 @@
+import * as crypto from 'crypto';
+
+import * as bcrypt from 'bcrypt';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
-import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -20,6 +22,9 @@ export enum UserRole {
 }
 
 @Entity('users')
+@Index(['role'])
+@Index(['is_active'])
+@Index(['created_at'])
 export class UserEntity {
   @PrimaryGeneratedColumn('increment')
   id!: number;

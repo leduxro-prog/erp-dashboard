@@ -1,17 +1,19 @@
+import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
 import { Request, Response, NextFunction } from 'express';
 
-import { TypeOrmOrderRepository } from '../../infrastructure/repositories/TypeOrmOrderRepository';
-import { OrderMapper, Order } from '../../infrastructure/mappers/OrderMapper';
+import { OrderStatusMachine } from '../../domain/entities/OrderStatusMachine';
 import { OrderCache } from '../../infrastructure/cache/OrderCache';
 import { OrderEntity, OrderStatus } from '../../infrastructure/entities/OrderEntity';
-import { OrderStatusMachine } from '../../domain/entities/OrderStatusMachine';
-import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { OrderMapper } from '../../infrastructure/mappers/OrderMapper';
+import { TypeOrmOrderRepository } from '../../infrastructure/repositories/TypeOrmOrderRepository';
+import { IInventoryRepository } from '../../../../inventory/src/domain/ports/IInventoryRepository';
 
 export class OrderController {
   constructor(
     private repository: TypeOrmOrderRepository,
     private mapper: OrderMapper,
     private cache: OrderCache,
+    private inventoryRepository?: IInventoryRepository,
   ) {}
 
   async createOrder(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -37,7 +39,7 @@ export class OrderController {
 
       // Fetch product cost data for snapshot
       const productIds = items.map((item: any) => item.product_id);
-      let productCostMap: Record<string, { cost: number | null; source: string | null }> = {};
+      const productCostMap: Record<string, { cost: number | null; source: string | null }> = {};
       try {
         const costResult = await this.repository.getDataSource().query(
           `SELECT id, base_price,
@@ -60,17 +62,38 @@ export class OrderController {
       }
 
       let subtotal = 0;
-      const processedItems = items.map((item: any) => {
+      const processedItems = [];
+
+      for (const item of items) {
         const lineTotal = item.quantity * item.unit_price;
         subtotal += lineTotal;
         const costData = productCostMap[String(item.product_id)];
-        return {
+
+        // Geographic Routing for Enterprise Scalability
+        let sourceWarehouseId = item.source_warehouse_id;
+        if (!sourceWarehouseId && this.inventoryRepository) {
+          try {
+            sourceWarehouseId = await this.inventoryRepository.findBestWarehouse(
+              String(item.product_id),
+              {
+                city: shipping_address?.city,
+                region: shipping_address?.region,
+                postalCode: shipping_address?.postal_code,
+              },
+            );
+          } catch (routingErr) {
+            console.error('Routing error:', routingErr);
+          }
+        }
+
+        processedItems.push({
           ...item,
           line_total: lineTotal,
           cost_price_snapshot: costData?.cost ?? null,
           cost_source: costData?.source ?? null,
-        };
-      });
+          source_warehouse_id: sourceWarehouseId,
+        });
+      }
 
       const taxRate = 0.21; // 21% VAT
       const taxAmount = subtotal * taxRate;

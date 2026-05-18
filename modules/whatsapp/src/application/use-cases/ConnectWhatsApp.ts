@@ -6,8 +6,9 @@
  * @module whatsapp/application/use-cases
  */
 
-import { IConnectionPort } from '../../domain/ports/IConnectionPort';
 import { NotFoundError } from '@shared/errors';
+
+import { IConnectionPort } from '../../domain/ports/IConnectionPort';
 
 /**
  * Connect WhatsApp request DTO.

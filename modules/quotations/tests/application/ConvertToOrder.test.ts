@@ -1,7 +1,7 @@
+import { QuoteNotFoundError, QuoteAlreadyProcessedError } from '../../src/application/errors/QuoteErrors';
 import { ConvertToOrder, IOrderService, IEventPublisher } from '../../src/application/use-cases/ConvertToOrder';
 import { Quote, QuoteStatus } from '../../src/domain/entities/Quote';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
-import { QuoteNotFoundError, QuoteAlreadyProcessedError } from '../../src/application/errors/QuoteErrors';
 
 describe('ConvertToOrder Use Case', () => {
   let convertToOrder: ConvertToOrder;

@@ -7,6 +7,7 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
+
 import { OrderItemEntity } from './OrderItemEntity';
 import { OrderStatusHistoryEntity } from './OrderStatusHistoryEntity';
 

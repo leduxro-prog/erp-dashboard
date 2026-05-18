@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
 import { AdjustStock, EventBus } from '../../src/application/use-cases/AdjustStock';
 import { IInventoryRepository } from '../../src/domain/ports/IInventoryRepository';
 

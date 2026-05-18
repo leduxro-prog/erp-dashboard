@@ -69,8 +69,14 @@ export const B2BPortalLayout: React.FC = () => {
             <Link to="/b2b-portal/catalog" className={navLinkClass('/b2b-portal/catalog')}>
               {isRo ? 'Catalog' : 'Catalog'}
             </Link>
+            <Link to="/b2b-portal/projects" className={navLinkClass('/b2b-portal/projects')}>
+              {isRo ? 'Proiecte' : 'Projects'}
+            </Link>
             <Link to="/b2b-portal/orders" className={navLinkClass('/b2b-portal/orders')}>
               {isRo ? 'Comenzi' : 'Orders'}
+            </Link>
+            <Link to="/b2b-portal/quick-order" className={navLinkClass('/b2b-portal/quick-order')}>
+              {isRo ? 'Comandă Rapidă' : 'Quick Order'}
             </Link>
             <Link to="/b2b-portal/cart" className={navLinkClass('/b2b-portal/cart')}>
               {isRo ? 'Coș' : 'Cart'}
@@ -80,6 +86,9 @@ export const B2BPortalLayout: React.FC = () => {
             </Link>
             <Link to="/b2b-portal/payments" className={navLinkClass('/b2b-portal/payments')}>
               {isRo ? 'Plăți' : 'Payments'}
+            </Link>
+            <Link to="/b2b-portal/team" className={navLinkClass('/b2b-portal/team')}>
+              {isRo ? 'Echipa Mea' : 'My Team'}
             </Link>
             <Link to="/b2b-portal/profile" className={navLinkClass('/b2b-portal/profile')}>
               {isRo ? 'Profil' : 'Profile'}

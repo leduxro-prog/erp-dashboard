@@ -1,6 +1,6 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { Job, Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
-import { createModuleLogger } from '@shared/utils/logger';
 
 export class SupplierSyncJob {
   private readonly logger = createModuleLogger('SupplierSyncJob');

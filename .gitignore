@@ -11,6 +11,7 @@ build/
 *.js
 *.js.map
 !jest.config.js
+!scripts/test-changed-modules.js
 
 # Coverage reports
 coverage/

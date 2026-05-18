@@ -4,12 +4,196 @@
  * Supports: product listing, filtering, search, stock visibility, pricing tiers
  */
 
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Router, Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
-import { VAT_RATE } from '@shared/constants';
+import multer from 'multer';
+
+import { VAT_RATE } from '../../../../../shared/constants/pricing-tiers';
+import { CatalogPdfGenerator } from '../../infrastructure/pdf/CatalogPdfGenerator';
+import { TierCalculationService } from '../../domain/services/TierCalculationService';
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 export function createB2BCatalogRouter(dataSource: DataSource): Router {
   const router = Router();
+  const pdfGenerator = new CatalogPdfGenerator();
+
+  // ==========================================
+  // POST /search/visual - Search by Photo (AI)
+  // ==========================================
+  router.post('/search/visual', upload.single('image'), async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ success: false, error: 'No image provided' });
+        return;
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        res.status(503).json({ success: false, error: 'Visual search not configured' });
+        return;
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const prompt = "Identify this lighting or electrical product. Provide exactly 3-5 technical keywords in Romanian that would help find it in an ERP catalog. Respond ONLY with the keywords separated by spaces.";
+      
+      const imageParts = [
+        {
+          inlineData: {
+            data: req.file.buffer.toString("base64"),
+            mimeType: req.file.mimetype
+          }
+        }
+      ];
+
+      const result = await model.generateContent([prompt, ...imageParts]);
+      const keywords = result.response.text().trim();
+
+      res.json({
+        success: true,
+        data: {
+          keywords,
+          suggested_search: keywords
+        }
+      });
+    } catch (error) {
+      console.error('Visual search error:', error);
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // GET /products/:id/pricing - Tiered pricing
+  // ==========================================
+  router.get('/products/:id/pricing', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const productId = parseInt(req.params.id);
+      const customerId = (req as any).user?.customerId ?? (req as any).b2bCustomer?.id;
+      
+      if (!customerId) {
+        res.status(401).json({ success: false, error: 'B2B context required' });
+        return;
+      }
+
+      // 1. Get product and customer tier
+      const [product, customer] = await Promise.all([
+        dataSource.query('SELECT base_price, currency_code FROM products WHERE id = $1', [productId]),
+        dataSource.query('SELECT tier FROM b2b_customers WHERE id = $1', [customerId])
+      ]);
+
+      if (product.length === 0) {
+        res.status(404).json({ success: false, error: 'Product not found' });
+        return;
+      }
+
+      const basePrice = parseFloat(product[0].base_price);
+      const tier = customer[0]?.tier || 'STANDARD';
+
+      // 2. Get volume discounts
+      const discounts = await dataSource.query(
+        `SELECT min_quantity, discount_percentage 
+         FROM volume_discounts 
+         WHERE product_id = $1 AND is_active = true 
+         ORDER BY min_quantity ASC`,
+        [productId]
+      );
+
+      // 3. Calculate tier discount
+      const tierService = new TierCalculationService();
+      const tierDiscountPercent = tierService.getDiscountForTier(tier as any) * 100;
+
+      // 4. Build pricing table
+      const pricingTable = [1, 10, 20, 50, 100].map(qty => {
+        // Find applicable volume discount for this qty
+        const volDiscount = discounts
+          .filter((d: any) => qty >= d.min_quantity)
+          .reduce((max: number, d: any) => Math.max(max, parseFloat(d.discount_percentage)), 0);
+
+        const totalDiscount = tierDiscountPercent + volDiscount;
+        const netPrice = basePrice * (1 - totalDiscount / 100);
+
+        return {
+          quantity: qty,
+          base_price: basePrice,
+          tier_discount: tierDiscountPercent,
+          volume_discount: volDiscount,
+          total_discount: totalDiscount,
+          net_price: Math.round(netPrice * 100) / 100
+        };
+      });
+
+      res.json({
+        success: true,
+        data: {
+          product_id: productId,
+          tier,
+          currency: product[0].currency_code || 'RON',
+          pricing_table: pricingTable
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // GET /products/:id/datasheet - Product PDF
+  // ==========================================
+  router.get('/products/:id/datasheet', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const productId = parseInt(req.params.id);
+
+      // We need to fetch the full product data to generate the PDF
+      // Using a simplified version of the GET /products/:id logic
+      const query = `
+        SELECT 
+          p.*,
+          c.name as category_name,
+          ps.*
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        LEFT JOIN product_specifications ps ON ps.product_id = p.id
+        WHERE p.id = $1 AND p.is_active = true
+      `;
+
+      const results = await dataSource.query(query, [productId]);
+      if (results.length === 0) {
+        res.status(404).json({ success: false, error: 'Product not found' });
+        return;
+      }
+
+      const p = results[0];
+      const productData = {
+        name: p.name,
+        sku: p.sku,
+        description: p.description,
+        category: { name: p.category_name },
+        specs: {
+          wattage: p.wattage,
+          lumens: p.lumens,
+          color_temperature: p.color_temperature,
+          cri: p.cri,
+          ip_rating: p.ip_rating,
+          voltage: p.voltage_input,
+          dimmable: p.dimmable,
+          warranty_years: p.warranty_years,
+          brand: p.brand
+        }
+      };
+
+      const pdfBuffer = await pdfGenerator.generateProductDatasheet(productData);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=Fisa_Tehnica_${p.sku}.pdf`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating datasheet:', error);
+      next(error);
+    }
+  });
 
   // ==========================================
   // GET /products - List products with filters
@@ -509,7 +693,7 @@ export function createB2BCatalogRouter(dataSource: DataSource): Router {
         params.push(parseInt(category_id));
       }
 
-      const [brands, ipRatings, colorTemps, mountingTypes, priceRange] = await Promise.all([
+      const [brands, ipRatings, colorTemps, mountingTypes, energyClasses, cris, priceRange] = await Promise.all([
         dataSource.query(
           `
           SELECT DISTINCT ps.brand, COUNT(*) as count
@@ -556,8 +740,32 @@ export function createB2BCatalogRouter(dataSource: DataSource): Router {
         ),
         dataSource.query(
           `
-          SELECT MIN(p.base_price) as min_price, MAX(p.base_price) as max_price
+          SELECT DISTINCT ps.energy_class, COUNT(*) as count
+          FROM product_specifications ps
+          JOIN products p ON p.id = ps.product_id
+          LEFT JOIN categories c ON c.id = p.category_id
+          WHERE ps.energy_class IS NOT NULL AND p.is_active = true ${catCondition}
+          GROUP BY ps.energy_class ORDER BY ps.energy_class
+        `,
+          params,
+        ),
+        dataSource.query(
+          `
+          SELECT DISTINCT ps.cri, COUNT(*) as count
+          FROM product_specifications ps
+          JOIN products p ON p.id = ps.product_id
+          LEFT JOIN categories c ON c.id = p.category_id
+          WHERE ps.cri IS NOT NULL AND p.is_active = true ${catCondition}
+          GROUP BY ps.cri ORDER BY ps.cri
+        `,
+          params,
+        ),
+        dataSource.query(
+          `
+          SELECT MIN(p.base_price) as min_price, MAX(p.base_price) as max_price,
+                 MIN(ps.wattage) as min_wattage, MAX(ps.wattage) as max_wattage
           FROM products p
+          LEFT JOIN product_specifications ps ON ps.product_id = p.id
           LEFT JOIN categories c ON c.id = p.category_id
           WHERE p.is_active = true ${catCondition}
         `,
@@ -579,11 +787,16 @@ export function createB2BCatalogRouter(dataSource: DataSource): Router {
             value: m.mounting_type,
             count: parseInt(m.count),
           })),
+          energy_classes: energyClasses.map((e: any) => ({ value: e.energy_class, count: parseInt(e.count) })),
+          cri_values: cris.map((c: any) => ({ value: c.cri, count: parseInt(c.count) })),
           price_range: {
             min: parseFloat(priceRange[0]?.min_price || '0'),
             max: parseFloat(priceRange[0]?.max_price || '0'),
           },
-          wattage_range: { min: 3, max: 200 },
+          wattage_range: {
+            min: parseFloat(priceRange[0]?.min_wattage || '3'),
+            max: parseFloat(priceRange[0]?.max_wattage || '200'),
+          },
         },
       });
     } catch (error) {

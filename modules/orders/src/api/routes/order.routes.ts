@@ -1,6 +1,7 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { OrderController } from '../controllers/OrderController';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Router, Request, Response, NextFunction } from 'express';
+
+import { OrderController } from '../controllers/OrderController';
 import { validateRequest } from '../validators/order.validators';
 
 export function createOrderRoutes(controller: OrderController): Router {

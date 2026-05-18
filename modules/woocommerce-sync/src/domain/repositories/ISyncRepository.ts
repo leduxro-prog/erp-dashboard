@@ -1,6 +1,6 @@
-import { SyncItem } from '../entities/SyncItem';
-import { SyncBatch } from '../entities/SyncBatch';
 import { ProductSyncMapping } from '../entities/ProductSyncMapping';
+import { SyncBatch } from '../entities/SyncBatch';
+import { SyncItem } from '../entities/SyncItem';
 
 export interface SyncStats {
   totalSyncItems: number;

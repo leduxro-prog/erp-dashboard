@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { ScrapeSupplierStock } from '../../src/application/use-cases/ScrapeSupplierStock';
-import { ISupplierRepository } from '../../src/domain';
-import { SupplierCode, SupplierEntity } from '../../src/domain/entities/Supplier';
-import { IScraperFactory } from '../../src/domain/ports/IScraper';
+
 import {
   ScrapeError,
   SupplierNotFoundError,
 } from '../../src/application/errors/supplier.errors';
+import { ScrapeSupplierStock } from '../../src/application/use-cases/ScrapeSupplierStock';
+import { ISupplierRepository } from '../../src/domain';
+import { SupplierCode, SupplierEntity } from '../../src/domain/entities/Supplier';
+import { IScraperFactory } from '../../src/domain/ports/IScraper';
 
 describe('ScrapeSupplierStock', () => {
   let useCase: ScrapeSupplierStock;

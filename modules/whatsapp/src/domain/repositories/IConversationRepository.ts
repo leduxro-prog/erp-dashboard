@@ -7,6 +7,7 @@
  */
 
 import { WhatsAppConversation, ConversationStatus } from '../entities/WhatsAppConversation';
+
 import { PaginationParams, PaginatedResult } from './IMessageRepository';
 
 /**

@@ -7,6 +7,7 @@
  */
 
 import { createModuleLogger } from '@shared/utils/logger';
+
 import { VideoScript, VideoFrame } from '../dtos/VideoScript';
 
 const logger = createModuleLogger('video-script-templates');

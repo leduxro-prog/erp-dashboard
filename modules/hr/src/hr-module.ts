@@ -1,4 +1,3 @@
-import { Router } from 'express';
 import {
     ICypherModule,
     IModuleContext,
@@ -6,6 +5,8 @@ import {
     IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router } from 'express';
+
 import { createHRRouter } from './api/routes';
 
 const logger = createModuleLogger('hr');

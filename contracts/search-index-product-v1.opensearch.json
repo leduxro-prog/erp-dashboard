@@ -1,0 +1,86 @@
+{
+  "index": "catalog_products_v1",
+  "aliases": {
+    "catalog_products_read": {},
+    "catalog_products_write": {}
+  },
+  "settings": {
+    "index": {
+      "number_of_shards": 3,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s"
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "productId": { "type": "keyword" },
+      "sku": { "type": "keyword" },
+      "erpProductId": { "type": "keyword" },
+      "title": {
+        "type": "text",
+        "fields": {
+          "keyword": { "type": "keyword" }
+        }
+      },
+      "categoryTree": {
+        "type": "keyword"
+      },
+      "brand": { "type": "keyword" },
+      "manufacturer": { "type": "keyword" },
+      "technical": {
+        "properties": {
+          "lumens": { "type": "float" },
+          "kelvin": { "type": "integer" },
+          "cri": { "type": "integer" },
+          "ipRating": { "type": "keyword" },
+          "wattage": { "type": "float" },
+          "voltage": { "type": "keyword" },
+          "mountingType": { "type": "keyword" },
+          "dimensions": {
+            "properties": {
+              "length": { "type": "float" },
+              "width": { "type": "float" },
+              "height": { "type": "float" },
+              "unit": { "type": "keyword" }
+            }
+          }
+        }
+      },
+      "ean": { "type": "keyword" },
+      "supplierCodes": { "type": "keyword" },
+      "manufacturerCodes": { "type": "keyword" },
+      "complianceFlags": { "type": "keyword" },
+      "visibility": {
+        "properties": {
+          "retail": { "type": "boolean" },
+          "b2b": { "type": "boolean" }
+        }
+      },
+      "commercial": {
+        "properties": {
+          "currency": { "type": "keyword" },
+          "listPrice": { "type": "scaled_float", "scaling_factor": 100 },
+          "promoPrice": { "type": "scaled_float", "scaling_factor": 100 },
+          "stockAvailable": { "type": "integer" }
+        }
+      },
+      "media": {
+        "properties": {
+          "primaryImageUrl": { "type": "keyword" },
+          "galleryUrls": { "type": "keyword" }
+        }
+      },
+      "documents": {
+        "properties": {
+          "datasheets": { "type": "keyword" },
+          "certificates": { "type": "keyword" },
+          "installation": { "type": "keyword" },
+          "warranty": { "type": "keyword" },
+          "compliance": { "type": "keyword" }
+        }
+      },
+      "updatedAt": { "type": "date" }
+    }
+  }
+}

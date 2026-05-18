@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
+import { ProductNotFoundError } from '../../src/application/errors/inventory.errors';
 import { ReserveStock } from '../../src/application/use-cases/ReserveStock';
 import {
   IInventoryRepository,
   StockReservation,
   Warehouse,
 } from '../../src/domain/ports/IInventoryRepository';
-import { ProductNotFoundError } from '../../src/application/errors/inventory.errors';
 
 describe('ReserveStock Use Case', () => {
   let useCase: ReserveStock;

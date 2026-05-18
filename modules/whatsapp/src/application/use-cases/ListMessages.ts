@@ -7,8 +7,8 @@
  * @module whatsapp/application/use-cases
  */
 
-import { IMessageRepository, PaginatedResult } from '../../domain/repositories/IMessageRepository';
 import { WhatsAppMessage, MessageStatus } from '../../domain/entities/WhatsAppMessage';
+import { IMessageRepository, PaginatedResult } from '../../domain/repositories/IMessageRepository';
 
 /**
  * List messages request DTO.

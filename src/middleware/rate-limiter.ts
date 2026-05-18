@@ -1,5 +1,5 @@
-import { rateLimit } from 'express-rate-limit';
 import { Request, Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 
 /**
  * General API rate limiter

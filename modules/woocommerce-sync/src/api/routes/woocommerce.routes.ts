@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
-import { WooCommerceController } from '../controllers/WooCommerceController';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Router, Request, Response } from 'express';
+
+import { WooCommerceController } from '../controllers/WooCommerceController';
 import { WooCommerceValidators } from '../validators/woocommerce.validators';
 
 export function createWooCommerceRoutes(

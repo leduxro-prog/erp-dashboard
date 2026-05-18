@@ -2,13 +2,14 @@
  * Order management types
  */
 
+import { OrderStatus } from '../constants/order-statuses';
+
 import { BaseEntity, Currency } from './common.types';
 
 /**
  * Order status — re-exported from the canonical source in shared/constants.
  * The OrderStatusEnum const is kept for backward compat (e.g. runtime iteration).
  */
-import { OrderStatus } from '../constants/order-statuses';
 export { OrderStatus };
 
 export const OrderStatusEnum = {

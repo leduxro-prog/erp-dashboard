@@ -1,5 +1,6 @@
-import { Router } from 'express';
 import { ICypherModule, IModuleContext, IModuleHealth, IModuleMetrics } from '@shared/module-system/module.interface';
+import { Router } from 'express';
+
 import { createQuotationsRouter } from './infrastructure/composition-root';
 
 // Export composition root

@@ -5,6 +5,7 @@
  * Application service for batch processing
  */
 import { Logger } from 'winston';
+
 import { INotificationRepository } from '../../domain/repositories/INotificationRepository';
 import { NotificationDispatcher } from '../../domain/services/NotificationDispatcher';
 

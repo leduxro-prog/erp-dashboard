@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   Index,
 } from 'typeorm';
+
 import { SyncType, SyncStatus } from '../../domain/entities/SyncItem';
 
 @Entity('wc_sync_items')

@@ -1460,11 +1460,7 @@ function DiscountsView() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const {
-    data: codes,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const { data: codesData, isLoading, refetch } = useQuery({
     queryKey: ['discount-codes', { status: statusFilter, search: searchTerm }],
     queryFn: () =>
       marketingService.getDiscountCodes({
@@ -1486,10 +1482,39 @@ function DiscountsView() {
     },
   });
 
-  const filteredCodes =
-    codes?.data?.filter((c: DiscountCode) =>
-      c.code.toLowerCase().includes(searchTerm.toLowerCase()),
-    ) || [];
+  const { mutate: createCode, isPending } = useMutation({
+    mutationFn: (data: Partial<DiscountCode>) => marketingService.createDiscountCode(data),
+    onSuccess: () => {
+      toast.success('Discount code created successfully');
+      setShowCreateModal(false);
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to create discount code');
+    },
+  });
+
+  const [formData, setFormData] = useState({
+    code: '',
+    type: 'percentage' as DiscountCode['type'],
+    value: 0,
+    minOrderValue: 0,
+    maxUses: 0,
+    validFrom: new Date().toISOString().split('T')[0],
+    validUntil: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createCode({
+      ...formData,
+      isActive: true,
+      validFrom: new Date(formData.validFrom).toISOString(),
+      validUntil: new Date(formData.validUntil).toISOString(),
+    });
+  };
+
+  const filteredCodes = codesData?.data || [];
 
   const getTypeConfig = (type: string) => {
     switch (type) {
@@ -1510,44 +1535,36 @@ function DiscountsView() {
     {
       key: 'code',
       label: 'Code',
-      render: (value, row) => (
-        <div className="flex items-center gap-2">
-          <Hash size={16} className="text-primary-600" />
-          <span className="font-mono font-semibold">{value}</span>
-          <StatusBadge
-            status={getTypeConfig(row.type).color}
-            label={getTypeConfig(row.type).label}
-          />
-        </div>
-      ),
+      render: (value) => <span className="font-mono font-bold text-text-primary">{value}</span>,
     },
     {
       key: 'value',
       label: 'Value',
-      render: (value, row) => {
-        if (row.type === 'percentage') return `${value}%`;
-        if (row.type === 'fixed_amount') return `${value} RON`;
-        return '-';
-      },
-    },
-    {
-      key: 'validFrom',
-      label: 'Validity',
-      render: (_, row) => (
-        <span className="text-sm">
-          {new Date(row.validFrom).toLocaleDateString('ro-RO')} -{' '}
-          {new Date(row.validUntil).toLocaleDateString('ro-RO')}
+      render: (value, row) => (
+        <span className="font-medium text-text-primary">
+          {value}
+          {row.type === 'percentage' ? '%' : ' RON'}
         </span>
       ),
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      render: (value) => <span className="capitalize text-sm">{value.replace('_', ' ')}</span>,
     },
     {
       key: 'currentUses',
       label: 'Usage',
       render: (value, row) => (
-        <span className={value >= (row.maxUses || 999) ? 'text-red-600' : 'text-green-600'}>
-          {value?.toLocaleString('ro-RO')} / {row.maxUses?.toLocaleString('ro-RO') || 'Unlimited'}
+        <span className="text-sm">
+          {value} / {row.maxUses || '∞'}
         </span>
       ),
+    },
+    {
+      key: 'validUntil',
+      label: 'Valid Until',
+      render: (value) => new Date(value).toLocaleDateString('ro-RO'),
     },
     {
       key: 'isActive',
@@ -1559,16 +1576,19 @@ function DiscountsView() {
     {
       key: 'id',
       label: 'Actions',
-      render: (_, row) =>
-        row.isActive && (
-          <button
-            onClick={() => deactivateCode(row.id)}
-            className="p-2 hover:bg-red-500/10 text-red-600 rounded-lg"
-            title="Deactivate"
-          >
-            <X size={16} />
-          </button>
-        ),
+      render: (id, row) => (
+        <div className="flex gap-1">
+          {row.isActive && (
+            <button
+              onClick={() => deactivateCode(id)}
+              className="p-2 hover:bg-red-500/10 text-red-600 rounded-lg"
+              title="Deactivate"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -1647,74 +1667,89 @@ function DiscountsView() {
                 <X size={20} />
               </button>
             </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                toast.success('Discount code created (mock)');
-                setShowCreateModal(false);
-              }}
-              className="p-6 space-y-4"
-            >
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">Code *</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg font-mono uppercase"
-                  placeholder="e.g., SUMMER2024"
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Type *
-                  </label>
-                  <select className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg">
-                    <option value="percentage">Percentage</option>
-                    <option value="fixed_amount">Fixed Amount</option>
-                    <option value="bogo">Buy One Get One</option>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg font-mono"
+                    placeholder="E.G. SUMMER10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">Type *</label>
+                  <select
+                    required
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                    className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed_amount">Fixed Amount (RON)</option>
                     <option value="free_shipping">Free Shipping</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Value *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
-                    placeholder="0"
-                  />
-                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Max Uses
-                  </label>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">Value *</label>
                   <input
                     type="number"
+                    required
+                    min="0"
+                    value={formData.value}
+                    onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">Max Uses</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.maxUses}
+                    onChange={(e) => setFormData({ ...formData, maxUses: parseInt(e.target.value) })}
                     className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
                     placeholder="Unlimited"
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Valid Until
-                  </label>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">Valid From</label>
                   <input
                     type="date"
+                    required
+                    value={formData.validFrom}
+                    onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
+                    className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">Valid Until</label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.validUntil}
+                    onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
                     className="w-full px-4 py-2 bg-surface-secondary border border-border-primary rounded-lg"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">
+              <div className="flex gap-3 pt-4 border-t border-border-primary">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="btn-secondary flex-1"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary flex-1">
-                  Create Code
+                <button type="submit" disabled={isPending} className="btn-primary flex-1">
+                  {isPending ? 'Creating...' : 'Create Code'}
                 </button>
               </div>
             </form>

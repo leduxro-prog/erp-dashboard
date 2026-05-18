@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import * as crypto from 'crypto';
+
 import {
     ICypherModule,
     IModuleContext,
@@ -6,9 +7,15 @@ import {
     IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router } from 'express';
+
+import { ResendEmailAdapter } from '../../../modules/notifications/src/infrastructure/adapters/ResendEmailAdapter';
+import { renderTemplate } from '../../../modules/notifications/src/infrastructure/templates';
+
+import { UserController } from './api/controllers/UserController';
+import { createTwoFactorRoutes } from './api/routes/twofa.routes';
 import { TwoFactorAuthService } from './application/services/TwoFactorAuthService';
 import { UserService } from './application/services/UserService';
-import { UserController } from './api/controllers/UserController';
 import { UserEntity, UserRole } from './domain/entities/UserEntity';
 
 export class UsersModule implements ICypherModule {
@@ -40,12 +47,68 @@ export class UsersModule implements ICypherModule {
         // Initialize Service and Controller
         this.userService = new UserService(context.dataSource);
         this.twoFactorAuthService = new TwoFactorAuthService(context.dataSource.getRepository(UserEntity));
-        this.userController = new UserController(this.userService, this.twoFactorAuthService);
+        const sendPasswordResetEmail = this.createPasswordResetEmailSender();
+        this.userController = new UserController(
+            this.userService,
+            this.twoFactorAuthService,
+            sendPasswordResetEmail,
+        );
 
         // Initialize Router
         this.router = this.userController.getRouter();
+        this.router.use('/2fa', createTwoFactorRoutes(this.userService, this.twoFactorAuthService));
 
         this.logger.info('UsersModule initialized.');
+    }
+
+    /**
+     * Creates a callback for sending password reset emails.
+     * Uses the Resend email adapter with the password-reset HTML template.
+     */
+    private createPasswordResetEmailSender(): (
+        email: string,
+        resetToken: string,
+        userName: string,
+    ) => Promise<void> {
+        return async (email: string, resetToken: string, userName: string) => {
+            const resendApiKey = process.env.RESEND_API_KEY;
+            if (!resendApiKey) {
+                this.logger.warn('RESEND_API_KEY not set — password reset email not sent');
+                return;
+            }
+
+            const frontendUrl = process.env.FRONTEND_URL || 'https://ledux.ro';
+            const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+            const expirationHours = 1;
+            const expirationTime = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
+
+            const { html } = renderTemplate('password-reset', {
+                customerEmail: email,
+                customerName: userName,
+                resetLink,
+                resetToken,
+                expirationHours,
+                expirationTime: expirationTime.toLocaleString('ro-RO', {
+                    timeZone: 'Europe/Bucharest',
+                }),
+                supportEmail: 'support@ledux.ro',
+                supportPhone: '+40 XXX XXX XXX',
+                currentYear: new Date().getFullYear(),
+                unsubscribeLink: `${frontendUrl}/unsubscribe`,
+                preferencesLink: `${frontendUrl}/email-preferences`,
+            });
+
+            const emailAdapter = new ResendEmailAdapter(resendApiKey);
+            const result = await emailAdapter.sendEmail({
+                to: email,
+                subject: 'Resetare Parolă — Ledux.ro',
+                html,
+            });
+
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to send password reset email');
+            }
+        };
     }
 
     private async setupEventListeners(): Promise<void> {
@@ -64,14 +127,21 @@ export class UsersModule implements ICypherModule {
                 return;
             }
 
-            // Generate random password
-            const tempPassword = `B2B1a${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+            // Generate cryptographically secure random password
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%';
+            let tempPassword = '';
+            const randomBytes = crypto.randomBytes(12);
+            for (let i = 0; i < 12; i++) {
+                tempPassword += chars[randomBytes[i] % chars.length];
+            }
+            tempPassword = tempPassword.slice(0, 8) + 'A' + 'a' + '1' + '!';
 
             await this.userService.create({
                 email: registration.email,
                 password: tempPassword,
                 first_name: registration.first_name || registration.firstName || registration.companyName || 'B2B',
                 last_name: registration.last_name || registration.lastName || 'User',
+                phone_number: registration.phoneNumber,
                 role: UserRole.B2B_USER,
             });
 

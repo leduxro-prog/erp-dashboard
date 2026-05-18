@@ -7,8 +7,8 @@
  * Deduplication priority: CUI > email > name+phone
  */
 
-import { DataSource } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource } from 'typeorm';
 
 export type CustomerSource = 'erp' | 'b2b' | 'smartbill';
 

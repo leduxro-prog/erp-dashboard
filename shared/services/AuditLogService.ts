@@ -7,6 +7,7 @@
  */
 
 import { DataSource } from 'typeorm';
+
 import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('audit-log');

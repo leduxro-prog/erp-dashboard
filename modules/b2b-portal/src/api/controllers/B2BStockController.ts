@@ -3,10 +3,10 @@
  * Handles CSV/Excel import of supplier stock and SmartBill stock sync
  */
 
+import * as https from 'https';
+
 import { Router, Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
-import * as https from 'https';
-import * as http from 'http';
 
 export function createB2BStockRouter(dataSource: DataSource): Router {
   const router = Router();
@@ -34,7 +34,7 @@ export function createB2BStockRouter(dataSource: DataSource): Router {
       };
 
       let imported = 0;
-      let errors: string[] = [];
+      const errors: string[] = [];
 
       for (const row of data) {
         try {
@@ -172,7 +172,7 @@ export function createB2BStockRouter(dataSource: DataSource): Router {
 
       // Reuse the JSON import logic
       let imported = 0;
-      let errors: string[] = [];
+      const errors: string[] = [];
 
       for (const row of data) {
         try {
@@ -285,7 +285,7 @@ export function createB2BStockRouter(dataSource: DataSource): Router {
 
       // Update local stock levels based on SmartBill data
       let synced = 0;
-      let errors: string[] = [];
+      const errors: string[] = [];
 
       for (const item of smartbillData.list) {
         try {

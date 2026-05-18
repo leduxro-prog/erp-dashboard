@@ -6,8 +6,10 @@
  * @module B2B Portal - Infrastructure Repositories
  */
 
-import { DataSource, QueryRunner } from 'typeorm';
 import * as crypto from 'crypto';
+
+import { DataSource, QueryRunner } from 'typeorm';
+
 import {
   IB2BSyncEventRepository,
   B2BSyncEvent,

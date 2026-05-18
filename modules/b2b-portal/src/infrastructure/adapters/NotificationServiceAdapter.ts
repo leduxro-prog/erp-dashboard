@@ -1,7 +1,8 @@
-import { INotificationPort } from '../../application/ports';
 import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+
 import { NotificationEntity } from '../../../../notifications/src/infrastructure/entities/NotificationEntity';
+import { INotificationPort } from '../../application/ports';
 
 export class NotificationServiceAdapter implements INotificationPort {
     constructor(private readonly dataSource: DataSource) { }

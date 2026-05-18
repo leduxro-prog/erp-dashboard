@@ -1,31 +1,30 @@
+import { IEventBus } from '@shared/module-system';
 import { Router, Request, Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 import { Logger } from 'winston';
-import { IEventBus } from '@shared/module-system';
 
-import { ISessionRepository } from '../domain/repositories/ISessionRepository';
-import { IRuleRepository } from '../domain/repositories/IRuleRepository';
-import { ICatalogRepository } from '../domain/repositories/ICatalogRepository';
-
-// Infrastructure repositories (TypeORM implementations)
-import { TypeOrmSessionRepository } from './repositories/TypeOrmSessionRepository';
-import { TypeOrmRuleRepository } from './repositories/TypeOrmRuleRepository';
-import { TypeOrmCatalogRepository } from './repositories/TypeOrmCatalogRepository';
-
-import { CreateSession } from '../application/use-cases/CreateSession';
+import { IInventoryPort } from '../application/ports/IInventoryPort';
+import { IPricingPort } from '../application/ports/IPricingPort';
 import { AddComponent } from '../application/use-cases/AddComponent';
-import { RemoveComponent } from '../application/use-cases/RemoveComponent';
-import { UpdateComponent } from '../application/use-cases/UpdateComponent';
-import { ValidateConfiguration } from '../application/use-cases/ValidateConfiguration';
 import { CalculateConfigurationPrice } from '../application/use-cases/CalculateConfigurationPrice';
 import { CompleteConfiguration } from '../application/use-cases/CompleteConfiguration';
 import { ConvertToQuote } from '../application/use-cases/ConvertToQuote';
+import { CreateSession } from '../application/use-cases/CreateSession';
+import { GetCatalog } from '../application/use-cases/GetCatalog';
 import { GetSession } from '../application/use-cases/GetSession';
 import { ListSessions } from '../application/use-cases/ListSessions';
-import { GetCatalog } from '../application/use-cases/GetCatalog';
+import { RemoveComponent } from '../application/use-cases/RemoveComponent';
+import { UpdateComponent } from '../application/use-cases/UpdateComponent';
+import { ValidateConfiguration } from '../application/use-cases/ValidateConfiguration';
+import { ICatalogRepository } from '../domain/repositories/ICatalogRepository';
+import { IRuleRepository } from '../domain/repositories/IRuleRepository';
+import { ISessionRepository } from '../domain/repositories/ISessionRepository';
 
-import { IPricingPort } from '../application/ports/IPricingPort';
-import { IInventoryPort } from '../application/ports/IInventoryPort';
+// Infrastructure repositories (TypeORM implementations)
+import { TypeOrmCatalogRepository } from './repositories/TypeOrmCatalogRepository';
+import { TypeOrmRuleRepository } from './repositories/TypeOrmRuleRepository';
+import { TypeOrmSessionRepository } from './repositories/TypeOrmSessionRepository';
+
 
 /**
  * Composition Root for Configurator Module

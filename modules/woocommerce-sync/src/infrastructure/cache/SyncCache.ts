@@ -1,5 +1,5 @@
-import * as redis from 'redis';
 import { createModuleLogger } from '@shared/utils/logger';
+import * as redis from 'redis';
 
 const logger = createModuleLogger('sync-cache');
 

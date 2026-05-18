@@ -1,8 +1,9 @@
+import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import { Router, Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
 import multer from 'multer';
+
 import { SmartBillController } from '../controllers/SmartBillController';
-import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 
 // Configure multer for file upload (memory storage)
 const upload = multer({

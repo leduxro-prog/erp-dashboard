@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from '@jest/globals';
+
 import { OrderItem } from '../../src/domain/entities/OrderItem';
 
 describe('OrderItem Cost Snapshot', () => {

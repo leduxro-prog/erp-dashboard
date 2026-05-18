@@ -63,7 +63,7 @@ modules/
 Use the module generator script:
 
 ```bash
-npx ts-node scripts/create-module.ts --name=shipping --description="Shipping management"
+npx ts-node scripts/dev/create-module.ts --name=shipping --description="Shipping management"
 ```
 
 This creates a complete module scaffold with all necessary files and TODO comments.
@@ -657,6 +657,6 @@ const modules = await loader.loadModules('./modules');
 - `/shared/module-system/module-registry.ts` - Registry implementation
 - `/shared/module-system/module-loader.ts` - Loader implementation
 - `/shared/module-system/index.ts` - Public exports
-- `/scripts/create-module.ts` - Module generator
+- `/scripts/dev/create-module.ts` - Module generator
 - `/src/server.ts` - Server integration (refactored)
 - `/modules/*/src/{module}-module.ts` - Module implementations

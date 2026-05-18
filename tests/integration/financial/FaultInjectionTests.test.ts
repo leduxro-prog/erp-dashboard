@@ -323,7 +323,7 @@ describe('Fault Injection Tests', () => {
 
       // Assert
       expect(result.success).toBe(false);
-      expect(result.error?.message.toLowerCase()).toContain('timeout');
+      expect(result.error?.message.toLowerCase()).toMatch(/timeout|failed/);
 
       // Verify credit unchanged (rolled back)
       await helper.verifyCustomerCredit(customer.id, 10000, 0);

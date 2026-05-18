@@ -2,9 +2,10 @@
  * SEO Automation API Routes
  * Defines all SEO endpoints including metadata generation, audits, and sitemap management
  */
-import { Router, Request, Response, NextFunction } from 'express';
-import { SeoController } from '../controllers/SeoController';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Router, Request, Response, NextFunction } from 'express';
+
+import { SeoController } from '../controllers/SeoController';
 import {
   generateSeoMetadataSchema,
   auditSeoSchema,

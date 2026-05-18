@@ -7,8 +7,9 @@
  *
  * @class NotificationDispatcher
  */
-import { Notification, NotificationChannel } from '../entities/Notification';
 import { Logger } from 'winston';
+
+import { Notification, NotificationChannel } from '../entities/Notification';
 
 /**
  * Provider interface for notification dispatch

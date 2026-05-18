@@ -1,5 +1,5 @@
-import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
 
 export interface FavoriteResponse {
@@ -359,7 +359,7 @@ export class B2BFavoritesController {
         return;
       }
 
-      let cart = await this.dataSource.query(
+      const cart = await this.dataSource.query(
         `SELECT id FROM b2b_cart WHERE customer_id = $1 AND is_active = true LIMIT 1`,
         [customerId],
       );

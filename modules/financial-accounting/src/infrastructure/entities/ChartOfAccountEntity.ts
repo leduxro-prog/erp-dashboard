@@ -1,4 +1,5 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index, OneToMany } from 'typeorm';
+
 import { JournalEntryLineEntity } from './JournalEntryLineEntity';
 
 @Entity('chart_of_accounts')

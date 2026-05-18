@@ -1,10 +1,11 @@
+import { IEventBus } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+
 import { IWorkflowInstanceRepository } from '../../domain/repositories/IWorkflowInstanceRepository';
 import { IWorkflowTemplateRepository } from '../../domain/repositories/IWorkflowTemplateRepository';
 import { WorkflowEngine } from '../../domain/services/WorkflowEngine';
 import { EscalateDTO } from '../dtos/CreateInstanceDTO';
 import { InstanceNotFoundError, TemplateNotFoundError, WorkflowAlreadyCompletedError } from '../errors/WorkflowError';
-import { IEventBus } from '@shared/module-system/module.interface';
 
 export class EscalateWorkflowUseCase {
   private logger = createModuleLogger('EscalateWorkflowUseCase');

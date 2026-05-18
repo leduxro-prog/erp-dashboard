@@ -1,10 +1,12 @@
+import { EventEmitter } from 'events';
+
+import { createModuleLogger } from '@shared/utils/logger';
 import { Job, Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
-import { createModuleLogger } from '@shared/utils/logger';
 import { DataSource } from 'typeorm';
-import { StockItemEntity } from '../entities/StockItemEntity';
+
 import { LowStockAlertEntity, AlertSeverity } from '../entities/LowStockAlertEntity';
-import { EventEmitter } from 'events';
+import { StockItemEntity } from '../entities/StockItemEntity';
 
 export interface AlertCheckJobDependencies {
   dataSource: DataSource;

@@ -1,6 +1,6 @@
-import { IJournalEntryRepository } from '../../domain/repositories/IJournalEntryRepository';
 import { IChartOfAccountRepository } from '../../domain/repositories/IChartOfAccountRepository';
 import { IFiscalPeriodRepository } from '../../domain/repositories/IFiscalPeriodRepository';
+import { IJournalEntryRepository } from '../../domain/repositories/IJournalEntryRepository';
 import { GeneralLedgerService, TrialBalanceEntry } from '../../domain/services/GeneralLedgerService';
 import { FinancialAccountingError } from '../errors/FinancialAccountingError';
 

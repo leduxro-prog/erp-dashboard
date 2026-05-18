@@ -3,9 +3,10 @@
  * Manages permanently failed webhook events and provides tools for review and replay
  */
 
-import { DataSource, Repository } from 'typeorm';
-import { WebhookEventLogEntity, WebhookStatus } from '../../infrastructure/entities/WebhookEventLogEntity';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource, Repository } from 'typeorm';
+
+import { WebhookEventLogEntity, WebhookStatus } from '../../infrastructure/entities/WebhookEventLogEntity';
 
 const logger = createModuleLogger('dlq-manager');
 

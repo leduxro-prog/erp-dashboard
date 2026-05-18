@@ -1,10 +1,11 @@
 import { Logger } from 'winston';
+
 import { ConfiguratorSession } from '../../domain/entities/ConfiguratorSession';
-import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
 import {
   SessionExpiredError,
   SessionNotFoundError,
 } from '../../domain/errors/configurator.errors';
+import { ISessionRepository } from '../../domain/repositories/ISessionRepository';
 
 /**
  * GetSession Use-Case

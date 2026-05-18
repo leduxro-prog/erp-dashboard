@@ -1,4 +1,6 @@
 import { Repository } from 'typeorm';
+
+import { RepositoryError } from '../../application/errors/smartbill.errors';
 import { SmartBillInvoice } from '../../domain/entities/SmartBillInvoice';
 import { SmartBillProforma } from '../../domain/entities/SmartBillProforma';
 import { SmartBillStock } from '../../domain/entities/SmartBillStock';
@@ -7,7 +9,6 @@ import { SmartBillInvoiceEntity } from '../entities/SmartBillInvoiceEntity';
 import { SmartBillProformaEntity } from '../entities/SmartBillProformaEntity';
 import { SmartBillStockSyncEntity } from '../entities/SmartBillStockSyncEntity';
 import { SmartBillMapper } from '../mappers/SmartBillMapper';
-import { RepositoryError } from '../../application/errors/smartbill.errors';
 
 export class TypeOrmSmartBillRepository implements ISmartBillRepository {
   constructor(

@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { MapSku } from '../../src/application/use-cases/MapSku';
-import { ISupplierRepository } from '../../src/domain';
+
 import {
   InvalidSkuMappingError,
   SkuMappingAlreadyExistsError,
   SupplierNotFoundError,
 } from '../../src/application/errors/supplier.errors';
+import { MapSku } from '../../src/application/use-cases/MapSku';
+import { ISupplierRepository } from '../../src/domain';
 import { SupplierCode } from '../../src/domain/entities/Supplier';
 
 describe('MapSku Use Case', () => {

@@ -1,7 +1,8 @@
+import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 import { Router } from 'express';
 import multer from 'multer';
+
 import { BankingController } from '../controllers/BankingController';
-import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
 
 // Configure multer for file upload (memory storage for PDF processing)
 const upload = multer({

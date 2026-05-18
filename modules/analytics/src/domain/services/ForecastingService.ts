@@ -141,7 +141,7 @@ export class ForecastingService {
 
     // Generate forecast points
     const forecastPoints: ForecastDataPoint[] = [...historicalData];
-    let lastValue =
+    const lastValue =
       values.slice(-period).reduce((a, b) => a + b, 0) / period;
     const lastDate = historicalData[historicalData.length - 1].date;
 

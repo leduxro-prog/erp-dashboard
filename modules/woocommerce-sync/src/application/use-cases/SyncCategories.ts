@@ -1,9 +1,12 @@
-import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
+import { v4 as uuidv4 } from 'uuid';
+
+import { SyncItem } from '../../domain/entities/SyncItem';
 import { IWooCommerceClient } from '../../domain/ports/IWooCommerceClient';
+import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
 import { SyncResult } from '../dtos/woocommerce.dtos';
 import { SyncError } from '../errors/woocommerce.errors';
-import { v4 as uuidv4 } from 'uuid';
-import { SyncItem } from '../../domain/entities/SyncItem';
+
+
 
 export interface InternalCategory {
   id: string;

@@ -1,5 +1,7 @@
 import Joi from 'joi';
 
+import { buildHostTopology, DeploymentIntent } from './host-topology';
+
 export interface ConfigSchema {
   // Database
   DB_HOST: string;
@@ -7,6 +9,9 @@ export interface ConfigSchema {
   DB_NAME: string;
   DB_USERNAME: string;
   DB_PASSWORD: string;
+  DATABASE_SSL_MODE?: 'disable' | 'require';
+  DATABASE_SSL_REJECT_UNAUTHORIZED?: boolean;
+  DB_SSL?: boolean;
 
   // Database Connection Pool
   DB_POOL_MAX?: number;
@@ -39,6 +44,11 @@ export interface ConfigSchema {
   // Optional
   PORT: number;
   NODE_ENV: 'development' | 'production' | 'staging' | 'test';
+  DEPLOYMENT_INTENT?: DeploymentIntent;
+  FRONTEND_URL?: string;
+  PUBLIC_BASE_URL?: string;
+  CANONICAL_SHOP_URL?: string;
+  LEGACY_STOREFRONT_URL?: string;
   CORS_ORIGINS?: string;
   LOG_LEVEL: 'error' | 'warn' | 'info' | 'debug' | 'verbose' | 'silly';
   API_PREFIX: string;
@@ -64,6 +74,10 @@ const envValidationSchema = Joi.object<ConfigSchema>({
     'any.required': 'DB_USERNAME is required',
   }),
   DB_PASSWORD: Joi.string().allow('').optional().default(''), // Allow empty password
+  DATABASE_SSL_MODE: Joi.string().valid('disable', 'require').optional(),
+  DATABASE_SSL_REJECT_UNAUTHORIZED: Joi.boolean().optional(),
+  /** @deprecated Use DATABASE_SSL_MODE instead. Supported as a legacy fallback only. */
+  DB_SSL: Joi.boolean().optional(),
 
   // Database Connection Pool - Optional with defaults
   DB_POOL_MAX: Joi.number().min(1).max(100).optional().default(20),
@@ -111,6 +125,11 @@ const envValidationSchema = Joi.object<ConfigSchema>({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'staging', 'test')
     .default('development'),
+  DEPLOYMENT_INTENT: Joi.string().valid('local', 'staging', 'rehearsal', 'production').optional(),
+  FRONTEND_URL: Joi.string().uri().optional().allow('').default(''),
+  PUBLIC_BASE_URL: Joi.string().uri().optional().allow('').default(''),
+  CANONICAL_SHOP_URL: Joi.string().uri().optional().allow('').default(''),
+  LEGACY_STOREFRONT_URL: Joi.string().uri().optional().allow('').default(''),
   CORS_ORIGINS: Joi.string().optional().allow(''),
   LOG_LEVEL: Joi.string()
     .valid('error', 'warn', 'info', 'debug', 'verbose', 'silly')
@@ -144,6 +163,8 @@ export function validateEnv(): ConfigSchema {
     const messages = error.details.map((detail) => detail.message).join(', ');
     throw new Error(`Environment validation failed: ${messages}`);
   }
+
+  buildHostTopology(value as ConfigSchema);
 
   return value as ConfigSchema;
 }

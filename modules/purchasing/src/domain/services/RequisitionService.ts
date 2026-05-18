@@ -3,8 +3,8 @@ import {
   RequisitionStatus,
   RequisitionApprovalStep,
 } from '../entities/PurchaseRequisition';
-import { IRequisitionRepository } from '../repositories/IRequisitionRepository';
 import { IBudgetRepository } from '../repositories/IBudgetRepository';
+import { IRequisitionRepository } from '../repositories/IRequisitionRepository';
 
 export class RequisitionService {
   constructor(

@@ -1,11 +1,12 @@
 import { Repository, DataSource, MoreThan, LessThan } from 'typeorm';
-import { ISyncRepository, SyncStats } from '../../domain/repositories/ISyncRepository';
-import { SyncItem } from '../../domain/entities/SyncItem';
-import { SyncBatch } from '../../domain/entities/SyncBatch';
+
 import { ProductSyncMapping } from '../../domain/entities/ProductSyncMapping';
-import { SyncItemEntity } from '../entities/SyncItemEntity';
-import { SyncBatchEntity } from '../entities/SyncBatchEntity';
+import { SyncBatch } from '../../domain/entities/SyncBatch';
+import { SyncItem } from '../../domain/entities/SyncItem';
+import { ISyncRepository, SyncStats } from '../../domain/repositories/ISyncRepository';
 import { ProductSyncMappingEntity } from '../entities/ProductSyncMappingEntity';
+import { SyncBatchEntity } from '../entities/SyncBatchEntity';
+import { SyncItemEntity } from '../entities/SyncItemEntity';
 
 export class TypeOrmSyncRepository implements ISyncRepository {
   private syncItemRepo: Repository<SyncItemEntity>;

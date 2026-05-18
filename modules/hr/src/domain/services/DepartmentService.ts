@@ -1,6 +1,6 @@
-import { DepartmentRepository } from '../../infrastructure/repositories/DepartmentRepository';
-import { DepartmentEntity } from '../../infrastructure/entities/Department';
 import { CreateDepartmentDTO, UpdateDepartmentDTO, DepartmentListQueryDTO } from '../../application/dtos/DepartmentDTO';
+import { DepartmentEntity } from '../../infrastructure/entities/Department';
+import { DepartmentRepository } from '../../infrastructure/repositories/DepartmentRepository';
 
 export class DepartmentService {
     constructor(private departmentRepository: DepartmentRepository) {}

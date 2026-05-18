@@ -1,12 +1,13 @@
 import { Repository } from 'typeorm';
+
 import {
   JournalEntry,
   JournalEntryStatus,
   ApprovalStatus,
 } from '../../domain/entities/JournalEntry';
 import { IJournalEntryRepository } from '../../domain/repositories/IJournalEntryRepository';
-import { JournalEntryEntity } from '../entities/JournalEntryEntity';
 import { ChartOfAccountEntity } from '../entities/ChartOfAccountEntity';
+import { JournalEntryEntity } from '../entities/JournalEntryEntity';
 
 export class JournalEntryRepository implements IJournalEntryRepository {
   constructor(private ormRepository: Repository<JournalEntryEntity>) {}

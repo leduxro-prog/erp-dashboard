@@ -35,11 +35,13 @@
  * console.log(`Hit rate: ${metrics.hitRate.overall.toFixed(2)}%`);
  */
 
+import { promisify } from 'util';
+import * as zlib from 'zlib';
+
+import { createModuleLogger } from '../utils/logger';
+
 import { LRUCache } from './lru-cache';
 import { RedisPool } from './redis-pool';
-import { createModuleLogger } from '../utils/logger';
-import * as zlib from 'zlib';
-import { promisify } from 'util';
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
@@ -937,7 +939,7 @@ Average Latency:
    * @returns {Promise<string>} Serialized (and optionally compressed) string
    */
   private async serialize(value: any): Promise<string> {
-    let serialized = JSON.stringify(value);
+    const serialized = JSON.stringify(value);
 
     // Apply compression if enabled and threshold exceeded
     if (this.serialization.useCompression) {

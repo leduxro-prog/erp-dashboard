@@ -3,6 +3,7 @@
  * Tests analytics retrieval with ROI calculations
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { GetCampaignAnalytics, GetCampaignAnalyticsInput } from '../../src/application/use-cases/GetCampaignAnalytics';
 import { CampaignNotFoundError } from '../../src/domain/errors/marketing.errors';
 

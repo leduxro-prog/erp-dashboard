@@ -11,18 +11,21 @@
 import { DataSource } from 'typeorm';
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
+import { resolveDatabaseSsl } from '../../src/config/database-ssl';
+
 // Database configuration from environment
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USER || 'cypher_user',
+  username: process.env.DB_USERNAME || process.env.DB_USER || 'cypher_user',
   password: process.env.DB_PASSWORD || 'cypher_secret_change_me',
   database: process.env.DB_NAME || 'cypher_erp',
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+  ssl: resolveDatabaseSsl(),
 };
 
 describe('Database Smoke Tests', () => {
   let dataSource: DataSource | null = null;
+  let connectionError: Error | null = null;
 
   beforeAll(async () => {
     // Initialize database connection
@@ -41,6 +44,7 @@ describe('Database Smoke Tests', () => {
     try {
       await dataSource.initialize();
     } catch (error) {
+      connectionError = error instanceof Error ? error : new Error(String(error));
       console.error('Failed to initialize database connection:', error);
       dataSource = null;
     }
@@ -54,29 +58,37 @@ describe('Database Smoke Tests', () => {
 
   describe('Connection Tests', () => {
     it('should connect to database', async () => {
-      if (!dataSource?.isInitialized) return;
+      if (connectionError) {
+        throw new Error(`Database connection failed — smoke test cannot proceed: ${connectionError.message}`);
+      }
       expect(dataSource).toBeDefined();
       expect(dataSource?.isInitialized).toBe(true);
     });
 
     it('should respond to simple query', async () => {
-      if (!dataSource?.isInitialized) return;
-      const result = await dataSource?.query('SELECT 1 as result');
+      if (!dataSource?.isInitialized) {
+        throw new Error('Database not initialized — connection test must pass first');
+      }
+      const result = await dataSource.query('SELECT 1 as result');
       expect(result).toBeDefined();
       expect(result[0].result).toBe(1);
     });
 
     it('should have correct database version', async () => {
-      if (!dataSource?.isInitialized) return;
-      const result = await dataSource?.query('SELECT version()');
+      if (!dataSource?.isInitialized) {
+        throw new Error('Database not initialized — connection test must pass first');
+      }
+      const result = await dataSource.query('SELECT version()');
       expect(result).toBeDefined();
       expect(result[0].version).toBeDefined();
       expect(result[0].version).toContain('PostgreSQL');
     });
 
     it('should have correct timezone', async () => {
-      if (!dataSource?.isInitialized) return;
-      const result = await dataSource?.query('SHOW timezone');
+      if (!dataSource?.isInitialized) {
+        throw new Error('Database not initialized — connection test must pass first');
+      }
+      const result = await dataSource.query('SHOW timezone');
       expect(result).toBeDefined();
       expect(result[0].TimeZone).toBeDefined();
     });

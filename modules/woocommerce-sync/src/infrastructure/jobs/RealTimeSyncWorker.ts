@@ -1,11 +1,12 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { Worker, WorkerOptions, Job } from 'bullmq';
+import Redis from 'ioredis';
+
+import { SyncItem } from '../../domain/entities/SyncItem';
 import { ISyncRepository } from '../../domain/repositories/ISyncRepository';
 import { SyncPriorityService } from '../../domain/services/SyncPriorityService';
 import { WooCommerceApiClient } from '../api-client/WooCommerceApiClient';
 import { WooCommerceMapper } from '../mappers/WooCommerceMapper';
-import Redis from 'ioredis';
-import { SyncItem } from '../../domain/entities/SyncItem';
-import { createModuleLogger } from '@shared/utils/logger';
 
 const logger = createModuleLogger('realtime-sync-worker');
 

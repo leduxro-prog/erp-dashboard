@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { PlaceSupplierOrder } from '../../src/application/use-cases/PlaceSupplierOrder';
-import { ISupplierRepository } from '../../src/domain';
+
 import {
   InvalidOrderError,
   InsufficientStockError,
   SupplierNotFoundError,
 } from '../../src/application/errors/supplier.errors';
+import { PlaceSupplierOrder } from '../../src/application/use-cases/PlaceSupplierOrder';
+import { ISupplierRepository } from '../../src/domain';
 import { SupplierCode } from '../../src/domain/entities/Supplier';
 import { SupplierOrderStatus } from '../../src/domain/entities/SupplierOrder';
 

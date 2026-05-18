@@ -7,7 +7,6 @@
  * @version 1.0.0
  */
 
-import { Router } from 'express';
 import {
   ICypherModule,
   IModuleContext,
@@ -15,9 +14,11 @@ import {
   IModuleMetrics,
 } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
-import { MarketingCompositionRoot } from './infrastructure/composition-root';
+import { Router } from 'express';
+
 import { MarketingController } from './api/controllers/MarketingController';
 import { createMarketingRoutes } from './api/routes/marketing.routes';
+import { MarketingCompositionRoot } from './infrastructure/composition-root';
 
 const logger = createModuleLogger('marketing');
 

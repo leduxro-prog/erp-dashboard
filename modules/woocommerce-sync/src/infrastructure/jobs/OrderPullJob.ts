@@ -1,8 +1,9 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { Queue, Worker, QueueOptions, WorkerOptions } from 'bullmq';
 import Redis from 'ioredis';
+
 import { PullOrders } from '../../application/use-cases/PullOrders';
 import { SyncCache } from '../cache/SyncCache';
-import { createModuleLogger } from '@shared/utils/logger';
 
 /**
  * OrderPullJob - Periodic job for pulling orders from WooCommerce

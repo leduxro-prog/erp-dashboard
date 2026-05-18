@@ -1,7 +1,8 @@
 import { Repository, DataSource, Between, In } from 'typeorm';
-import { LeaveRequestEntity } from '../entities/LeaveRequest';
-import { LeaveBalanceEntity } from '../entities/LeaveBalance';
+
 import { LeaveRequestListQueryDTO } from '../../application/dtos/LeaveDTO';
+import { LeaveBalanceEntity } from '../entities/LeaveBalance';
+import { LeaveRequestEntity } from '../entities/LeaveRequest';
 
 export class LeaveRepository {
     private leaveRequestRepository: Repository<LeaveRequestEntity>;

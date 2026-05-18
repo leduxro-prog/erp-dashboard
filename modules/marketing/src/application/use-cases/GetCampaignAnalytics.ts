@@ -6,9 +6,9 @@
  */
 
 import { Campaign } from '../../domain/entities/Campaign';
+import { CampaignNotFoundError } from '../../domain/errors/marketing.errors';
 import { ICampaignRepository } from '../../domain/repositories/ICampaignRepository';
 import { IMarketingEventRepository } from '../../domain/repositories/IMarketingEventRepository';
-import { CampaignNotFoundError } from '../../domain/errors/marketing.errors';
 
 /**
  * Campaign analytics data

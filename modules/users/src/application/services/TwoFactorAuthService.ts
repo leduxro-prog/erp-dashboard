@@ -1,8 +1,11 @@
+import * as crypto from 'crypto';
+
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
-import * as crypto from 'crypto';
-import { UserEntity } from '../../domain/entities/UserEntity';
 import { Repository } from 'typeorm';
+
+import { UserEntity } from '../../domain/entities/UserEntity';
+
 
 export interface TwoFactorSetupResponse {
   secret: string;

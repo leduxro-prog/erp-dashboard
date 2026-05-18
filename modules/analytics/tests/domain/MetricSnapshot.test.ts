@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { MetricSnapshot, MetricType, Period } from '../../src/domain/entities/MetricSnapshot';
 
 /**
@@ -232,7 +233,7 @@ describe('MetricSnapshot Entity', () => {
     });
 
     it('should preserve dimensions in comparison', () => {
-      const comparison = snapshot.compareWith(previousSnapshot);
+      snapshot.compareWith(previousSnapshot);
 
       // Dimensions are part of the snapshot, not comparison result
       expect(snapshot.dimensions.get('region')).toBe('US');

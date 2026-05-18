@@ -1,5 +1,5 @@
-import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Response, NextFunction } from 'express';
 
 /**
  * Configurator Controller

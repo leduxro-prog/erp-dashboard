@@ -1,9 +1,9 @@
-import { JournalEntry, JournalEntryStatus, ApprovalStatus } from '../entities/JournalEntry';
 import { ChartOfAccount } from '../entities/ChartOfAccount';
 import { FiscalPeriod } from '../entities/FiscalPeriod';
-import { IJournalEntryRepository } from '../repositories/IJournalEntryRepository';
+import { JournalEntry, JournalEntryStatus, ApprovalStatus } from '../entities/JournalEntry';
 import { IChartOfAccountRepository } from '../repositories/IChartOfAccountRepository';
 import { IFiscalPeriodRepository } from '../repositories/IFiscalPeriodRepository';
+import { IJournalEntryRepository } from '../repositories/IJournalEntryRepository';
 
 export interface TrialBalanceEntry {
   accountId: string;

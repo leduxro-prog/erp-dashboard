@@ -1,10 +1,11 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+
 import { createModuleLogger } from '../../../shared/utils/logger';
 
 export class AiService {
-    private logger = createModuleLogger('AiService');
-    private genAI: GoogleGenerativeAI;
-    private model: any;
+  private logger = createModuleLogger('AiService');
+  private genAI: GoogleGenerativeAI;
+  private model: GenerativeModel;
 
     constructor(apiKey: string) {
         if (!apiKey) {
@@ -30,29 +31,31 @@ export class AiService {
         User Question: ${message}
       `;
 
-            const result = await this.model.generateContent(prompt);
-            const response = await result.response;
-            return response.text();
-        } catch (error) {
-            this.logger.error('Error generating chat response', error);
-            throw new Error('Failed to generate chat response');
-        }
+      const result = await this.model.generateContent(prompt);
+      const response = result.response;
+      return response.text();
+    } catch (error) {
+      this.logger.error('Error generating chat response', error);
+      throw new Error('Failed to generate chat response');
     }
+  }
 
-    async analyzeCrmData(clients: any[]): Promise<string[]> {
-        try {
-            this.logger.info(`Analyzing CRM data for ${clients.length} clients`);
+  async analyzeCrmData(clients: Record<string, unknown>[]): Promise<string[]> {
+    try {
+      this.logger.info(`Analyzing CRM data for ${clients.length} clients`);
+
+      const sanitizedClients = clients.map((client) => this.sanitizeClientForPrompt(client));
 
             const prompt = `
-        Analyze the following CRM client list: ${JSON.stringify(clients)}.
+        Analyze the following CRM client list: ${JSON.stringify(sanitizedClients)}.
         Identify 3 strategic opportunities or priority actions.
         Focus on: valuable clients who haven't been contacted recently, promising leads, or inactive clients who can be reactivated.
         Respond strictly with a list of 3 short and concise bullet points in Romanian, separated by the "|" character. Do not use numbering.
       `;
 
-            const result = await this.model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
+      const result = await this.model.generateContent(prompt);
+      const response = result.response;
+      const text = response.text();
 
             return text.split('|').map((s: string) => s.trim()).filter((s: string) => s.length > 5);
         } catch (error) {
@@ -60,4 +63,18 @@ export class AiService {
             return ["Nu am putut genera sugestii relevante momentan."];
         }
     }
+
+  private sanitizeClientForPrompt(client: Record<string, unknown>): Record<string, unknown> {
+    return {
+      id: client?.id,
+      segment: client?.segment,
+      totalOrders: client?.totalOrders,
+      totalRevenue: client?.totalRevenue,
+      status: client?.status,
+      lastContactAt: client?.lastContactAt,
+      lastOrderAt: client?.lastOrderAt,
+      leadScore: client?.leadScore,
+      isActive: client?.isActive,
+    };
+  }
 }

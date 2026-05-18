@@ -1,13 +1,15 @@
+import { createModuleLogger } from '@shared/utils/logger';
 import { DataSource } from 'typeorm';
-import { IBankingRepository } from './IBankingRepository';
+
+import { BankAccount, StatementImport, BankTransaction, PaymentMatch } from '../../domain/entities';
 import {
   BankAccountEntity,
   BankTransactionEntity,
   StatementImportEntity,
   PaymentMatchEntity,
 } from '../entities';
-import { BankAccount, StatementImport, BankTransaction, PaymentMatch } from '../../domain/entities';
-import { createModuleLogger } from '@shared/utils/logger';
+
+import { IBankingRepository } from './IBankingRepository';
 
 const logger = createModuleLogger('banking-repository');
 
@@ -254,7 +256,7 @@ export class TypeOrmBankingRepository implements IBankingRepository {
       /Invoice[-\s]*:?[-\s]*(\d+)/i,
     ];
 
-    let possibleInvoiceNumbers: string[] = [];
+    const possibleInvoiceNumbers: string[] = [];
     for (const pattern of patterns) {
       const match = description.match(pattern);
       if (match) {
@@ -327,7 +329,7 @@ export class TypeOrmBankingRepository implements IBankingRepository {
     // Extract order number pattern
     const patterns = [/B2B[-\s]*(\d+)/i, /Order[-\s]*:?[-\s]*(\d+)/i, /COMANDA[-\s]*(\d+)/i];
 
-    let possibleOrderNumbers: string[] = [];
+    const possibleOrderNumbers: string[] = [];
     for (const pattern of patterns) {
       const match = description.match(pattern);
       if (match) {

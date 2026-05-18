@@ -14,9 +14,9 @@
  */
 
 import { createModuleLogger } from '@shared/utils/logger';
-
 import * as cron from 'node-cron';
 import { DataSource } from 'typeorm';
+
 import { FinancialKPIService } from '../../../financial-accounting/src/domain/services/FinancialKPIService';
 import { SmartInventoryService } from '../../../inventory/src/domain/services/SmartInventoryService';
 import { DailyReportFormatter } from '../../../whatsapp/src/domain/services/DailyReportFormatter';

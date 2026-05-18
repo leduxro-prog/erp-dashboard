@@ -1,11 +1,13 @@
-import { Request, Response, Router } from 'express';
-import { UserService } from '../../application/services/UserService';
-import { TwoFactorAuthService } from '../../application/services/TwoFactorAuthService';
-import { createModuleLogger } from '@shared/utils/logger';
-import { jwtService } from '@shared/services/JwtService';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { jwtService } from '@shared/services/JwtService';
+import { createModuleLogger } from '@shared/utils/logger';
+import { Request, Response, Router } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
+
+import { authRateLimiter } from '../../../../../src/middleware/rate-limiter';
+import { TwoFactorAuthService } from '../../application/services/TwoFactorAuthService';
+import { UserService } from '../../application/services/UserService';
 import {
   loginSchema,
   registerSchema,
@@ -13,7 +15,6 @@ import {
   resetPasswordSchema,
   validateBody,
 } from '../validators/auth.validators';
-import { authRateLimiter } from '../../../../../src/middleware/rate-limiter';
 
 // Whitelist of allowed Google accounts for ERP login
 const ALLOWED_GOOGLE_EMAILS = ['ledux.ro@gmail.com', 'flaviu.caba@gmail.com'];

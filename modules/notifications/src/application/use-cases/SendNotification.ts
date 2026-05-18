@@ -4,15 +4,11 @@
  *
  * Application service orchestrating domain logic and I/O
  */
+import { v4 as uuidv4 } from 'uuid';
 import { Logger } from 'winston';
+
 import { Notification } from '../../domain/entities/Notification';
 import { NotificationTemplate } from '../../domain/entities/NotificationTemplate';
-import { INotificationRepository } from '../../domain/repositories/INotificationRepository';
-import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
-import { IPreferenceRepository } from '../../domain/repositories/IPreferenceRepository';
-import { NotificationDispatcher } from '../../domain/services/NotificationDispatcher';
-import { TemplateEngine } from '../../domain/services/TemplateEngine';
-import { SendNotificationDTO, SendNotificationResponseDTO } from '../dtos/notification.dtos';
 import {
   TemplateNotFoundError,
   InvalidChannelError,
@@ -21,7 +17,12 @@ import {
   TemplateRenderError,
   PreferenceNotFoundError,
 } from '../../domain/errors/notification.errors';
-import { v4 as uuidv4 } from 'uuid';
+import { INotificationRepository } from '../../domain/repositories/INotificationRepository';
+import { IPreferenceRepository } from '../../domain/repositories/IPreferenceRepository';
+import { ITemplateRepository } from '../../domain/repositories/ITemplateRepository';
+import { NotificationDispatcher } from '../../domain/services/NotificationDispatcher';
+import { TemplateEngine } from '../../domain/services/TemplateEngine';
+import { SendNotificationDTO, SendNotificationResponseDTO } from '../dtos/notification.dtos';
 
 /**
  * Send a single notification through specified channel

@@ -11,6 +11,12 @@
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
 #
 # Environment Variables Required:
+#   - NODE_ENV: staging or production (must match DEPLOYMENT_INTENT pairing rules)
+#   - DEPLOYMENT_INTENT: staging, rehearsal, or production
+#   - FRONTEND_URL: canonical ERP/B2B browser origin
+#   - PUBLIC_BASE_URL: canonical API origin
+#   - TRAEFIK_FRONTEND_HOST: host matched by frontend router
+#   - TRAEFIK_API_HOST: host matched by API router
 #   - DB_PASSWORD: Strong database password
 #   - JWT_SECRET: Strong JWT secret key
 #   - REDIS_PASSWORD: Redis password
@@ -48,14 +54,14 @@ services:
         window: 120s
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.frontend.rule=Host(`erp.cypher.ro`)"
+        - "traefik.http.routers.frontend.rule=Host(`${TRAEFIK_FRONTEND_HOST:?TRAEFIK_FRONTEND_HOST must be set}`)"
         - "traefik.http.routers.frontend.tls=true"
         - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
         - "com.cypher.service=frontend"
-        - "com.cypher.environment=production"
+        - "com.cypher.environment=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
         - "com.cypher.monitoring.enabled=true"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=${NODE_ENV:?NODE_ENV must be set}
     logging:
       driver: "json-file"
       options:
@@ -94,18 +100,24 @@ services:
         window: 180s
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.api.rule=Host(`api.cypher.ro`)"
+        - "traefik.http.routers.api.rule=Host(`${TRAEFIK_API_HOST:?TRAEFIK_API_HOST must be set}`)"
         - "traefik.http.routers.api.tls=true"
         - "traefik.http.routers.api.tls.certresolver=letsencrypt"
         - "traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/api"
         - "com.cypher.service=app"
-        - "com.cypher.environment=production"
+        - "com.cypher.environment=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
         - "com.cypher.monitoring.enabled=true"
         - "com.cypher.version=${VERSION:-latest}"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=${NODE_ENV:?NODE_ENV must be set}
+      - DEPLOYMENT_INTENT=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}
+      - FRONTEND_URL=${FRONTEND_URL:?FRONTEND_URL must be set}
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:?PUBLIC_BASE_URL must be set}
+      - CANONICAL_SHOP_URL=${CANONICAL_SHOP_URL:-}
+      - LEGACY_STOREFRONT_URL=${LEGACY_STOREFRONT_URL:-}
       - LOG_LEVEL=warn
-      - DB_SSL=true
+      - DATABASE_SSL_MODE=${DATABASE_SSL_MODE:?DATABASE_SSL_MODE must be set (use: disable | require)}
+      - DATABASE_SSL_REJECT_UNAUTHORIZED=${DATABASE_SSL_REJECT_UNAUTHORIZED:?DATABASE_SSL_REJECT_UNAUTHORIZED must be set (use: true | false)}
       - DB_POOL_MIN=5
       - DB_POOL_MAX=20
     logging:
@@ -136,7 +148,7 @@ services:
         window: 120s
       labels:
         - "com.cypher.service=database"
-        - "com.cypher.environment=production"
+        - "com.cypher.environment=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
         - "com.cypher.backup.enabled=true"
     command:
       - "postgres"
@@ -194,7 +206,7 @@ services:
         window: 60s
       labels:
         - "com.cypher.service=redis"
-        - "com.cypher.environment=production"
+        - "com.cypher.environment=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
         - "com.cypher.monitoring.enabled=true"
     command: >
       sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
@@ -229,7 +241,7 @@ services:
         window: 120s
       labels:
         - "com.cypher.service=meilisearch"
-        - "com.cypher.environment=production"
+        - "com.cypher.environment=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
         - "com.cypher.monitoring.enabled=true"
     environment:
       - MEILI_ENV=production
@@ -261,7 +273,7 @@ services:
         window: 60s
       labels:
         - "com.cypher.service=pgadmin"
-        - "com.cypher.environment=production"
+        - "com.cypher.environment=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
     environment:
       - PGADMIN_CONFIG_SERVER_MODE=False
       - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
@@ -294,7 +306,7 @@ services:
         window: 120s
       labels:
         - "com.cypher.service=ai-service"
-        - "com.cypher.environment=production"
+        - "com.cypher.environment=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
         - "com.cypher.monitoring.enabled=true"
     logging:
       driver: "json-file"
@@ -319,7 +331,7 @@ services:
 
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-strong_password_change_in_production}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}
       RABBITMQ_DEFAULT_VHOST: /
 
       # Production memory and disk settings
@@ -364,7 +376,7 @@ services:
 
       labels:
         - "com.cypher.service=rabbitmq"
-        - "com.cypher.environment=production"
+        - "com.cypher.environment=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
         - "com.cypher.monitoring.enabled=true"
 
     logging:
@@ -388,7 +400,7 @@ services:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=admin@cypher.ro"
+      - "--certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL:-admin@ledux.ro}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--log.level=INFO"
       - "--accesslog=true"
@@ -443,7 +455,7 @@ networks:
       config:
         - subnet: 172.21.0.0/16
     labels:
-      - "com.cypher.network=production"
+      - "com.cypher.network=${DEPLOYMENT_INTENT:?DEPLOYMENT_INTENT must be set}"
 
 # ==============================================================================
 # Volumes

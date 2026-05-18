@@ -3,6 +3,7 @@
  * Tests meta tag generation and structured data creation
  */
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { GenerateProductSeo, GenerateProductSeoInput } from '../../src/application/use-cases/GenerateProductSeo';
 import { ProductNotFoundError } from '../../src/domain/errors/seo.errors';
 

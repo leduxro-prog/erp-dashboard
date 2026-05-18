@@ -1,8 +1,10 @@
-import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
-import { DataSource } from 'typeorm';
-import { TierCalculationService } from '../../domain/services/TierCalculationService';
 import { VAT_RATE } from '@shared/constants';
+import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Response, NextFunction } from 'express';
+import { DataSource } from 'typeorm';
+
+import { TierCalculationService } from '../../domain/services/TierCalculationService';
+
 
 export interface CartItemResponse {
   id: number;
@@ -40,12 +42,6 @@ export interface CartResponse {
   tax_amount: number;
   total_with_tax: number;
   currency: string;
-}
-
-interface VolumeDiscount {
-  min_quantity: number;
-  max_quantity: number | null;
-  discount_percentage: number;
 }
 
 export class B2BCartController {

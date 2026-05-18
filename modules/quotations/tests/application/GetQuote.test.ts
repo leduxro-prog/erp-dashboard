@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { GetQuote } from '../../src/application/use-cases/GetQuote';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
 import { GetLowStockAlerts } from '../../src/application/use-cases/GetLowStockAlerts';
-import { IInventoryRepository } from '../../src/domain/repositories';
 import { LowStockAlert } from '../../src/domain/entities';
+import { IInventoryRepository } from '../../src/domain/repositories';
 
 describe('GetLowStockAlerts Use Case', () => {
   let useCase: GetLowStockAlerts;

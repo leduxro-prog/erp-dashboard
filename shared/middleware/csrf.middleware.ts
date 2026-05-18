@@ -4,8 +4,10 @@
  * Uses origin/referer header validation and double-submit cookie pattern
  */
 
-import { Request, Response, NextFunction } from 'express';
 import { URL } from 'url';
+
+import { Request, Response, NextFunction } from 'express';
+
 import logger from '../utils/logger';
 
 /**

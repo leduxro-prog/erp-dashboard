@@ -4,6 +4,7 @@
  */
 
 import { DataSource, Repository } from 'typeorm';
+
 import { CustomerLoyaltyEntity, LoyaltyTier } from '../../infrastructure/entities/CustomerLoyaltyEntity';
 import { PointsTransactionEntity, PointsTransactionType } from '../../infrastructure/entities/PointsTransactionEntity';
 

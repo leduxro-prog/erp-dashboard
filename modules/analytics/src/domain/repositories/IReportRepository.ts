@@ -1,4 +1,5 @@
 import { Report } from '../entities/Report';
+
 import { PaginatedResult } from './IDashboardRepository';
 
 /**

@@ -1,7 +1,10 @@
-import path from 'path';
 import fs from 'fs';
-import { ICypherModule } from './module.interface';
+import path from 'path';
+
 import { createModuleLogger } from '../utils/logger';
+
+import { ICypherModule } from './module.interface';
+
 
 const logger = createModuleLogger('module-loader');
 const OPTIONAL_MODULES_WITH_RUNTIME_DEPS = new Set(['notifications', 'quotations']);

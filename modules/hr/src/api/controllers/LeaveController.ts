@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { LeaveService } from '../../domain/services/LeaveService';
 import { successResponse, errorResponse, paginatedResponse } from '@shared/utils/response';
+import { Request, Response, NextFunction } from 'express';
+
+import { LeaveService } from '../../domain/services/LeaveService';
 
 export class LeaveController {
     constructor(private leaveService: LeaveService) { }

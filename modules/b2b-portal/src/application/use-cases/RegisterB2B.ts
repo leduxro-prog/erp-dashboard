@@ -5,21 +5,25 @@
  * @module B2B Portal - Application
  */
 
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { createModuleLogger } from '@shared/utils/logger';
+import * as bcrypt from 'bcrypt';
+import { DataSource } from 'typeorm';
+
 import { B2BRegistration } from '../../domain/entities/B2BRegistration';
-import { IRegistrationRepository } from '../../domain/repositories/IRegistrationRepository';
-import { CuiValidationService } from '../../domain/services/CuiValidationService';
-import { AnafValidationService } from '../../infrastructure/services/AnafValidationService';
 import {
   RegistrationExistsError,
   InvalidCuiError,
   InvalidIbanError,
 } from '../../domain/errors/b2b.errors';
-import { createModuleLogger } from '@shared/utils/logger';
-import { DataSource } from 'typeorm';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
-import * as bcrypt from 'bcrypt';
+import { IRegistrationRepository } from '../../domain/repositories/IRegistrationRepository';
+import { CuiValidationService } from '../../domain/services/CuiValidationService';
+import { AnafValidationService } from '../../infrastructure/services/AnafValidationService';
+
+
 
 const logger = createModuleLogger('RegisterB2B');
 

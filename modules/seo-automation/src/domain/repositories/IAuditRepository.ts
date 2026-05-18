@@ -9,6 +9,7 @@
 
 import { SeoAuditResult, AuditType } from '../entities/SeoAuditResult';
 import { SeoEntityType } from '../entities/SeoIssue';
+
 import { PaginatedResult, PaginationParams } from './ISeoMetadataRepository';
 
 /**

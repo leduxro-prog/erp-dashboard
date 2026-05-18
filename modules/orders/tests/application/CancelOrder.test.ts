@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
+import { OrderCancellationError, OrderNotFoundError } from '../../src/application/errors';
 import {
   CancelOrder,
   IEventPublisher,
   IStockService,
 } from '../../src/application/use-cases/CancelOrder';
 import { IOrderRepository, Order, OrderItem, OrderStatus, Address } from '../../src/domain';
-import { OrderCancellationError, OrderNotFoundError } from '../../src/application/errors';
 
 const makeOrder = (status: OrderStatus = OrderStatus.QUOTE_PENDING): Order =>
   Order.create({

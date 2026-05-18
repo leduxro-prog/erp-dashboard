@@ -1,26 +1,45 @@
+import http from 'http';
+import path from 'path';
+
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import cors, { CorsOptions } from 'cors';
 import dotenv from 'dotenv';
 import express, { Express, NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import http from 'http';
-import path from 'path';
-import { AppDataSource } from './data-source';
-import { validateEnv, ConfigSchema } from './config/env.validation';
-import { rateLimiter, authRateLimiter } from './middleware/rate-limiter';
-import logger, { createModuleLogger } from '../shared/utils/logger';
-import { getEventBus } from '../shared/utils/event-bus';
-import { createRequestIdMiddleware } from '../shared/middleware/request-id.middleware';
-import { createAuditMiddleware } from '../shared/middleware/audit-trail.middleware';
-import { createCSRFMiddleware } from '../shared/middleware/csrf.middleware';
-import { tracingMiddleware } from '../shared/middleware/tracing.middleware';
-import { sanitizeMiddleware } from '../shared/middleware/sanitize.middleware';
-import { createAuditLogger } from '../shared/utils/audit-logger';
-import { registerApiDocsRoutes } from './api-docs/routes';
-import { ModuleRegistry, ModuleLoader, IModuleContext } from '../shared/module-system';
+
 import { createMetricsMiddleware, createMetricsEndpoint } from '../shared/metrics';
-import { formatPrometheusMetrics, collectPrometheusMetrics } from '../shared/metrics/prometheus-exporter';
+import {
+  formatPrometheusMetrics,
+  collectPrometheusMetrics,
+} from '../shared/metrics/prometheus-exporter';
+import { createAuditMiddleware } from '../shared/middleware/audit-trail.middleware';
+import { authenticate, requireRole } from '../shared/middleware/auth.middleware';
+import { createCSRFMiddleware } from '../shared/middleware/csrf.middleware';
+import { registerHealthRoutes } from '../shared/middleware/health.middleware';
+import {
+  globalApiLimiter,
+  b2bApiLimiter,
+  loginLimiter,
+  authLimiter,
+  writeOperationLimiter,
+} from '../shared/middleware/rate-limit.middleware';
+import { createRequestIdMiddleware } from '../shared/middleware/request-id.middleware';
+import { sanitizeMiddleware } from '../shared/middleware/sanitize.middleware';
+import { tracingMiddleware } from '../shared/middleware/tracing.middleware';
+import { ModuleRegistry, ModuleLoader, IModuleContext } from '../shared/module-system';
+import { AuditLogService } from '../shared/services/AuditLogService';
+import { UnifiedDlqService } from '../shared/services/UnifiedDlqService';
+import { createAuditLogger } from '../shared/utils/audit-logger';
+import { getEventBus } from '../shared/utils/event-bus';
+import logger, { createModuleLogger } from '../shared/utils/logger';
+
+import { registerApiDocsRoutes } from './api-docs/routes';
+import { validateEnv, ConfigSchema } from './config/env.validation';
+import { buildHostTopology } from './config/host-topology';
+import { AppDataSource } from './data-source';
+import authRoutes from './routes/auth.routes';
 import { createWebsiteSyncRouter } from './routes/website-sync.routes';
 
 dotenv.config();
@@ -117,8 +136,14 @@ async function bootstrap(): Promise<void> {
     bootstrapLogger.info('Event bus initialized');
 
     // Step 5: Configure CORS
-    const corsOrigins = config.CORS_ORIGINS || 'http://localhost:3000,http://localhost:3001';
-    const allowedOrigins = corsOrigins.split(',').map((origin) => origin.trim());
+    const hostTopology = buildHostTopology(config);
+    const allowedOrigins = hostTopology.allowedCorsOrigins;
+
+    if (hostTopology.deploymentIntent !== 'local' && !config.CORS_ORIGINS?.trim()) {
+      bootstrapLogger.warn(
+        'CORS_ORIGINS is not configured; using explicit host topology origins.',
+      );
+    }
 
     const corsOptions: CorsOptions = {
       origin: (origin, callback) => {
@@ -204,10 +229,10 @@ async function bootstrap(): Promise<void> {
     );
 
     // Step 14: Apply rate limiting
-    app.use(rateLimiter); // General API rate limiter
+    app.use(globalApiLimiter); // General API rate limiter
 
     // Step 14b: Apply stricter rate limiting to auth endpoints
-    app.use('/auth', authRateLimiter);
+    app.use('/auth', authLimiter);
 
     // Step 14c: Metrics collection middleware
     app.use(createMetricsMiddleware());

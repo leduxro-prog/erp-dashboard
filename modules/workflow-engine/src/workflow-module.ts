@@ -3,14 +3,15 @@
  * Configurable workflow and approval engine for all modules
  */
 
-import { Router } from 'express';
 import { ICypherModule, IModuleContext, IModuleHealth, IModuleMetrics } from '@shared/module-system/module.interface';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Router } from 'express';
+
 import { WorkflowController } from './api/controllers/WorkflowController';
-import { WorkflowTemplateRepository } from './infrastructure/repositories/WorkflowTemplateRepository';
-import { WorkflowInstanceRepository } from './infrastructure/repositories/WorkflowInstanceRepository';
-import { WorkflowTemplateEntity, WorkflowInstanceEntity, WorkflowDelegationEntity, WorkflowAnalyticsEntity } from './infrastructure/entities';
 import { WorkflowCache } from './infrastructure/cache/WorkflowCache';
+import { WorkflowTemplateEntity, WorkflowInstanceEntity, WorkflowDelegationEntity, WorkflowAnalyticsEntity } from './infrastructure/entities';
+import { WorkflowInstanceRepository } from './infrastructure/repositories/WorkflowInstanceRepository';
+import { WorkflowTemplateRepository } from './infrastructure/repositories/WorkflowTemplateRepository';
 
 export class WorkflowEngineModule implements ICypherModule {
   readonly name = 'workflow-engine';

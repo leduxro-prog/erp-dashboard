@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import {
   B2BRegistration,
   B2BRegistrationStatus,

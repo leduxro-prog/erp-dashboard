@@ -3,9 +3,10 @@
  * Routes for receiving webhook events from WooCommerce
  */
 
-import { Router } from 'express';
-import { WooCommerceWebhookController } from '../controllers/WooCommerceWebhookController';
 import { authenticate } from '@shared/middleware/auth.middleware';
+import { Router } from 'express';
+
+import { WooCommerceWebhookController } from '../controllers/WooCommerceWebhookController';
 
 /**
  * Create webhook routes

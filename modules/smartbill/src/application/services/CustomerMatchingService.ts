@@ -5,8 +5,8 @@
  * and ERP customers using a weighted scoring algorithm.
  */
 
-import { DataSource } from 'typeorm';
 import { createModuleLogger } from '@shared/utils/logger';
+import { DataSource } from 'typeorm';
 
 const logger = createModuleLogger('CustomerMatchingService');
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { Forecast, ForecastMethod, ForecastDataPoint } from '../../src/domain/entities/Forecast';
 
 /**

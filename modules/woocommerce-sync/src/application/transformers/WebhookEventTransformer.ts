@@ -3,8 +3,8 @@
  * Transforms WooCommerce webhook payloads to ERP domain events
  */
 
-import { v4 as uuidv4 } from 'uuid';
 import { createModuleLogger } from '@shared/utils/logger';
+import { v4 as uuidv4 } from 'uuid';
 
 const logger = createModuleLogger('webhook-event-transformer');
 

@@ -6,8 +6,9 @@
  * @module whatsapp/application/use-cases
  */
 
-import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
 import { NotFoundError } from '@shared/errors';
+
+import { IConversationRepository } from '../../domain/repositories/IConversationRepository';
 
 /**
  * Update conversation tags request DTO.

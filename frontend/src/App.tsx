@@ -78,6 +78,9 @@ const B2BOrderDetailPage = lazy(() =>
 const B2BInvoicesPage = lazy(() =>
   import('./pages/b2b-portal/B2BInvoicesPage').then((m) => ({ default: m.B2BInvoicesPage })),
 );
+const B2BQuickOrderPage = lazy(() =>
+  import('./pages/b2b-portal/B2BBulkOrderPage').then((m) => ({ default: m.B2BQuickOrderPage })),
+);
 const B2BCartPage = lazy(() =>
   import('./pages/b2b-portal/B2BCartPage').then((m) => ({ default: m.B2BCartPage })),
 );
@@ -86,6 +89,12 @@ const B2BCheckoutPage = lazy(() =>
 );
 const B2BProfilePage = lazy(() =>
   import('./pages/b2b-portal/B2BProfilePage').then((m) => ({ default: m.B2BProfilePage })),
+);
+const B2BTeamPage = lazy(() =>
+  import('./pages/b2b-portal/B2BTeamPage').then((m) => ({ default: m.B2BTeamPage })),
+);
+const B2BProjectsPage = lazy(() =>
+  import('./pages/b2b-portal/B2BProjectsPage').then((m) => ({ default: m.B2BProjectsPage })),
 );
 const B2BAddressesPage = lazy(() =>
   import('./pages/b2b-portal/B2BAddressesPage').then((m) => ({ default: m.B2BAddressesPage })),
@@ -572,10 +581,34 @@ export default function App() {
             }
           />
           <Route
+            path="quick-order"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <B2BQuickOrderPage />
+              </Suspense>
+            }
+          />
+          <Route
             path="invoices"
             element={
               <Suspense fallback={<PageLoadingFallback />}>
                 <B2BInvoicesPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="team"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <B2BTeamPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="projects"
+            element={
+              <Suspense fallback={<PageLoadingFallback />}>
+                <B2BProjectsPage />
               </Suspense>
             }
           />

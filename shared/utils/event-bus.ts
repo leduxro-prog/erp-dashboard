@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+
 import { createModuleLogger } from './logger';
 
 const logger = createModuleLogger('event-bus');

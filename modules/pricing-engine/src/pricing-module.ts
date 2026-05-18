@@ -1,4 +1,3 @@
-import { Router } from 'express';
 import {
   ICypherModule,
   IModuleContext,
@@ -6,8 +5,10 @@ import {
   IModuleMetrics,
 } from '@shared/module-system';
 import { createModuleLogger } from '@shared/utils/logger';
-import { createPricingEngineRouter } from './infrastructure/composition-root';
+import { Router } from 'express';
+
 import { PriceCache } from './infrastructure/cache/PriceCache';
+import { createPricingEngineRouter } from './infrastructure/composition-root';
 
 const logger = createModuleLogger('pricing-engine');
 

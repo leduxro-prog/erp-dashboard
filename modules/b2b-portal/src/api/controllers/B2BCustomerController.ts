@@ -1,8 +1,9 @@
-import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
+import { Response, NextFunction } from 'express';
 import { DataSource } from 'typeorm';
+
 import { TierCalculationService } from '../../domain/services/TierCalculationService';
-import { ValidationError } from '@shared/errors/BaseError';
+
 
 export interface CustomerProfileResponse {
   id: number;

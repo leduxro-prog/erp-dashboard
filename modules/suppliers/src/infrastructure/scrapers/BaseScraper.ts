@@ -1,6 +1,7 @@
-import { Browser, Page } from 'puppeteer';
-import { SupplierCredentials } from '../../domain';
 import { createModuleLogger } from '@shared/utils/logger';
+import { Browser, Page } from 'puppeteer';
+
+import { SupplierCredentials } from '../../domain';
 
 const logger = createModuleLogger('base-scraper');
 

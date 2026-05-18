@@ -10,9 +10,9 @@
  *
  * This file is kept only for historical reference and should not be imported.
  */
+import { createModuleLogger } from '@shared/utils/logger';
 import { Job, Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
-import { createModuleLogger } from '@shared/utils/logger';
 
 export class SmartBillSyncJob {
   private readonly logger = createModuleLogger('SmartBillSyncJob');

@@ -1,3 +1,7 @@
+import { PurchaseRequisition, RequisitionLine } from '../../domain/entities/PurchaseRequisition';
+import { IRequisitionRepository } from '../../domain/repositories/IRequisitionRepository';
+import { RequisitionService } from '../../domain/services/RequisitionService';
+import { RequisitionMapper } from '../../infrastructure/mappers/RequisitionMapper';
 import {
   CreateRequisitionDTO,
   RequisitionResponseDTO,
@@ -6,10 +10,6 @@ import {
   SubmitRequisitionDTO,
   RejectRequisitionDTO,
 } from '../dtos/RequisitionDTOs';
-import { PurchaseRequisition, RequisitionLine } from '../../domain/entities/PurchaseRequisition';
-import { RequisitionService } from '../../domain/services/RequisitionService';
-import { IRequisitionRepository } from '../../domain/repositories/IRequisitionRepository';
-import { RequisitionMapper } from '../../infrastructure/mappers/RequisitionMapper';
 
 export class RequisitionUseCases {
   constructor(

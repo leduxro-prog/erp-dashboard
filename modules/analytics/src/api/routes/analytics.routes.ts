@@ -2,9 +2,10 @@
  * Analytics API Routes
  * Defines all analytics endpoints including dashboards, reports, metrics, and KPI dashboards
  */
-import { Router, Request, Response, NextFunction } from 'express';
-import { AnalyticsController } from '../controllers/AnalyticsController';
 import { authenticate, requireRole } from '@shared/middleware/auth.middleware';
+import { Router, Request, Response, NextFunction } from 'express';
+
+import { AnalyticsController } from '../controllers/AnalyticsController';
 import {
   createDashboardSchema,
   updateDashboardSchema,
@@ -41,7 +42,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Query params: page, limit, dashboard_type, is_public, search
    */
   router.get('/dashboards', validateRequest(listDashboardsSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.listDashboards(req, res, next)
+    controller.listDashboards(req as any, res, next)
   );
 
   /**
@@ -50,7 +51,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: user
    */
   router.post('/dashboards', validateRequest(createDashboardSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.createDashboard(req, res, next)
+    controller.createDashboard(req as any, res, next)
   );
 
   /**
@@ -59,7 +60,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: user
    */
   router.get('/dashboards/:id', (req: Request, res: Response, next: NextFunction) =>
-    controller.getDashboardWithWidgets(req, res, next)
+    controller.getDashboardWithWidgets(req as any, res, next)
   );
 
   /**
@@ -68,7 +69,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: user (owner) or admin
    */
   router.put('/dashboards/:id', validateRequest(updateDashboardSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.updateDashboard(req, res, next)
+    controller.updateDashboard(req as any, res, next)
   );
 
   /**
@@ -77,7 +78,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: admin
    */
   router.delete('/dashboards/:id', requireRole(['admin']), (req: Request, res: Response, next: NextFunction) =>
-    controller.deleteDashboard(req, res, next)
+    controller.deleteDashboard(req as any, res, next)
   );
 
   /**
@@ -86,7 +87,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: user (owner) or admin
    */
   router.post('/dashboards/:id/widgets', validateRequest(createWidgetSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.addWidget(req, res, next)
+    controller.addWidget(req as any, res, next)
   );
 
   /**
@@ -95,7 +96,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: user (owner) or admin
    */
   router.put('/dashboards/:id/widgets/:widgetId', validateRequest(updateWidgetSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.updateWidget(req, res, next)
+    controller.updateWidget(req as any, res, next)
   );
 
   /**
@@ -104,7 +105,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: user (owner) or admin
    */
   router.delete('/dashboards/:id/widgets/:widgetId', (req: Request, res: Response, next: NextFunction) =>
-    controller.removeWidget(req, res, next)
+    controller.removeWidget(req as any, res, next)
   );
 
   /**
@@ -118,7 +119,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Supported formats: PDF, CSV, EXCEL, JSON
    */
   router.post('/reports', validateRequest(generateReportSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.generateReport(req, res, next)
+    controller.generateReport(req as any, res, next)
   );
 
   /**
@@ -128,7 +129,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Query params: page, limit, report_type, status, search, start_date, end_date
    */
   router.get('/reports', validateRequest(listReportsSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.listReports(req, res, next)
+    controller.listReports(req as any, res, next)
   );
 
   /**
@@ -137,7 +138,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: user
    */
   router.get('/reports/:id', (req: Request, res: Response, next: NextFunction) =>
-    controller.getReportDetails(req, res, next)
+    controller.getReportDetails(req as any, res, next)
   );
 
   /**
@@ -147,7 +148,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Query params: format (CSV, EXCEL, PDF)
    */
   router.get('/reports/:id/download', (req: Request, res: Response, next: NextFunction) =>
-    controller.downloadReport(req, res, next)
+    controller.downloadReport(req as any, res, next)
   );
 
   /**
@@ -161,7 +162,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Query params: page, limit, metric_key, search
    */
   router.get('/metrics/snapshots', validateRequest(listMetricSnapshotsSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.getMetricSnapshots(req, res, next)
+    controller.getMetricSnapshots(req as any, res, next)
   );
 
   /**
@@ -170,7 +171,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Auth: user
    */
   router.post('/metrics/snapshots', validateRequest(createMetricSnapshotSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.createMetricSnapshot(req, res, next)
+    controller.createMetricSnapshot(req as any, res, next)
   );
 
   /**
@@ -184,7 +185,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Query params: page, limit, metric_key, search
    */
   router.get('/forecasts', validateRequest(listForecastsSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.getForecasts(req, res, next)
+    controller.getForecasts(req as any, res, next)
   );
 
   /**
@@ -194,7 +195,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Methods: LINEAR, EXPONENTIAL_SMOOTHING, ARIMA, PROPHET
    */
   router.post('/forecasts/generate', requireRole(['admin']), validateRequest(generateForecastSchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.generateForecast(req, res, next)
+    controller.generateForecast(req as any, res, next)
   );
 
   /**
@@ -209,7 +210,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Includes: revenue, orders, AOV, conversion rate, CAC, LTV, top products
    */
   router.get('/kpi/sales', validateRequest(kpiQuerySchema), (req: Request, res: Response, next: NextFunction) =>
-    controller.getSalesKPI(req, res, next)
+    controller.getSalesKPI(req as any, res, next)
   );
 
   /**
@@ -220,7 +221,7 @@ export function createAnalyticsRoutes(controller: AnalyticsController): Router {
    * Includes: stock value, turnover, stockouts, accuracy, warehouse utilization
    */
   router.get('/kpi/inventory', (req: Request, res: Response, next: NextFunction) =>
-    controller.getInventoryKPI(req, res, next)
+    controller.getInventoryKPI(req as any, res, next)
   );
 
   return router;

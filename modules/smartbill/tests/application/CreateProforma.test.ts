@@ -1,12 +1,12 @@
+import { ProformaCreationError } from '../../src/application/errors/smartbill.errors';
 import {
   CreateProformaUseCase,
   ISmartBillApiClientProforma,
   IEventBusProforma,
   IOrderServiceProforma,
 } from '../../src/application/use-cases/CreateProforma';
-import { ISmartBillRepository } from '../../src/domain/repositories/ISmartBillRepository';
 import { SmartBillProforma } from '../../src/domain/entities/SmartBillProforma';
-import { ProformaCreationError } from '../../src/application/errors/smartbill.errors';
+import { ISmartBillRepository } from '../../src/domain/repositories/ISmartBillRepository';
 
 describe('CreateProformaUseCase', () => {
   let useCase: CreateProformaUseCase;

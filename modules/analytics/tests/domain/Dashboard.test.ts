@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
+
 import { Dashboard, LayoutType } from '../../src/domain/entities/Dashboard';
 import { DashboardWidget, WidgetType, DataSourceType } from '../../src/domain/entities/DashboardWidget';
 

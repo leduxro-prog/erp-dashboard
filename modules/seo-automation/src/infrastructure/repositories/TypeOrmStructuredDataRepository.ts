@@ -1,11 +1,12 @@
 import { DataSource, Repository } from 'typeorm';
-import { StructuredData, SchemaType } from '../../domain/entities/StructuredData';
+
 import { SeoEntityType } from '../../domain/entities/SeoIssue';
-import { IStructuredDataRepository } from '../../domain/repositories/IStructuredDataRepository';
+import { StructuredData, SchemaType } from '../../domain/entities/StructuredData';
 import {
   PaginatedResult,
   PaginationParams,
 } from '../../domain/repositories/ISeoMetadataRepository';
+import { IStructuredDataRepository } from '../../domain/repositories/IStructuredDataRepository';
 import { StructuredDataEntity } from '../entities/StructuredDataEntity';
 
 /**

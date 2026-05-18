@@ -6,8 +6,9 @@
  * @module shared/alerting/alert-manager
  */
 
-import { createModuleLogger } from '../utils/logger';
 import * as crypto from 'crypto';
+
+import { createModuleLogger } from '../utils/logger';
 
 const logger = createModuleLogger('alert-manager');
 

@@ -4,19 +4,22 @@
  */
 
 import { Router } from 'express';
+import Redis from 'ioredis';
 import { DataSource } from 'typeorm';
+
 import { InventoryController } from '../api/controllers/InventoryController';
+import { InventoryPickingController } from '../api/controllers/InventoryPickingController';
 import { createInventoryRoutes } from '../api/routes/inventory.routes';
-import { CheckStock } from '../application/use-cases/CheckStock';
-import { ReserveStock } from '../application/use-cases/ReserveStock';
-import { ReleaseStock } from '../application/use-cases/ReleaseStock';
 import { AdjustStock } from '../application/use-cases/AdjustStock';
+import { CheckStock } from '../application/use-cases/CheckStock';
 import { GetLowStockAlerts } from '../application/use-cases/GetLowStockAlerts';
 import { GetMovementHistory } from '../application/use-cases/GetMovementHistory';
 import { GetWarehouses } from '../application/use-cases/GetWarehouses';
-import { TypeOrmInventoryRepository } from './repositories/TypeOrmInventoryRepository';
-import Redis from 'ioredis';
+import { ReleaseStock } from '../application/use-cases/ReleaseStock';
+import { ReserveStock } from '../application/use-cases/ReserveStock';
+
 import { StockCache } from './cache/StockCache';
+import { TypeOrmInventoryRepository } from './repositories/TypeOrmInventoryRepository';
 
 /**
  * Create Inventory Router
@@ -46,7 +49,7 @@ export function createInventoryRouter(dataSource: DataSource): Router {
   const getMovementHistory = new GetMovementHistory(inventoryRepository);
   const getWarehouses = new GetWarehouses(inventoryRepository);
 
-  // Instantiate controller with all injected use-cases
+  // Instantiate controllers
   const controller = new InventoryController(
     checkStock,
     reserveStock,
@@ -58,6 +61,8 @@ export function createInventoryRouter(dataSource: DataSource): Router {
     dataSource
   );
 
+  const pickingController = new InventoryPickingController(dataSource);
+
   // Create and return configured Express router
-  return createInventoryRoutes(controller);
+  return createInventoryRoutes(controller, pickingController);
 }

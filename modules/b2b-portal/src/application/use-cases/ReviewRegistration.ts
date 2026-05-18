@@ -5,17 +5,21 @@
  * @module B2B Portal - Application
  */
 
-import { B2BRegistration, B2BRegistrationStatus } from '../../domain/entities/B2BRegistration';
-import { B2BCustomer, B2BCustomerTier } from '../../domain/entities/B2BCustomer';
-import { IRegistrationRepository } from '../../domain/repositories/IRegistrationRepository';
-import { IB2BCustomerRepository } from '../../domain/repositories/IB2BCustomerRepository';
+import { randomUUID, randomBytes } from 'crypto';
+
 import { NotFoundError } from '@shared/errors/BaseError';
 import { createModuleLogger } from '@shared/utils/logger';
-import { InvalidRegistrationStateError } from '../../domain/errors/b2b.errors';
-import { TierCalculationService } from '../../domain/services/TierCalculationService';
-import { randomUUID, randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
+
+import { B2BCustomer, B2BCustomerTier } from '../../domain/entities/B2BCustomer';
+import { B2BRegistration, B2BRegistrationStatus } from '../../domain/entities/B2BRegistration';
+import { InvalidRegistrationStateError } from '../../domain/errors/b2b.errors';
+import { IB2BCustomerRepository } from '../../domain/repositories/IB2BCustomerRepository';
+import { IRegistrationRepository } from '../../domain/repositories/IRegistrationRepository';
+import { TierCalculationService } from '../../domain/services/TierCalculationService';
+
+
 
 const logger = createModuleLogger('ReviewRegistration');
 

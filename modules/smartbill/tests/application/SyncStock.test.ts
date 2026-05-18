@@ -1,7 +1,7 @@
-import { SyncStockUseCase, ISmartBillApiClientStock, IEventBusStock } from '../../src/application/use-cases/SyncStock';
-import { ISmartBillRepository } from '../../src/domain/repositories/ISmartBillRepository';
-import { SmartBillStock } from '../../src/domain/entities/SmartBillStock';
 import { StockSyncError } from '../../src/application/errors/smartbill.errors';
+import { SyncStockUseCase, ISmartBillApiClientStock, IEventBusStock } from '../../src/application/use-cases/SyncStock';
+import { SmartBillStock } from '../../src/domain/entities/SmartBillStock';
+import { ISmartBillRepository } from '../../src/domain/repositories/ISmartBillRepository';
 
 describe('SyncStockUseCase', () => {
   let useCase: SyncStockUseCase;

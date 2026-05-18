@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+
+import { ReservationNotFoundError } from '../../src/application/errors/inventory.errors';
 import { ReleaseStock } from '../../src/application/use-cases/ReleaseStock';
 import { IInventoryRepository } from '../../src/domain/repositories';
-import { ReservationNotFoundError } from '../../src/application/errors/inventory.errors';
 
 describe('ReleaseStock Use Case', () => {
   let useCase: ReleaseStock;
