@@ -37,6 +37,15 @@ export class UserService {
     }
   }
 
+  private isUniqueConstraintError(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: unknown }).code === '23505'
+    );
+  }
+
   async create(data: {
     email: string;
     password: string;
@@ -96,6 +105,59 @@ export class UserService {
   async findByEmail(email: string): Promise<UserEntity | null> {
     return this.repository.findOne({
       where: { email, is_active: true },
+    });
+  }
+
+  async findOrCreateGoogleUser(data: {
+    googleId: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl?: string;
+  }): Promise<UserEntity & { avatar_url?: string; auth_provider?: string }> {
+    const email = data.email.toLowerCase();
+    const existing = await this.repository.findOne({ where: { email } });
+
+    if (existing) {
+      return Object.assign(existing, {
+        avatar_url: data.avatarUrl,
+        auth_provider: 'google',
+      });
+    }
+
+    const password = `Google1a${crypto.randomBytes(24).toString('base64url')}`;
+    const password_hash = await UserEntity.hashPassword(password);
+
+    const user = this.repository.create({
+      email,
+      password_hash,
+      first_name: data.firstName,
+      last_name: data.lastName,
+      role: UserRole.ADMIN,
+      is_active: true,
+      email_verified: true,
+      email_verified_at: new Date(),
+    });
+
+    let saved: UserEntity;
+    try {
+      saved = await this.repository.save(user);
+    } catch (error) {
+      if (!this.isUniqueConstraintError(error)) {
+        throw error;
+      }
+
+      const userCreatedByConcurrentRequest = await this.repository.findOne({ where: { email } });
+      if (!userCreatedByConcurrentRequest) {
+        throw error;
+      }
+
+      saved = userCreatedByConcurrentRequest;
+    }
+
+    return Object.assign(saved, {
+      avatar_url: data.avatarUrl,
+      auth_provider: 'google',
     });
   }
 

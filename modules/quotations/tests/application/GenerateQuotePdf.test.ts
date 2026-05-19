@@ -10,6 +10,36 @@ import {
 } from '../../src/application/use-cases/GenerateQuotePdf';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
 import { IQuotePdfGenerator } from '../../src/domain/services/IQuotePdfGenerator';
+import { Quote } from '../../src/domain/entities/Quote';
+
+const makeQuote = (overrides: Partial<Quote> = {}): Quote => {
+  const quote = new Quote(
+    'quote-1',
+    'QTE-001',
+    'customer-1',
+    'John Doe',
+    'john@example.com',
+    [
+      {
+        id: 'item-1',
+        productId: 'product-1',
+        sku: 'SKU-001',
+        productName: 'Product 1',
+        quantity: 2,
+        unitPrice: 500,
+        lineTotal: 1000,
+      },
+    ],
+    { street: 'Main 1', city: 'Bucharest', postcode: '010001', country: 'RO' },
+    { street: 'Main 1', city: 'Bucharest', postcode: '010001', country: 'RO' },
+    'Net 15',
+    '2-3 days',
+    'tester',
+  );
+
+  Object.assign(quote, overrides);
+  return quote;
+};
 
 describe('GenerateQuotePdf Use Case', () => {
   let useCase: GenerateQuotePdf;
@@ -38,18 +68,14 @@ describe('GenerateQuotePdf Use Case', () => {
   });
 
   it('should generate PDF for quote', async () => {
-    const mockQuote = {
-      id: 'quote-1',
-      quoteNumber: 'QTE-001',
-      customerName: 'John Doe',
-      items: [],
+    const mockQuote = makeQuote({
       subtotal: 1000,
       taxAmount: 190,
       grandTotal: 1190,
-    };
+    });
 
     const generatedBuffer = Buffer.from('fake-pdf-data');
-    mockRepository.findById.mockResolvedValue(mockQuote as any);
+    mockRepository.findById.mockResolvedValue(mockQuote);
     mockCompanyDetailsProvider.getCompanyDetails.mockResolvedValue({
       name: 'Cypher ERP',
       address: 'Test Street 1',
@@ -78,18 +104,13 @@ describe('GenerateQuotePdf Use Case', () => {
   });
 
   it('should wrap PDF generation errors', async () => {
-    const mockQuote = {
-      id: 'quote-1',
-      quoteNumber: 'QTE-001',
-      customerName: 'John Doe',
-      customerEmail: 'john@example.com',
-      items: [{ productName: 'Product 1', quantity: 2, unitPrice: 500 }],
+    const mockQuote = makeQuote({
       subtotal: 1000,
       taxAmount: 190,
       grandTotal: 1190,
-    };
+    });
 
-    mockRepository.findById.mockResolvedValue(mockQuote as any);
+    mockRepository.findById.mockResolvedValue(mockQuote);
     mockCompanyDetailsProvider.getCompanyDetails.mockResolvedValue({
       name: 'Cypher ERP',
       address: 'Test Street 1',

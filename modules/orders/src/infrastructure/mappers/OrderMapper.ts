@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common';
-
 import { OrderEntity, OrderStatus, PaymentStatus } from '../entities/OrderEntity';
 
 // Domain model (simplified)
@@ -69,7 +67,6 @@ export interface OrderDetailResult {
   status_history: any[];
 }
 
-@Injectable()
 export class OrderMapper {
   toDomain(entity: OrderEntity): Order {
     return {

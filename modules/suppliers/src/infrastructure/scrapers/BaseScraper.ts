@@ -11,6 +11,45 @@ export interface ScrapedProduct {
   price: number;
   currency: string;
   stockQuantity: number;
+  category?: string;
+  imageUrl?: string;
+  images?: string[];
+  manufacturer?: string;
+  brand?: string;
+  specifications?: {
+    countryOfOrigin?: string;
+    wattage?: number;
+    lumens?: number;
+    colorTemperature?: number;
+    cri?: number;
+    beamAngle?: number;
+    ipRating?: string;
+    efficacy?: number;
+    dimmable?: boolean | string | number;
+    dimmingType?: string;
+    voltageInput?: string;
+    voltageOutput?: string;
+    powerFactor?: number;
+    frequency?: string;
+    mountingType?: string;
+    material?: string;
+    color?: string;
+    lifespanHours?: number;
+    warrantyYears?: number;
+    certificationCe?: boolean | string | number;
+    certificationRohs?: boolean | string | number;
+    certificationUl?: boolean | string | number;
+    certificationEtl?: boolean | string | number;
+    certificationEnec?: boolean | string | number;
+    energyClass?: string;
+    datasheetUrl?: string;
+    iesFileUrl?: string;
+    installationGuideUrl?: string;
+    customSpecs?: Record<string, unknown>;
+  };
+  attributes?: Record<string, string | number | boolean>;
+  ean?: string;
+  sourceUpdatedAt?: Date | string;
 }
 
 export abstract class BaseScraper {

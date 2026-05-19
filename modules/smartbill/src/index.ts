@@ -14,10 +14,12 @@ import { CustomerMatchingService } from './application/services/CustomerMatching
 import { SyncMonitorService } from './application/services/SyncMonitorService';
 import { ConvertProformaToInvoiceUseCase } from './application/use-cases/ConvertProformaToInvoice';
 import { CreateInvoiceUseCase } from './application/use-cases/CreateInvoice';
+import { CreateB2BProformaUseCase } from './application/use-cases/CreateB2BProforma';
 import { CreateProformaUseCase } from './application/use-cases/CreateProforma';
 import { CreateProformaFromQuoteUseCase } from './application/use-cases/CreateProformaFromQuote';
 import { GetWarehousesUseCase } from './application/use-cases/GetWarehouses';
 import { ImportPricesFromExcelUseCase } from './application/use-cases/ImportPricesFromExcel';
+import { RegisterCatalogProductUseCase } from './application/use-cases/RegisterCatalogProduct';
 import { SyncInvoiceStatusUseCase } from './application/use-cases/SyncInvoiceStatus';
 import { SyncPricesFromInvoicesUseCase } from './application/use-cases/SyncPricesFromInvoices';
 import { SyncSmartBillCustomers } from './application/use-cases/SyncSmartBillCustomers';
@@ -75,6 +77,7 @@ export interface SmartBillModuleFactoryResult {
   createInvoiceUseCase: CreateInvoiceUseCase;
   createProformaUseCase: CreateProformaUseCase;
   createProformaFromQuoteUseCase?: CreateProformaFromQuoteUseCase;
+  createB2BProformaUseCase?: CreateB2BProformaUseCase;
   syncStockUseCase: SyncStockUseCase;
   getWarehousesUseCase: GetWarehousesUseCase;
   syncPricesUseCase?: SyncPricesFromInvoicesUseCase;
@@ -82,6 +85,7 @@ export interface SmartBillModuleFactoryResult {
   syncSmartBillCustomers?: SyncSmartBillCustomers;
   convertProformaToInvoiceUseCase?: ConvertProformaToInvoiceUseCase;
   syncInvoiceStatusUseCase?: SyncInvoiceStatusUseCase;
+  registerCatalogProductUseCase: RegisterCatalogProductUseCase;
   customerMatchingService?: CustomerMatchingService;
   controller: SmartBillController;
   routes: Router;
@@ -160,6 +164,16 @@ export function createSmartBillModule(
       )
     : undefined;
 
+  // B2B proforma: auto-create SmartBill proforma on B2B order placement
+  const createB2BProformaUseCase = dataSource
+    ? new CreateB2BProformaUseCase(
+        repository,
+        apiClient as unknown as any,
+        config.eventBus,
+        dataSource,
+      )
+    : undefined;
+
   // Customer matching service for intelligent auto-match scoring
   const customerMatchingService = dataSource ? new CustomerMatchingService(dataSource) : undefined;
 
@@ -182,6 +196,10 @@ export function createSmartBillModule(
     orderService,
   );
 
+  const registerCatalogProductUseCase = new RegisterCatalogProductUseCase(
+    apiClient as unknown as any,
+  );
+
   // Sync monitoring service
   const syncMonitorService = dataSource ? new SyncMonitorService(dataSource) : undefined;
 
@@ -201,6 +219,7 @@ export function createSmartBillModule(
     syncMonitorService,
     convertProformaToInvoiceUseCase,
     syncInvoiceStatusUseCase,
+    registerCatalogProductUseCase,
   );
 
   const routes = createSmartBillRoutesFromController(controller);
@@ -229,6 +248,7 @@ export function createSmartBillModule(
     createInvoiceUseCase,
     createProformaUseCase,
     createProformaFromQuoteUseCase,
+    createB2BProformaUseCase,
     syncStockUseCase,
     getWarehousesUseCase,
     syncPricesUseCase,
@@ -236,6 +256,7 @@ export function createSmartBillModule(
     syncSmartBillCustomers,
     convertProformaToInvoiceUseCase,
     syncInvoiceStatusUseCase,
+    registerCatalogProductUseCase,
     customerMatchingService,
     controller,
     routes,
@@ -261,11 +282,12 @@ export default class SmartBillModule implements ICypherModule {
     'smartbill.invoice_status_changed',
     'smartbill.stock_synced',
   ];
-  readonly subscribedEvents = ['order.created', 'order.paid'];
+  readonly subscribedEvents = ['order.created', 'order.paid', 'b2b.order.created'];
 
   private context!: IModuleContext;
   private router!: Router;
   private factory!: SmartBillModuleFactoryResult;
+  private b2bOrderHandler?: (data: unknown) => void;
 
   async initialize(context: IModuleContext): Promise<void> {
     this.context = context;
@@ -360,10 +382,54 @@ export default class SmartBillModule implements ICypherModule {
       }
     }
 
+    // Subscribe to b2b.order.created to auto-generate SmartBill proformas
+    if (this.factory.createB2BProformaUseCase) {
+      try {
+        this.b2bOrderHandler = async (data: unknown) => {
+          const event = data as { b2bOrderId: number; orderNumber?: string };
+          if (!event.b2bOrderId) {
+            this.context.logger.warn('b2b.order.created event missing b2bOrderId', { data });
+            return;
+          }
+          try {
+            await this.factory.createB2BProformaUseCase!.execute({
+              b2bOrderId: event.b2bOrderId,
+            });
+            this.context.logger.info('B2B proforma created via event', {
+              b2bOrderId: event.b2bOrderId,
+              orderNumber: event.orderNumber,
+            });
+          } catch (error) {
+            this.context.logger.error('Failed to create B2B proforma via event', {
+              b2bOrderId: event.b2bOrderId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        };
+        await this.context.eventBus.subscribe('b2b.order.created', this.b2bOrderHandler);
+        this.context.logger.info('SmartBill subscribed to b2b.order.created events');
+      } catch (error) {
+        this.context.logger.warn('Failed to subscribe to b2b.order.created', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     this.context.logger.info('SmartBill module started (all sync jobs active)');
   }
 
   async stop(): Promise<void> {
+    // Unsubscribe from b2b.order.created
+    if (this.b2bOrderHandler) {
+      try {
+        await this.context.eventBus.unsubscribe('b2b.order.created', this.b2bOrderHandler);
+      } catch (error) {
+        this.context.logger.warn('Error unsubscribing from b2b.order.created', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     try {
       await this.factory.stockSyncJob.stop();
     } catch (error) {

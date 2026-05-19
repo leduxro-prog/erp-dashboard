@@ -8,6 +8,13 @@ import {
 } from './module.interface';
 
 const logger = createModuleLogger('module-registry');
+const OPTIONAL_UNLOADED_DEPENDENCIES: Record<string, string[]> = {
+  smartbill: ['orders'],
+  'woocommerce-sync': ['inventory', 'orders'],
+};
+const OPTIONAL_INITIALIZATION_ERRORS: Record<string, string[]> = {
+  'ai-assistant': ['GEMINI_API_KEY is not defined'],
+};
 
 /**
  * Dependency graph node for topological sorting.
@@ -182,6 +189,14 @@ export class ModuleRegistry {
   }
 
   /**
+   * Get modules that successfully completed start().
+   * Useful for runtime router mounting and health operations.
+   */
+  getStartedModules(): Map<string, ICypherModule> {
+    return new Map(this.startedModules);
+  }
+
+  /**
    * Check if a module is registered.
    *
    * @param name - Module name
@@ -255,6 +270,14 @@ export class ModuleRegistry {
         );
 
         const message = error instanceof Error ? error.message : String(error);
+
+        const optionalInitErrors = OPTIONAL_INITIALIZATION_ERRORS[module.name] || [];
+        const isOptionalInitFailure = optionalInitErrors.some((signature) => message.includes(signature));
+
+        if (isOptionalInitFailure) {
+          logger.info(`Optional module "${module.name}" disabled: ${message}`);
+          continue;
+        }
 
         if (isDependedUpon) {
           logger.error(`Critical module "${module.name}" failed to initialize: ${message}`);
@@ -519,10 +542,18 @@ export class ModuleRegistry {
       const validDeps: string[] = [];
       for (const depName of node.dependencies) {
         if (!nodes.has(depName)) {
-          logger.warn(
-            `Module "${name}" depends on unloaded module "${depName}" - dependency skipped. ` +
-            `Available modules: ${Array.from(nodes.keys()).join(', ')}`
-          );
+          const optionalDeps = OPTIONAL_UNLOADED_DEPENDENCIES[name] || [];
+          if (optionalDeps.includes(depName)) {
+            logger.info(
+              `Module "${name}" depends on unloaded optional module "${depName}" - dependency skipped. ` +
+              `Available modules: ${Array.from(nodes.keys()).join(', ')}`
+            );
+          } else {
+            logger.warn(
+              `Module "${name}" depends on unloaded module "${depName}" - dependency skipped. ` +
+              `Available modules: ${Array.from(nodes.keys()).join(', ')}`
+            );
+          }
         } else {
           validDeps.push(depName);
         }

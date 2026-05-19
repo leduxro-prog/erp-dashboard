@@ -14,6 +14,11 @@ import {
 
 @Entity('smartbill_proformas')
 @Index('idx_order_id', ['orderId'])
+@Index('idx_smartbill_b2b_proformas_active_order_unique', ['orderId'], {
+  unique: true,
+  where:
+    "\"orderId\" LIKE 'B2B-%' AND status IN ('draft', 'pending_external', 'requires_reconciliation', 'issued', 'sent', 'converted')",
+})
 @Index('idx_smartbill_id', ['smartBillId'])
 @Index('idx_status', ['status'])
 @Index('idx_smartbill_status', ['smartBillStatus'])

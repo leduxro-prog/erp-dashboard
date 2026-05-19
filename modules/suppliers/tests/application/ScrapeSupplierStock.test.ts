@@ -29,6 +29,8 @@ describe('ScrapeSupplierStock', () => {
       password: 'test',
     },
     syncFrequency: 4,
+    defaultMarkupPercentage: 30,
+    markupType: 'percentage',
     lastSync: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -55,6 +57,9 @@ describe('ScrapeSupplierStock', () => {
       bulkUpsertProducts: jest
         .fn<ISupplierRepository['bulkUpsertProducts']>()
         .mockImplementation(async () => ({ created: 0, updated: 0 })),
+      upsertProductSpecifications: jest
+        .fn<ISupplierRepository['upsertProductSpecifications']>()
+        .mockImplementation(async (specifications) => specifications.length),
       updateLastSync: jest
         .fn<ISupplierRepository['updateLastSync']>()
         .mockImplementation(async () => undefined),
@@ -160,6 +165,41 @@ describe('ScrapeSupplierStock', () => {
     expect(result.priceChanges).toHaveLength(1);
     expect(result.priceChanges[0].changePercentage).toBe(25);
     expect(result.significantPriceChanges).toHaveLength(1);
+  });
+
+  it('persists specifications for first-time products after product IDs are assigned', async () => {
+    mockRepository.getSupplier.mockImplementationOnce(
+      async () => new SupplierEntity({ ...mockSupplier, code: SupplierCode.BUSINESS_CENTRAL }),
+    );
+    mockRepository.bulkUpsertProducts.mockImplementationOnce(async (products) => {
+      products[0].productId = 123;
+      return { created: 1, updated: 0 };
+    });
+    mockScraperFactory.getScraper.mockImplementationOnce(() => ({
+      scrapeProducts: async () => [
+        {
+          supplierSku: 'NEW-001',
+          name: 'New Product 24W 3000K',
+          price: 10,
+          currency: 'RON',
+          stockQuantity: 10,
+          brand: 'Spec Brand',
+          specifications: {
+            wattage: 24,
+            colorTemperature: 3000,
+          },
+        },
+      ],
+      scrapeStock: async () => [],
+    }));
+
+    const result = await useCase.execute(1);
+
+    expect(result.specificationsDetected).toBe(1);
+    expect(mockRepository.upsertProductSpecifications).toHaveBeenCalledWith(
+      [expect.objectContaining({ productId: 123, supplierSku: 'NEW-001', brand: 'Spec Brand' })],
+      expect.objectContaining({ conflictPolicy: 'merge_non_empty' }),
+    );
   });
 
   it('updates supplier last sync timestamp', async () => {

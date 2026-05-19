@@ -25,6 +25,8 @@ describe('MapSku Use Case', () => {
     isActive: true,
     credentials: { username: 'u', password: 'p' },
     syncFrequency: 4,
+    defaultMarkupPercentage: 0,
+    markupType: 'percentage',
     lastSync: null,
     createdAt: new Date(),
     updatedAt: new Date(),

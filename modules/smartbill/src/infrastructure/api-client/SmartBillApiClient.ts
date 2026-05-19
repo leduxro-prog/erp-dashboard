@@ -34,8 +34,13 @@ export class SmartBillStatusMapper {
   /**
    * Map SmartBill invoice status to internal ERP status
    */
-  static mapInvoiceStatus(smartbillStatus: SmartBillInvoiceStatus): 'draft' | 'issued' | 'sent' | 'paid' | 'cancelled' {
-    const mapping: Record<SmartBillInvoiceStatus, 'draft' | 'issued' | 'sent' | 'paid' | 'cancelled'> = {
+  static mapInvoiceStatus(
+    smartbillStatus: SmartBillInvoiceStatus,
+  ): 'draft' | 'issued' | 'sent' | 'paid' | 'cancelled' {
+    const mapping: Record<
+      SmartBillInvoiceStatus,
+      'draft' | 'issued' | 'sent' | 'paid' | 'cancelled'
+    > = {
       draft: 'draft',
       sent: 'sent',
       paid: 'paid',
@@ -48,8 +53,13 @@ export class SmartBillStatusMapper {
   /**
    * Map SmartBill proforma status to internal ERP status
    */
-  static mapProformaStatus(smartbillStatus: SmartBillProformaStatus): 'draft' | 'issued' | 'sent' | 'converted' | 'cancelled' {
-    const mapping: Record<SmartBillProformaStatus, 'draft' | 'issued' | 'sent' | 'converted' | 'cancelled'> = {
+  static mapProformaStatus(
+    smartbillStatus: SmartBillProformaStatus,
+  ): 'draft' | 'issued' | 'sent' | 'converted' | 'cancelled' {
+    const mapping: Record<
+      SmartBillProformaStatus,
+      'draft' | 'issued' | 'sent' | 'converted' | 'cancelled'
+    > = {
       draft: 'draft',
       sent: 'sent',
       converted: 'converted',
@@ -62,7 +72,9 @@ export class SmartBillStatusMapper {
    * Determine if status is final (no further updates expected)
    */
   static isFinalInvoiceStatus(smartbillStatus: SmartBillInvoiceStatus): boolean {
-    return smartbillStatus === 'paid' || smartbillStatus === 'canceled' || smartbillStatus === 'storno';
+    return (
+      smartbillStatus === 'paid' || smartbillStatus === 'canceled' || smartbillStatus === 'storno'
+    );
   }
 
   /**
@@ -148,7 +160,7 @@ export class SmartBillApiClient {
       },
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     });
 
@@ -178,7 +190,9 @@ export class SmartBillApiClient {
    *   products: [...]
    * });
    */
-  async createInvoice(payload: any): Promise<{ id: string; number: string; status: SmartBillInvoiceStatus }> {
+  async createInvoice(
+    payload: any,
+  ): Promise<{ id: string; number: string; status: SmartBillInvoiceStatus; series?: string }> {
     return this.withRetry(async () => {
       try {
         logger.info('Creating SmartBill invoice', {
@@ -206,9 +220,75 @@ export class SmartBillApiClient {
           id: smartBillId,
           number: invoiceNumber,
           status: result.status || 'sent',
+          series: result.series || result.seriesName || payload.seriesName,
         };
       } catch (error) {
         throw this.handleApiError(error, 'createInvoice');
+      }
+    });
+  }
+
+  /**
+   * Create invoice with raw SmartBill payload (no field remapping).
+   *
+   * This is used for catalog product registration where payload must
+   * match SmartBill's documented invoice schema exactly.
+   */
+  async createInvoiceRaw(payload: any): Promise<{
+    id?: string;
+    number?: string;
+    status?: SmartBillInvoiceStatus;
+    series?: string;
+  }> {
+    return this.withRetry(async () => {
+      try {
+        logger.info('Creating SmartBill invoice (raw payload)', {
+          seriesName: payload?.seriesName,
+          isDraft: payload?.isDraft,
+        });
+
+        const response = await this.axiosInstance.post('/invoice', payload);
+        const result = response.data || {};
+
+        return {
+          id: result.smartbillInvoiceId || result.id || result.invoiceId,
+          number: result.invoiceNumber || result.number,
+          status: result.status || 'draft',
+          series: result.series || result.seriesName || payload?.seriesName,
+        };
+      } catch (error) {
+        throw this.handleApiError(error, 'createInvoiceRaw');
+      }
+    });
+  }
+
+  /**
+   * Get available tax definitions configured in SmartBill.
+   *
+   * SmartBill API Endpoint: GET /tax?cif=...
+   */
+  async getTaxes(): Promise<Array<{ name: string; percentage: number }>> {
+    return this.withRetry(async () => {
+      try {
+        const params = new URLSearchParams({ cif: this.companyVat });
+        const response = await this.axiosInstance.get(`/tax?${params.toString()}`);
+
+        const taxesRaw = response.data?.taxes;
+        const taxes = Array.isArray(taxesRaw)
+          ? taxesRaw
+              .map((tax: any) => ({
+                name: String(tax?.name || '').trim(),
+                percentage: Number(tax?.percentage),
+              }))
+              .filter((tax: { name: string; percentage: number }) => {
+                return tax.name.length > 0 && Number.isFinite(tax.percentage);
+              })
+          : [];
+
+        logger.debug('SmartBill taxes fetched', { count: taxes.length });
+        return taxes;
+      } catch (error) {
+        throw this.handleApiError(error, 'getTaxes');
       }
     });
   }
@@ -232,7 +312,9 @@ export class SmartBillApiClient {
    *   products: [...]
    * });
    */
-  async createProforma(payload: any): Promise<{ id: string; number: string; status: SmartBillProformaStatus }> {
+  async createProforma(
+    payload: any,
+  ): Promise<{ id: string; number: string; status: SmartBillProformaStatus }> {
     return this.withRetry(async () => {
       try {
         logger.info('Creating SmartBill proforma', {
@@ -378,7 +460,9 @@ export class SmartBillApiClient {
     return this.withRetry(async () => {
       try {
         const params = new URLSearchParams({ cif: this.companyVat });
-        const response = await this.axiosInstance.get(`/invoice/status?${params.toString()}&smartbillInvoiceId=${smartBillId}`);
+        const response = await this.axiosInstance.get(
+          `/invoice/status?${params.toString()}&smartbillInvoiceId=${smartBillId}`,
+        );
 
         const result = response.data || {};
         return {
@@ -396,22 +480,36 @@ export class SmartBillApiClient {
   /**
    * Get all stocks for all warehouses in a single call.
    *
-   * SmartBill API Endpoint: GET /warehouse
+   * SmartBill API Endpoint: GET /stocks?cif=...&date=YYYY-MM-DD
    *
    * @returns Array of warehouses with their products
    * @throws {SmartBillApiError} If API call fails
    */
-  async getStocks(): Promise<Array<{ warehouseName: string; products: Array<{ sku: string; name?: string; quantity: number; price?: number; measuringUnit?: string; vat?: number }> }>> {
+  async getStocks(): Promise<
+    Array<{
+      warehouseName: string;
+      products: Array<{
+        sku: string;
+        name?: string;
+        quantity: number;
+        price?: number;
+        measuringUnit?: string;
+        vat?: number;
+      }>;
+    }>
+  > {
     return this.withRetry(async () => {
       try {
-        const params = new URLSearchParams({ cif: this.companyVat });
-        const response = await this.axiosInstance.get(`/warehouse?${params.toString()}`);
+        const today = new Date().toISOString().split('T')[0];
+        const params = new URLSearchParams({ cif: this.companyVat, date: today });
+        const response = await this.axiosInstance.get(`/stocks?${params.toString()}`);
 
-        const data = response.data || [];
-        const list = Array.isArray(data) ? data : (data.warehouses || []);
+        const data = response.data || {};
+        const list = Array.isArray(data) ? data : data.list || data.warehouses || [];
 
         const result = list.map((entry: any) => {
-          const warehouseName = entry.warehouseName || entry.name || 'unknown';
+          const warehouseName =
+            entry.warehouse?.warehouseName || entry.warehouseName || entry.name || 'unknown';
 
           return {
             warehouseName,
@@ -431,7 +529,12 @@ export class SmartBillApiClient {
                 quantity: typeof p.quantity === 'number' ? p.quantity : 0,
                 price: price !== null ? price : undefined,
                 measuringUnit: p.measuringUnit || p.um || 'buc',
-                vat: typeof p.vat === 'number' ? p.vat : (typeof p.vatRate === 'number' ? p.vatRate : 19),
+                vat:
+                  typeof p.vat === 'number'
+                    ? p.vat
+                    : typeof p.vatRate === 'number'
+                      ? p.vatRate
+                      : 19,
               };
             }),
           };
@@ -452,9 +555,18 @@ export class SmartBillApiClient {
    * @returns Array of SKUs with quantities and product details
    * @throws {SmartBillApiError} If API call fails
    */
-  async getStock(warehouseId: string): Promise<Array<{ sku: string; name?: string; quantity: number; price?: number; measuringUnit?: string; vat?: number }>> {
+  async getStock(warehouseId: string): Promise<
+    Array<{
+      sku: string;
+      name?: string;
+      quantity: number;
+      price?: number;
+      measuringUnit?: string;
+      vat?: number;
+    }>
+  > {
     const stocks = await this.getStocks();
-    const entry = stocks.find(s => s.warehouseName === warehouseId);
+    const entry = stocks.find((s) => s.warehouseName === warehouseId);
     return entry ? entry.products : [];
   }
 
@@ -466,7 +578,7 @@ export class SmartBillApiClient {
    */
   async getWarehouses(): Promise<Array<{ id: string; name: string }>> {
     const stocks = await this.getStocks();
-    return stocks.map(s => ({
+    return stocks.map((s) => ({
       id: s.warehouseName,
       name: s.warehouseName,
     }));
@@ -482,7 +594,10 @@ export class SmartBillApiClient {
    * @returns Cancellation result
    * @throws {SmartBillApiError} If API call fails
    */
-  async cancelInvoice(seriesName: string, number: string): Promise<{ success: boolean; message?: string }> {
+  async cancelInvoice(
+    seriesName: string,
+    number: string,
+  ): Promise<{ success: boolean; message?: string }> {
     return this.withRetry(async () => {
       try {
         const response = await this.axiosInstance.post('/invoice/cancel', {
@@ -513,7 +628,10 @@ export class SmartBillApiClient {
    * @returns Cancellation result
    * @throws {SmartBillApiError} If API call fails
    */
-  async cancelProforma(seriesName: string, number: string): Promise<{ success: boolean; message?: string }> {
+  async cancelProforma(
+    seriesName: string,
+    number: string,
+  ): Promise<{ success: boolean; message?: string }> {
     return this.withRetry(async () => {
       try {
         const response = await this.axiosInstance.post('/proforma/cancel', {
@@ -544,7 +662,10 @@ export class SmartBillApiClient {
    * @returns The created invoice details
    * @throws {SmartBillApiError} If API call fails
    */
-  async convertProformaToInvoice(seriesName: string, number: string): Promise<{ id: string; number: string; invoiceSeries: string; invoiceNumber: string }> {
+  async convertProformaToInvoice(
+    seriesName: string,
+    number: string,
+  ): Promise<{ id: string; number: string; invoiceSeries: string; invoiceNumber: string }> {
     return this.withRetry(async () => {
       try {
         const response = await this.axiosInstance.post('/proforma/convert', {
@@ -643,11 +764,13 @@ export class SmartBillApiClient {
    */
   private isRetryableError(error: any): boolean {
     // Network errors
-    if (error?.code === 'ECONNREFUSED' ||
-        error?.code === 'ETIMEDOUT' ||
-        error?.code === 'ENOTFOUND' ||
-        error?.code === 'ENETUNREACH' ||
-        error?.code === 'EAI_AGAIN') {
+    if (
+      error?.code === 'ECONNREFUSED' ||
+      error?.code === 'ETIMEDOUT' ||
+      error?.code === 'ENOTFOUND' ||
+      error?.code === 'ENETUNREACH' ||
+      error?.code === 'EAI_AGAIN'
+    ) {
       return true;
     }
 
@@ -710,7 +833,7 @@ export class SmartBillApiClient {
 
         // Handle multiple errors
         if (responseData.errors && Array.isArray(responseData.errors)) {
-          message = responseData.errors.map(e => e.message).join(', ');
+          message = responseData.errors.map((e) => e.message).join(', ');
         }
 
         apiResponse = responseData;
@@ -728,11 +851,7 @@ export class SmartBillApiClient {
       apiResponse,
     });
 
-    return new SmartBillApiError(
-      message,
-      statusCode,
-      apiResponse,
-    );
+    return new SmartBillApiError(message, statusCode, apiResponse);
   }
 
   /**
@@ -744,6 +863,6 @@ export class SmartBillApiClient {
    * @internal
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

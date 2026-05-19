@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'react-hot-toast';
 import {
   Plus, Search, Send, Paperclip, MoreVertical,
   Clock, Check, CheckCheck,
@@ -18,6 +17,11 @@ import { DataTable } from '../components/ui/DataTable';
 import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
+
+const toast = {
+  success: (message: string) => console.info(message),
+  error: (message: string) => console.error(message),
+};
 
 // ============================================================
 // SUB-COMPONENTS

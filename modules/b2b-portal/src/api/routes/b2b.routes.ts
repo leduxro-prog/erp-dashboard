@@ -1,3 +1,6 @@
+import { createHash } from 'crypto';
+import jwt from 'jsonwebtoken';
+
 import { asyncHandler } from '@shared/middleware/async-handler';
 import { authenticate, requireRole, AuthenticatedRequest } from '@shared/middleware/auth.middleware';
 import { authenticateB2B } from '@shared/middleware/b2b-auth.middleware';
@@ -38,7 +41,14 @@ import {
   convertCartToOrderSchema,
   createBulkOrderSchema,
   listBulkOrdersSchema,
+  listProductsSchema,
 } from '../validators/b2b.validators';
+import { SettingsService } from '../../../../settings/src/application/services/SettingsService';
+import { createModuleLogger } from '../../../../../shared/utils/logger';
+import type {
+  B2BAuthenticatedRequest,
+  B2BJWTPayload,
+} from '../../../../../shared/middleware/b2b-auth.middleware';
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -57,6 +67,160 @@ const csvUpload = multer({
   },
 });
 
+const catalogCacheHeaders = (ttlSeconds = 60) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const bucket = Math.floor(Date.now() / (ttlSeconds * 1000));
+    const etag = `W/"${createHash('sha1').update(`${req.originalUrl}:${bucket}`).digest('hex')}"`;
+
+    res.setHeader(
+      'Cache-Control',
+      `public, max-age=${ttlSeconds}, s-maxage=${ttlSeconds}, stale-while-revalidate=${ttlSeconds}`,
+    );
+    res.setHeader('ETag', etag);
+    res.setHeader('Vary', 'Accept-Encoding');
+
+    if (req.headers['if-none-match'] === etag) {
+      res.status(304).end();
+      return;
+    }
+
+    next();
+  };
+};
+
+const catalogPolicyLogger = createModuleLogger('b2b-catalog-policy');
+const PROTECTED_CATALOG_FIELDS = [
+  'price',
+  'stock_local',
+  'stock_supplier',
+  'stock_total',
+  'credit_limit',
+  'discount_tiers',
+] as const;
+
+type CatalogVisibility = 'public' | 'login_only' | 'hidden';
+type CatalogPolicyState = {
+  catalogVisibility: CatalogVisibility;
+  isAuthenticatedB2B: boolean;
+};
+
+const attachOptionalB2BAuth = (req: Request, _res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  const secret = process.env['JWT_SECRET_B2B'];
+  if (!secret) {
+    next();
+    return;
+  }
+
+  try {
+    const decoded = jwt.verify(authHeader.substring(7), secret);
+    if (typeof decoded === 'object' && decoded && (decoded as B2BJWTPayload).realm === 'b2b') {
+      const payload = decoded as B2BJWTPayload;
+      (req as B2BAuthenticatedRequest).b2bCustomer = {
+        id: payload.sub,
+        email: payload.email,
+        role: payload.role,
+        customer_id: payload.customer_id,
+        tier: payload.tier,
+        company_name: payload.company_name,
+      };
+    }
+  } catch {
+    // Treat invalid tokens as anonymous for public retail endpoints.
+  }
+
+  next();
+};
+
+const setCatalogPolicyState = (res: Response, state: CatalogPolicyState) => {
+  res.locals['catalogPolicyState'] = state;
+};
+
+const getCatalogPolicyState = (res: Response): CatalogPolicyState | undefined => {
+  return res.locals['catalogPolicyState'] as CatalogPolicyState | undefined;
+};
+
+const redactProtectedCatalogFields = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((item) => redactProtectedCatalogFields(item));
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+  const nextRecord: Record<string, unknown> = {};
+
+  for (const [key, nestedValue] of Object.entries(record)) {
+    if (PROTECTED_CATALOG_FIELDS.includes(key as (typeof PROTECTED_CATALOG_FIELDS)[number])) {
+      continue;
+    }
+    nextRecord[key] = redactProtectedCatalogFields(nestedValue);
+  }
+
+  return nextRecord;
+};
+
+const redactAnonymousLoginOnlyCatalogResponse = (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const originalJson = res.json.bind(res);
+
+  res.json = ((body: unknown) => {
+    const policyState = getCatalogPolicyState(res);
+
+    if (
+      policyState?.catalogVisibility === 'login_only' &&
+      !policyState.isAuthenticatedB2B &&
+      body &&
+      typeof body === 'object'
+    ) {
+      return originalJson(redactProtectedCatalogFields(body));
+    }
+
+    return originalJson(body);
+  }) as Response['json'];
+
+  next();
+};
+
+const enforceCatalogVisibility = (settingsService: Pick<SettingsService, 'getPublicSettings'>) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const publicSettings = await settingsService.getPublicSettings();
+      const catalogVisibility =
+        (publicSettings.b2b?.catalogVisibility as CatalogVisibility | undefined) ?? 'public';
+      const isAuthenticatedB2B = Boolean((req as B2BAuthenticatedRequest).b2bCustomer?.id);
+
+      setCatalogPolicyState(res, {
+        catalogVisibility,
+        isAuthenticatedB2B,
+      });
+
+      if (catalogVisibility === 'hidden' && !isAuthenticatedB2B) {
+        res.status(404).json({
+          success: false,
+          message: 'Catalog not found',
+        });
+        return;
+      }
+
+      next();
+    } catch (error) {
+      catalogPolicyLogger.error('Failed to resolve catalog visibility policy', { error });
+      next(error);
+    }
+  };
+};
+
 export function createB2BRoutes(
   controller: B2BController,
   orderController: B2BOrderController,
@@ -68,47 +232,64 @@ export function createB2BRoutes(
   favoritesController?: B2BFavoritesController,
   webhookController?: B2BPortalWebhookController,
   syncController?: B2BPortalSyncController,
-  teamController?: B2BTeamController,
+  settingsServiceOrTeamController:
+    | Pick<SettingsService, 'getPublicSettings'>
+    | B2BTeamController = new SettingsService(catalogPolicyLogger),
+  teamControllerOrProjectController?: B2BTeamController | B2BProjectController,
   projectController?: B2BProjectController,
 ): Router {
   const router = Router();
+  const hasSettingsService = (
+    value: Pick<SettingsService, 'getPublicSettings'> | B2BTeamController,
+  ): value is Pick<SettingsService, 'getPublicSettings'> =>
+    typeof (value as Pick<SettingsService, 'getPublicSettings'>).getPublicSettings === 'function';
+  const settingsService = hasSettingsService(settingsServiceOrTeamController)
+    ? settingsServiceOrTeamController
+    : new SettingsService(catalogPolicyLogger);
+  const resolvedTeamController = hasSettingsService(settingsServiceOrTeamController)
+    ? (teamControllerOrProjectController as B2BTeamController | undefined)
+    : settingsServiceOrTeamController;
+  const resolvedProjectController = hasSettingsService(settingsServiceOrTeamController)
+    ? projectController
+    : (teamControllerOrProjectController as B2BProjectController | undefined);
+  const catalogVisibilityMiddleware = enforceCatalogVisibility(settingsService);
 
   /**
    * B2B Team Management
    */
-  if (teamController) {
-    router.get('/team', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      teamController.listTeam(req, res)
+  if (resolvedTeamController) {
+    router.get('/team', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedTeamController.listTeam(req, res)
     ));
-    router.post('/team/invite', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      teamController.inviteMember(req, res)
+    router.post('/team/invite', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedTeamController.inviteMember(req, res)
     ));
-    router.put('/team/:id', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      teamController.updateMember(req, res)
+    router.put('/team/:id', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedTeamController.updateMember(req, res)
     ));
-    router.delete('/team/:id', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      teamController.removeMember(req, res)
+    router.delete('/team/:id', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedTeamController.removeMember(req, res)
     ));
   }
 
   /**
    * B2B Collaborative Projects
    */
-  if (projectController) {
-    router.get('/projects', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      projectController.listProjects(req, res)
+  if (resolvedProjectController) {
+    router.get('/projects', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.listProjects(req, res)
     ));
-    router.post('/projects', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      projectController.createProject(req, res)
+    router.post('/projects', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.createProject(req, res)
     ));
-    router.get('/projects/:id', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      projectController.getProject(req, res)
+    router.get('/projects/:id', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.getProject(req, res)
     ));
-    router.post('/projects/:id/items', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      projectController.addItem(req, res)
+    router.post('/projects/:id/items', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.addItem(req, res)
     ));
-    router.post('/projects/:id/convert', authenticateB2B, asyncHandler((req: any, res: Response) => 
-      projectController.convertToCart(req, res)
+    router.post('/projects/:id/convert', authenticateB2B, asyncHandler((req: any, res: Response) =>
+      resolvedProjectController.convertToCart(req, res)
     ));
   }
 
@@ -152,6 +333,11 @@ export function createB2BRoutes(
    */
   router.get(
     '/products',
+    queryValidationMiddleware(listProductsSchema),
+    attachOptionalB2BAuth,
+    catalogVisibilityMiddleware,
+    redactAnonymousLoginOnlyCatalogResponse,
+    catalogCacheHeaders(60),
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       controller.listProducts(req, res, next),
     ),
@@ -164,6 +350,9 @@ export function createB2BRoutes(
    */
   router.get(
     '/products/filters',
+    attachOptionalB2BAuth,
+    catalogVisibilityMiddleware,
+    catalogCacheHeaders(180),
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       controller.getProductFilters(req, res, next),
     ),
@@ -176,8 +365,23 @@ export function createB2BRoutes(
    */
   router.get(
     '/products/categories',
+    attachOptionalB2BAuth,
+    catalogVisibilityMiddleware,
+    catalogCacheHeaders(300),
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       controller.getProductCategories(req, res, next),
+    ),
+  );
+
+  /**
+   * GET /documents/preview
+   * Proxies external supplier documents for in-app preview (prevents iframe blocking)
+   */
+  router.get(
+    '/documents/preview',
+    authenticateB2B,
+    asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
+      controller.previewDocument(req, res, next),
     ),
   );
 
@@ -188,6 +392,9 @@ export function createB2BRoutes(
    */
   router.get(
     '/products/:id(\\d+)',
+    attachOptionalB2BAuth,
+    catalogVisibilityMiddleware,
+    redactAnonymousLoginOnlyCatalogResponse,
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       controller.getProductDetails(req, res, next),
     ),
@@ -240,7 +447,7 @@ export function createB2BRoutes(
    */
   router.get(
     '/customers',
-    authenticate,
+    authenticateB2B,
     queryValidationMiddleware(listCustomersSchema),
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       controller.listCustomers(req, res, next),
@@ -253,7 +460,7 @@ export function createB2BRoutes(
    */
   router.get(
     '/customers/:id',
-    authenticate,
+    authenticateB2B,
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       controller.getCustomerDetails(req, res, next),
     ),
@@ -333,6 +540,18 @@ export function createB2BRoutes(
     authenticateB2B,
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       orderController.getOrders(req, res, next),
+    ),
+  );
+
+  /**
+   * GET /orders/:id/model-pdf
+   * Download order model PDF for customer order
+   */
+  router.get(
+    '/orders/:id/model-pdf',
+    authenticateB2B,
+    asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
+      orderController.downloadOrderModelPdf(req, res, next),
     ),
   );
 
@@ -452,7 +671,7 @@ export function createB2BRoutes(
    * Get cart by customer ID (admin/sales rep)
    */
   router.get(
-    '/cart/:customerId',
+    '/cart/:customerId(\\d+)',
     authenticateB2B,
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       cartController.getCart(req, res, next),
@@ -548,7 +767,7 @@ export function createB2BRoutes(
    * Clear cart by customer ID (admin/sales rep)
    */
   router.delete(
-    '/cart/clear/:customerId',
+    '/cart/clear/:customerId(\\d+)',
     authenticateB2B,
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       cartController.clearCart(req, res, next),

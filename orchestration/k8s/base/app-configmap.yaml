@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cypher-app-config
+  namespace: cypher
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  API_PREFIX: "/api/v1"
+  APP_NAME: "CYPHER ERP"
+  APP_URL: "https://erp.example.com"
+  FRONTEND_URL: "https://erp.example.com"
+  B2B_FRONTEND_URL: "https://b2b.example.com"
+  PUBLIC_BASE_URL: "https://erp.example.com"
+  COOKIE_DOMAIN: ".example.com"
+  COOKIE_SECURE: "true"
+  VERSION: "latest"
+
+  DB_HOST: "postgres.cypher-data.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "cypher_erp"
+  DB_USER: "cypher_user"
+  DB_USERNAME: "cypher_user"
+  DB_SSL: "true"
+  DB_LOGGING: "false"
+  DB_POOL_MIN: "3"
+  DB_POOL_MAX: "12"
+  DB_STATEMENT_TIMEOUT: "120000"
+  DB_QUERY_TIMEOUT: "120000"
+
+  REDIS_HOST: "redis.cypher-data.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+
+  RABBITMQ_HOST: "rabbitmq.cypher-data.svc.cluster.local"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "admin"
+  RABBITMQ_VHOST: "/"
+
+  JWT_EXPIRES_IN: "24h"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+
+  LOG_LEVEL: "info"
+  CORS_ORIGINS: "https://erp.example.com,https://b2b.example.com"
+  CORS_CREDENTIALS: "true"
+  ALLOW_LOCALHOST_ORIGINS: "false"
+  TRUST_PROXY: "2"
+
+  SUPPLIER_SYNC_INTERVAL_MS: "14400000"
+  SUPPLIER_SCRAPE_TIMEOUT_MS: "30000"
+  SUPPLIER_SCRAPE_MAX_RETRIES: "3"
+
+  FEATURE_ENABLE_WOOCOMMERCE_SYNC: "false"

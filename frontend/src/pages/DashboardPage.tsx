@@ -23,9 +23,9 @@ const columns: Column<Order>[] = [
     label: 'Status',
     render: (value) => <StatusBadge status={value.toLowerCase()} />,
   },
-  { 
-    key: 'createdAt', 
-    label: 'Date', 
+  {
+    key: 'createdAt',
+    label: 'Date',
     sortable: true,
     render: (value) => new Date(value).toLocaleDateString('ro-RO')
   },
@@ -63,7 +63,7 @@ export function DashboardPage() {
   }
 
   const findKPI = (name: string) => kpis?.find(k => k.name === name) || { value: 0, change: 0, trend: [] };
-  
+
   const revenueKPI = findKPI('TOTAL_REVENUE');
   const ordersKPI = findKPI('ORDER_COUNT');
   const aovKPI = findKPI('AVG_ORDER_VALUE');
@@ -76,13 +76,13 @@ export function DashboardPage() {
   })) || [];
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 lg:p-8 space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold text-text-primary">Dashboard</h1>
           <p className="text-text-secondary mt-1">Bun venit înapoi! Iată o privire de ansamblu asupra afacerii tale.</p>
         </div>
-        <button className="btn-primary">Export Raport</button>
+        <button className="btn-primary w-full sm:w-auto">Export Raport</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -12,6 +12,7 @@ import { ConvertProformaToInvoiceUseCase } from '../../application/use-cases/Con
 import { CreateInvoiceUseCase } from '../../application/use-cases/CreateInvoice';
 import { CreateProformaUseCase } from '../../application/use-cases/CreateProforma';
 import { CreateProformaFromQuoteUseCase } from '../../application/use-cases/CreateProformaFromQuote';
+import { RegisterCatalogProductUseCase } from '../../application/use-cases/RegisterCatalogProduct';
 import { GetWarehousesUseCase } from '../../application/use-cases/GetWarehouses';
 import { ImportPricesFromExcelUseCase } from '../../application/use-cases/ImportPricesFromExcel';
 import { SyncInvoiceStatusUseCase } from '../../application/use-cases/SyncInvoiceStatus';
@@ -40,6 +41,7 @@ export class SmartBillController {
     private readonly syncMonitorService?: SyncMonitorService,
     private readonly convertProformaToInvoiceUseCase?: ConvertProformaToInvoiceUseCase,
     private readonly syncInvoiceStatusUseCase?: SyncInvoiceStatusUseCase,
+    private readonly registerCatalogProductUseCase?: RegisterCatalogProductUseCase,
   ) {}
 
   async createInvoice(req: Request, res: Response): Promise<void> {
@@ -112,6 +114,24 @@ export class SmartBillController {
     try {
       const result = await this.syncStockUseCase.execute();
       res.json(successResponse(result));
+    } catch (error) {
+      this.handleError(error, res);
+    }
+  }
+
+  async registerCatalogProduct(req: Request, res: Response): Promise<void> {
+    try {
+      if (!this.registerCatalogProductUseCase) {
+        res
+          .status(503)
+          .json(
+            errorResponse('SERVICE_UNAVAILABLE', 'Catalog registration feature not available', 503),
+          );
+        return;
+      }
+
+      const result = await this.registerCatalogProductUseCase.execute(req.body);
+      res.status(201).json(successResponse(result));
     } catch (error) {
       this.handleError(error, res);
     }

@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import toast from 'react-hot-toast';
 import {
   Search,
   SlidersHorizontal,
@@ -17,16 +16,14 @@ import {
   Droplets,
   CheckCircle,
   Shield,
-  Camera,
-  FolderPlus,
-  ArrowRight,
-  TrendingUp,
-  ChevronRight,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { ResponsiveImage } from '../../components/ui/ResponsiveImage';
 import { b2bApi } from '../../services/b2b-api';
 import { useCartStore } from '../../stores/cart.store';
 import { useB2BAuthStore } from '../../stores/b2b/b2b-auth.store';
+import { trackAddToCart } from '../../services/retargeting';
+import { resolveSupplierLeadTimeLabel } from '../../utils/supplierLeadTime';
 
 interface Product {
   id: number;
@@ -38,28 +35,69 @@ interface Product {
   image_url: string;
   stock_local: number;
   stock_supplier: number;
+  stock_total?: number;
   supplier_lead_time: number;
+  supplier_lead_time_label?: string;
+  supplier_name?: string | null;
   rating?: number;
   category?: string;
-  technical?: {
-    wattage?: number;
-    kelvin?: number;
-    ipRating?: string;
-    lumens?: number;
-  };
+  brand?: string | null;
+  manufacturer?: string | null;
+  mounting_type?: string | null;
+  ip_rating?: string | null;
+  color_temperature?: number | null;
 }
 
-// Specs parser - extract lighting specs from product name/description
-const parseSpecs = (product: Product) => {
-  if (product.technical) {
+const getTotalStock = (product: Product): number => {
+  return Number(product.stock_total ?? 0) || product.stock_local + product.stock_supplier;
+};
+
+const getSupplierStockDisplay = (
+  product: Product,
+): { label: string; color: string; dot: string } | null => {
+  const leadTimeLabel = resolveSupplierLeadTimeLabel(
+    product.supplier_name,
+    product.supplier_lead_time,
+    product.supplier_lead_time_label,
+    product.brand,
+    product.manufacturer,
+  );
+  const supplierName = String(product.supplier_name || '').toLowerCase();
+  const isMplSupplier = supplierName.includes('mpl power');
+
+  if (isMplSupplier) {
+    const available = product.stock_supplier > 0;
     return {
-      watt: product.technical.wattage ? `${product.technical.wattage}W` : null,
-      kelvin: product.technical.kelvin ? product.technical.kelvin.toString() : null,
-      ip: product.technical.ipRating || null,
-      lumen: product.technical.lumens ? `${product.technical.lumens}lm` : null,
+      label: available
+        ? `Furnizor: Disponibil (${leadTimeLabel} zile)`
+        : 'Furnizor: Indisponibil',
+      color: available ? '#4f8eff' : '#ef4444',
+      dot: available ? '#4f8eff' : '#ef4444',
     };
   }
 
+  if (product.stock_supplier <= 0) {
+    return null;
+  }
+
+  return {
+    label: `Furnizor: ${product.stock_supplier} buc (${leadTimeLabel} zile)`,
+    color: '#4f8eff',
+    dot: '#4f8eff',
+  };
+};
+
+const getManufacturer = (product: Product): string | null => {
+  const value =
+    String(product.manufacturer || '').trim() ||
+    String(product.brand || '').trim() ||
+    String(product.supplier_name || '').trim();
+
+  return value.length > 0 ? value : null;
+};
+
+// Specs parser - extract lighting specs from product name/description
+const parseSpecs = (product: Product) => {
   const text = `${product.name} ${product.description}`.toLowerCase();
   const wattMatch = text.match(/(\d+)\s*w(?:att)?/i);
   const kelvinMatch = text.match(/(\d{4})\s*k/i);
@@ -67,8 +105,8 @@ const parseSpecs = (product: Product) => {
   const lumenMatch = text.match(/(\d+)\s*(?:lm|lumen)/i);
   return {
     watt: wattMatch ? `${wattMatch[1]}W` : null,
-    kelvin: kelvinMatch ? kelvinMatch[1] : null,
-    ip: ipMatch ? `IP${ipMatch[1]}` : null,
+    kelvin: kelvinMatch ? kelvinMatch[1] : null, // Returns "4000"
+    ip: ipMatch ? `IP${ipMatch[1]}` : null, // Returns "IP65"
     lumen: lumenMatch ? `${lumenMatch[1]}lm` : null,
   };
 };
@@ -108,73 +146,196 @@ const sortOptions = [
 ];
 
 export const B2BStoreCatalogPage: React.FC = () => {
+  const PAGE_SIZE = 48;
+  const AUTO_LOAD_ROOT_MARGIN = '280px';
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Toate Produsele');
   const [selectedKelvin, setSelectedKelvin] = useState<string[]>([]);
   const [selectedIp, setSelectedIp] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [selectedMounting, setSelectedMounting] = useState<string[]>([]);
-  const [selectedEnergy, setSelectedEnergy] = useState<string[]>([]);
-  const [isDimmable, setIsDimmable] = useState<boolean | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string[]>([]);
+  const [selectedMountingType, setSelectedMountingType] = useState<string[]>([]);
+  const [selectedStripType, setSelectedStripType] = useState<string[]>([]);
+  const [selectedLedVoltage, setSelectedLedVoltage] = useState<string[]>([]);
+  const [selectedLightColor, setSelectedLightColor] = useState<string[]>([]);
   const [priceMin, setPriceMin] = useState('');
   const [priceMax, setPriceMax] = useState('');
-  const [wattageMin, setWattageMin] = useState('');
-  const [wattageMax, setWattageMax] = useState('');
-  const [stockFilter, setStockFilter] = useState<'all' | 'local' | 'supplier'>('all');
+  const [stockFilter, setStockFilter] = useState<'all' | 'stock' | 'local' | 'supplier'>('all');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [addedToCart, setAddedToCart] = useState<number | null>(null);
-  const [compareList, setCompareList] = useState<number[]>([]);
-  const [isVisualSearching, setIsVisualSearching] = useState(false);
-
-  // Projects
-  const [availableProjects, setAvailableProjects] = useState<any[]>([]);
-  const [showProjectModal, setShowProjectModal] = useState<{ productId: number } | null>(null);
-
-  // B2B Rules
   const [b2bSettings, setB2bSettings] = useState({
     showPrices: true,
     showStock: true,
     catalogVisibility: 'public' as 'public' | 'login_only' | 'hidden',
   });
 
-  // Dynamic Filters
   const [availableCategories, setAvailableCategories] = useState<string[]>(lightingCategories);
-  const [availableFilters, setAvailableFilters] = useState<{ 
-    kelvin: any[]; 
+  const [availableFilters, setAvailableFilters] = useState<{
+    kelvin: any[];
     ip: any[];
-    brands: any[];
-    mounting: any[];
-    energy: any[];
+    brand: any[];
+    mountingType: any[];
+    stripType: any[];
+    ledVoltage: any[];
+    lightColor: any[];
   }>({
     kelvin: kelvinOptions,
     ip: ipOptions,
-    brands: [],
-    mounting: [],
-    energy: []
+    brand: [],
+    mountingType: [],
+    stripType: [],
+    ledVoltage: [],
+    lightColor: [],
   });
-
-  // Pagination
-  const [page, setPage] = useState(1);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const itemsPerPage = 24;
 
   const { addItem } = useCartStore();
   const { isAuthenticated } = useB2BAuthStore();
   const location = useLocation();
+  const latestRequestIdRef = useRef(0);
+  const activeRequestAbortRef = useRef<AbortController | null>(null);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  const prefetchedProductIdsRef = useRef<Set<number>>(new Set());
+  const preloadedLcpImageRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    fetchB2BSettings();
+    loadCategories();
+  }, []);
+
+  useEffect(() => {
+    loadFilters(selectedCategory !== 'Toate Produsele' ? selectedCategory : undefined);
+  }, [selectedCategory]);
+
+  const loadCategories = async () => {
+    try {
+      const cats = await b2bApi.getCategories();
+
+      if (cats && Array.isArray(cats)) {
+        const normalizedCategories = cats
+          .map((cat) => {
+            if (typeof cat === 'string') {
+              return cat.trim();
+            }
+
+            if (cat && typeof cat === 'object' && 'name' in cat) {
+              return String((cat as { name?: unknown }).name || '').trim();
+            }
+
+            return '';
+          })
+          .filter((name) => name.length > 0);
+
+        setAvailableCategories(['Toate Produsele', ...normalizedCategories]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
+
+  const loadFilters = async (category?: string) => {
+    try {
+      const filters = await b2bApi.getFilters({ category });
+
+      if (!filters) {
+        return;
+      }
+
+      setAvailableFilters({
+        kelvin: Array.isArray(filters.kelvin) && filters.kelvin.length > 0 ? filters.kelvin : [],
+        ip: Array.isArray(filters.ip) && filters.ip.length > 0 ? filters.ip : [],
+        brand: Array.isArray(filters.brand) ? filters.brand : [],
+        mountingType: Array.isArray(filters.mountingType) ? filters.mountingType : [],
+        stripType: Array.isArray(filters.stripType) ? filters.stripType : [],
+        ledVoltage: Array.isArray(filters.ledVoltage) ? filters.ledVoltage : [],
+        lightColor: Array.isArray(filters.lightColor) ? filters.lightColor : [],
+      });
+
+      setSelectedKelvin((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.kelvin) ? filters.kelvin : []).some(
+            (opt: any) => String(opt.value) === value,
+          ),
+        ),
+      );
+      setSelectedIp((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.ip) ? filters.ip : []).some(
+            (opt: any) => String(opt.value).toUpperCase() === value.toUpperCase(),
+          ),
+        ),
+      );
+      setSelectedBrand((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.brand) ? filters.brand : []).some(
+            (opt: any) => String(opt.value) === value,
+          ),
+        ),
+      );
+      setSelectedMountingType((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.mountingType) ? filters.mountingType : []).some(
+            (opt: any) => String(opt.value) === value,
+          ),
+        ),
+      );
+      setSelectedStripType((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.stripType) ? filters.stripType : []).some(
+            (opt: any) => String(opt.value).toLowerCase() === value.toLowerCase(),
+          ),
+        ),
+      );
+      setSelectedLedVoltage((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.ledVoltage) ? filters.ledVoltage : []).some(
+            (opt: any) => String(opt.value) === value,
+          ),
+        ),
+      );
+      setSelectedLightColor((prev) =>
+        prev.filter((value) =>
+          (Array.isArray(filters.lightColor) ? filters.lightColor : []).some(
+            (opt: any) => String(opt.value).toLowerCase() === value.toLowerCase(),
+          ),
+        ),
+      );
+    } catch (err) {
+      console.error('Failed to fetch filters:', err);
+      // Fallback to defaults already in state
+    }
+  };
+
+  const isAbortLikeError = (error: unknown): boolean => {
+    const maybeError = error as { name?: string; code?: string; message?: string };
+    return (
+      maybeError?.name === 'AbortError' ||
+      maybeError?.code === 'ERR_CANCELED' ||
+      maybeError?.message === 'canceled'
+    );
+  };
 
   const fetchB2BSettings = async () => {
     try {
-      const response = await fetch('/api/v1/settings', { credentials: 'include' });
-      if (!response.ok) return;
+      const response = await fetch('/api/v1/settings', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
       const payload = await response.json();
       const settings = payload?.data ?? payload;
+
       if (settings?.b2b) {
         setB2bSettings({
           showPrices: settings.b2b.showPrices !== false,
@@ -187,188 +348,265 @@ export const B2BStoreCatalogPage: React.FC = () => {
     }
   };
 
-  const loadFilters = async () => {
-    try {
-      const [cats, filters] = await Promise.all([b2bApi.getCategories(), b2bApi.getFilters()]);
-      if (cats && Array.isArray(cats)) {
-        setAvailableCategories(['Toate Produsele', ...cats]);
-      }
-      if (filters) {
-        setAvailableFilters({
-          kelvin: filters.color_temperatures || filters.kelvin || kelvinOptions,
-          ip: filters.ip_ratings || filters.ip || ipOptions,
-          brands: filters.brands || [],
-          mounting: filters.mounting_types || [],
-          energy: filters.energy_classes || []
-        });
-
-        if (filters.price_range) {
-          // setPriceMax(filters.price_range.max.toString());
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch filters:', err);
-    }
-  };
-
-  const fetchProjects = async () => {
-    if (!isAuthenticated) return;
-    try {
-      const data = await b2bApi.getB2BProjects();
-      setAvailableProjects(data || []);
-    } catch (err) {
-      console.error('Failed to fetch projects:', err);
-    }
-  };
-
-  const handleVisualSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setIsVisualSearching(true);
-      const formData = new FormData();
-      formData.append('image', file);
-
-      const response = await fetch('/api/v1/b2b/search/visual', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-      });
-
-      if (!response.ok) throw new Error('Visual search failed');
-      const payload = await response.json();
-      const data = payload?.data ?? payload;
-
-      if (data.suggested_search) {
-        setSearchQuery(data.suggested_search);
-        toast.success(`Căutare sugerată: ${data.suggested_search}`);
-      }
-    } catch (err) {
-      toast.error('Căutarea vizuală nu a putut identifica produsul.');
-    } finally {
-      setIsVisualSearching(false);
-      if (e.target) e.target.value = '';
-    }
-  };
-
-  const fetchProducts = async (isInitial = false) => {
-    try {
-      setLoading(true);
-      const currentPage = isInitial ? 1 : page;
-      const params: any = {
-        page: currentPage,
-        limit: itemsPerPage,
-        search: searchQuery || undefined,
-        category: selectedCategory !== 'Toate Produsele' ? selectedCategory : undefined,
-        kelvin: selectedKelvin.length > 0 ? selectedKelvin : undefined,
-        ip: selectedIp.length > 0 ? selectedIp : undefined,
-        brand: selectedBrands.length > 0 ? selectedBrands.join(',') : undefined,
-        mounting: selectedMounting.length > 0 ? selectedMounting.join(',') : undefined,
-        energy: selectedEnergy.length > 0 ? selectedEnergy.join(',') : undefined,
-        dimmable: isDimmable !== null ? isDimmable : undefined,
-        min_price: priceMin ? parseFloat(priceMin) : undefined,
-        max_price: priceMax ? parseFloat(priceMax) : undefined,
-        wattage_min: wattageMin ? parseFloat(wattageMin) : undefined,
-        wattage_max: wattageMax ? parseFloat(wattageMax) : undefined,
-        sort: sortBy,
-        stock: stockFilter !== 'all' ? stockFilter : undefined,
-      };
-
-      let fetchedItems: Product[] = [];
-      let total = 0;
-
-      if (isAuthenticated) {
-        const response = await b2bApi.getProducts(params);
-        fetchedItems = response.products || [];
-        total = response.total || 0;
-      } else {
-        const queryParams = new URLSearchParams();
-        Object.entries(params).forEach(([key, value]) => {
-          if (value === undefined || value === null || value === '') return;
-          if (Array.isArray(value)) {
-            value.forEach((v) => queryParams.append(key, String(v)));
-            return;
-          }
-          queryParams.append(key, String(value));
-        });
-
-        const response = await fetch(`/api/v1/b2b/products?${queryParams.toString()}`, { credentials: 'include' });
-        if (!response.ok) throw new Error('Failed to fetch');
-        const payload = await response.json();
-        const data = payload?.data ?? payload;
-        fetchedItems = data.products || [];
-        total = data.total || 0;
-      }
-
-      if (isInitial) {
-        setProducts(fetchedItems);
-      } else {
-        setProducts(prev => [...prev, ...fetchedItems]);
-      }
-      
-      setTotalProducts(total);
-      setHasMore((isInitial ? 0 : products.length) + fetchedItems.length < total);
-
-    } catch (err) {
-      console.error('Error fetching catalog:', err);
-      setError('S-a produs o eroare la încărcarea catalogului.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddToProject = async (projectId: string, productId: number) => {
-    try {
-      await b2bApi.addProductToProject(projectId, { product_id: productId, quantity: 1 });
-      toast.success('Produs adăugat în proiect!');
-      setShowProjectModal(null);
-    } catch (err) {
-      toast.error('Eroare la adăugarea în proiect.');
-    }
-  };
-
-  const toggleBrand = (val: string) => {
-    setSelectedBrands(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
-  };
-
-  const toggleMounting = (val: string) => {
-    setSelectedMounting(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
-  };
-
-  const toggleEnergy = (val: string) => {
-    setSelectedEnergy(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
-  };
-
-  const toggleKelvin = (val: string) => {
-    setSelectedKelvin(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
-  };
-
-  const toggleIp = (val: string) => {
-    setSelectedIp(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
-  };
-
-  const toggleCompare = (id: number) => {
-    setCompareList(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
-  };
-
   const handleAddToCart = (product: Product) => {
-    addItem({
-      productId: product.id,
+    addItem(
+      {
+        productId: product.id,
+        sku: product.sku,
+        name: product.name,
+        price: product.price,
+        currency: product.currency,
+        image_url: product.image_url,
+      },
+      1,
+    );
+
+    trackAddToCart({
+      id: product.id,
       sku: product.sku,
       name: product.name,
+      category: product.category,
+      quantity: 1,
       price: product.price,
-      currency: product.currency,
-      image_url: product.image_url,
-    }, 1);
+      currency: product.currency || 'RON',
+    });
+
+    // Show success feedback
     setAddedToCart(product.id);
     setTimeout(() => setAddedToCart(null), 2000);
   };
 
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      setPage(prev => prev + 1);
+  const fetchProducts = useCallback(async (pageToLoad = 1, append = false) => {
+    const requestId = ++latestRequestIdRef.current;
+    activeRequestAbortRef.current?.abort();
+    const abortController = new AbortController();
+    activeRequestAbortRef.current = abortController;
+
+    try {
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setError('');
+      }
+      const params = {
+        page: pageToLoad,
+        limit: PAGE_SIZE,
+        compact: true,
+        search: searchQuery || undefined,
+        category: selectedCategory !== 'Toate Produsele' ? selectedCategory : undefined,
+        kelvin: selectedKelvin.length > 0 ? selectedKelvin : undefined,
+        ip: selectedIp.length > 0 ? selectedIp : undefined,
+        brand: selectedBrand.length > 0 ? selectedBrand : undefined,
+        mountingType: selectedMountingType.length > 0 ? selectedMountingType : undefined,
+        stripType: selectedStripType.length > 0 ? selectedStripType : undefined,
+        ledVoltage: selectedLedVoltage.length > 0 ? selectedLedVoltage : undefined,
+        lightColor: selectedLightColor.length > 0 ? selectedLightColor : undefined,
+        min_price: priceMin ? parseFloat(priceMin) : undefined,
+        max_price: priceMax ? parseFloat(priceMax) : undefined,
+        sort: sortBy,
+        stock: stockFilter !== 'all' ? stockFilter : undefined,
+      };
+
+      let response: any;
+      let nextProducts: Product[] = [];
+      let pagination: any = null;
+
+      if (isAuthenticated) {
+        response = await b2bApi.getProducts(params, { signal: abortController.signal });
+        nextProducts = Array.isArray(response?.products) ? response.products : [];
+        pagination = response?.pagination || null;
+      } else {
+        const queryParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value === undefined || value === null || value === '') {
+            return;
+          }
+
+          if (Array.isArray(value)) {
+            value.forEach((item) => queryParams.append(key, String(item)));
+            return;
+          }
+
+          queryParams.append(key, String(value));
+        });
+
+        const response = await fetch(`/api/v1/b2b/products?${queryParams.toString()}`, {
+          credentials: 'include',
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch products');
+        }
+
+        const payload = await response.json();
+        const data = payload?.data ?? payload;
+        nextProducts = Array.isArray(data?.products) ? data.products : [];
+        pagination = data?.pagination || null;
+      }
+
+      if (requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
+      setProducts((prev) => (append ? [...prev, ...nextProducts] : nextProducts));
+      setCurrentPage(pageToLoad);
+      setTotalPages(Math.max(1, Number(pagination?.total_pages || 1)));
+      setTotalProducts(Number(pagination?.total || nextProducts.length));
+    } catch (err) {
+      if (isAbortLikeError(err)) {
+        return;
+      }
+
+      if (requestId !== latestRequestIdRef.current) {
+        return;
+      }
+
+      console.error('Failed to fetch products:', err);
+      setError('Nu s-a putut încărca catalogul.');
+    } finally {
+      if (requestId === latestRequestIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+
+      if (activeRequestAbortRef.current === abortController) {
+        activeRequestAbortRef.current = null;
+      }
     }
+  }, [
+    PAGE_SIZE,
+    isAuthenticated,
+    priceMax,
+    priceMin,
+    searchQuery,
+    selectedBrand,
+    selectedCategory,
+    selectedIp,
+    selectedKelvin,
+    selectedLedVoltage,
+    selectedLightColor,
+    selectedMountingType,
+    selectedStripType,
+    sortBy,
+    stockFilter,
+  ]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProducts(1, false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [fetchProducts]);
+
+  const filteredProducts = products;
+
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || currentPage >= totalPages) {
+      return;
+    }
+    fetchProducts(currentPage + 1, true);
+  }, [currentPage, fetchProducts, loadingMore, totalPages]);
+
+  const prefetchProductDetails = useCallback((productId: number) => {
+    if (!Number.isFinite(productId) || prefetchedProductIdsRef.current.has(productId)) {
+      return;
+    }
+
+    prefetchedProductIdsRef.current.add(productId);
+    fetch(`/api/v1/b2b/products/${productId}`, { credentials: 'include' }).catch(() => {
+      prefetchedProductIdsRef.current.delete(productId);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      activeRequestAbortRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    const firstImageUrl = products[0]?.image_url;
+    if (!firstImageUrl || firstImageUrl === preloadedLcpImageRef.current) {
+      return;
+    }
+
+    const preloadSelector = 'link[data-catalog-lcp="true"]';
+    const existing = document.querySelector(preloadSelector);
+    if (existing) {
+      existing.remove();
+    }
+
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = firstImageUrl;
+    link.setAttribute('fetchpriority', 'high');
+    link.setAttribute('data-catalog-lcp', 'true');
+    document.head.appendChild(link);
+    preloadedLcpImageRef.current = firstImageUrl;
+  }, [products]);
+
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return;
+        }
+
+        handleLoadMore();
+      },
+      { root: null, rootMargin: AUTO_LOAD_ROOT_MARGIN, threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [AUTO_LOAD_ROOT_MARGIN, handleLoadMore]);
+
+  const toggleKelvin = (val: string) => {
+    setSelectedKelvin((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleIp = (val: string) => {
+    setSelectedIp((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]));
+  };
+
+  const toggleBrand = (val: string) => {
+    setSelectedBrand((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleMountingType = (val: string) => {
+    setSelectedMountingType((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleStripType = (val: string) => {
+    setSelectedStripType((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleLedVoltage = (val: string) => {
+    setSelectedLedVoltage((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
+  };
+
+  const toggleLightColor = (val: string) => {
+    setSelectedLightColor((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
+    );
   };
 
   const clearFilters = () => {
@@ -376,115 +614,172 @@ export const B2BStoreCatalogPage: React.FC = () => {
     setSelectedCategory('Toate Produsele');
     setSelectedKelvin([]);
     setSelectedIp([]);
+    setSelectedBrand([]);
+    setSelectedMountingType([]);
+    setSelectedStripType([]);
+    setSelectedLedVoltage([]);
+    setSelectedLightColor([]);
     setPriceMin('');
     setPriceMax('');
     setStockFilter('all');
-    setPage(1);
   };
 
-  // Effects
-  useEffect(() => {
-    fetchB2BSettings();
-    loadFilters();
-  }, []);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchQuery, selectedCategory, selectedKelvin, selectedIp, priceMin, priceMax, sortBy, stockFilter]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProducts(page === 1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [page, searchQuery, selectedCategory, selectedKelvin, selectedIp, priceMin, priceMax, sortBy, stockFilter, isAuthenticated]);
-
-  const filteredProducts = products; // Using products directly as they are filtered by API
-
-  // Visibility Guards
+  // Check catalog visibility
   if (b2bSettings.catalogVisibility === 'hidden') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
-        <div className="text-center p-8">
-          <Package size={64} className="mx-auto mb-6 text-primary-500" />
-          <h2 className="text-2xl font-bold text-white mb-3">Catalog Temporar Indisponibil</h2>
-          <p className="text-gray-400 mb-6">Mentenanță în curs. Reveniți în curând.</p>
-          <Link to="/b2b-store" className="bg-primary-500 text-black px-8 py-3 rounded-xl font-bold">Acasă</Link>
+      <div
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: '#f8f9fa' }}
+      >
+        <div className="text-center max-w-md p-8">
+          <Package size={64} className="mx-auto mb-6" style={{ color: '#daa520' }} />
+          <h2 className="text-2xl font-bold text-text-primary mb-3">Catalog Temporar Indisponibil</h2>
+          <p className="text-text-tertiary mb-6">
+            Catalogul nostru este momentan în mentenanță. Vă rugăm reveniți în curând.
+          </p>
+          <Link
+            to="/b2b-store"
+            className="inline-block px-6 py-3 rounded-lg font-medium"
+            style={{ background: '#daa520', color: '#000' }}
+          >
+            Înapoi la Pagina Principală
+          </Link>
         </div>
       </div>
     );
   }
 
-  if (b2bSettings.catalogVisibility === 'login_only' && !isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
-        <div className="text-center p-8 max-w-md">
-          <Shield size={64} className="mx-auto mb-6 text-primary-500" />
-          <h2 className="text-2xl font-bold text-white mb-3">Acces Restricționat</h2>
-          <p className="text-gray-400 mb-8">Autentificați-vă pentru a accesa catalogul profesional Ledux.</p>
-          <div className="flex gap-4">
-            <Link to="/b2b-store/login" className="flex-1 bg-primary-500 text-black py-3 rounded-xl font-bold">Login</Link>
-            <Link to="/b2b-store/register" className="flex-1 border border-primary-500 text-primary-500 py-3 rounded-xl font-bold">Cont Nou</Link>
+  if (b2bSettings.catalogVisibility === 'login_only') {
+    if (!isAuthenticated) {
+      return (
+        <div
+          className="min-h-screen flex items-center justify-center px-4"
+          style={{ background: '#f8f9fa' }}
+        >
+          <div className="text-center max-w-md p-8">
+            <Shield size={64} className="mx-auto mb-6" style={{ color: '#daa520' }} />
+            <h2 className="text-2xl font-bold text-text-primary mb-3">Acces Restricționat</h2>
+            <p className="text-text-tertiary mb-6">
+              Catalogul este disponibil doar pentru clienții autentificați. Vă rugăm
+              autentificați-vă pentru a vedea produsele.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                to={`/b2b-store/login?redirect=${encodeURIComponent(location.pathname)}`}
+                className="inline-block px-6 py-3 rounded-lg font-medium"
+                style={{ background: '#daa520', color: '#000' }}
+              >
+                Autentificare
+              </Link>
+              <Link
+                to="/b2b-store/register"
+                className="inline-block px-6 py-3 rounded-lg font-medium border"
+                style={{ borderColor: '#daa520', color: '#daa520' }}
+              >
+                Înregistrare
+              </Link>
+            </div>
           </div>
+        </div>
+      );
+    }
+  }
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: '#f8f9fa' }}
+      >
+        <div className="text-center">
+          <Loader className="animate-spin mx-auto mb-4" size={40} style={{ color: '#daa520' }} />
+          <p style={{ color: '#6b7280' }}>Se încarcă catalogul...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-[#0a0a0f] min-h-screen pb-20">
-      {/* Catalog Header */}
-      <div className="py-12 border-b border-white/5 bg-gradient-to-b from-primary-500/5 to-transparent">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="overflow-x-hidden" style={{ background: '#f8f9fa', minHeight: '100vh' }}>
+      {/* Header */}
+      <div
+        className="py-8 sm:py-10"
+        style={{
+          borderBottom: '1px solid rgba(218,165,32,0.1)',
+          background: 'linear-gradient(180deg, rgba(218,165,32,0.06) 0%, #f8f9fa 100%)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-white">Catalog B2B</h1>
-              <p className="text-gray-500 mt-2">Peste {totalProducts} repere profesionale în timp real</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Catalog Produse</h1>
+              <p className="text-sm mt-1" style={{ color: '#6b7280' }}>
+                {totalProducts} produse disponibile
+              </p>
             </div>
-            <div className="flex gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:w-96">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Caută după denumire sau SKU..." 
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              {/* Search */}
+              <div className="relative flex-grow md:w-80">
+                <input
+                  type="text"
+                  placeholder="Caută produse, SKU-uri..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-12 text-white focus:border-primary-500 outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    color: '#111827',
+                  }}
                 />
-                <label className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-500 hover:text-primary-500 transition-colors">
-                  <input type="file" accept="image/*" className="hidden" onChange={handleVisualSearch} disabled={isVisualSearching} />
-                  {isVisualSearching ? <Loader className="animate-spin" size={18} /> : <Camera size={18} />}
-                </label>
+                <Search className="absolute left-3 top-3 h-4 w-4" style={{ color: '#9ca3af' }} />
               </div>
-              <button onClick={() => setShowFilters(!showFilters)} className="md:hidden bg-primary-500/10 border border-primary-500/20 text-primary-500 p-3 rounded-2xl">
-                <SlidersHorizontal size={24} />
+              {/* Filter Toggle (Mobile) */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="lg:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
+                style={{
+                  background: 'rgba(218,165,32,0.1)',
+                  border: '1px solid rgba(218,165,32,0.2)',
+                  color: '#daa520',
+                }}
+              >
+                <SlidersHorizontal size={16} /> Filtre
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="flex gap-10">
-          {/* Filters Sidebar */}
-          <aside className={`w-72 flex-shrink-0 space-y-8 ${showFilters ? 'fixed inset-0 z-50 bg-[#0a0a0f] p-6 overflow-y-auto' : 'hidden md:block'}`}>
-            {showFilters && (
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-white">Filtre</h3>
-                <button onClick={() => setShowFilters(false)} className="text-white"><X /></button>
-              </div>
-            )}
-            
-            <div>
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Package size={14} className="text-primary-500" /> Categorii
-              </h4>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* ========== SIDEBAR FILTERS ========== */}
+          <aside
+            className={`w-full lg:w-72 flex-shrink-0 space-y-6 ${showFilters ? 'block' : 'hidden'} lg:block`}
+          >
+            {/* Categories */}
+            <div
+              className="rounded-2xl p-5"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center gap-2">
+                <Package size={14} style={{ color: '#daa520' }} />
+                Categorii
+              </h3>
               <div className="space-y-1">
-                {availableCategories.map(cat => (
-                  <button 
-                    key={cat} 
+                {availableCategories.map((cat) => (
+                  <button
+                    key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-all ${selectedCategory === cat ? 'bg-primary-500/10 text-primary-500 font-bold' : 'text-gray-400 hover:text-white'}`}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm transition-all"
+                    style={{
+                      color: selectedCategory === cat ? '#daa520' : '#6b7280',
+                      background:
+                        selectedCategory === cat ? 'rgba(218,165,32,0.08)' : 'transparent',
+                    }}
                   >
                     {cat}
                   </button>
@@ -492,197 +787,631 @@ export const B2BStoreCatalogPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-5 rounded-3xl bg-white/2 border border-white/5 space-y-6">
-              {/* Brands Filter */}
-              {availableFilters.brands.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Shield size={14} className="text-primary-500" /> Brand
-                  </h4>
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                    {availableFilters.brands.map(brand => (
-                      <label key={brand.value} className="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" checked={selectedBrands.includes(brand.value)} onChange={() => toggleBrand(brand.value)} className="hidden" />
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedBrands.includes(brand.value) ? 'bg-primary-500 border-primary-500' : 'border-white/20'}`}>
-                          {selectedBrands.includes(brand.value) && <CheckCircle size={10} className="text-black" />}
-                        </div>
-                        <span className="text-xs text-gray-400 group-hover:text-white">{brand.value}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Technical Filters */}
-              <div>
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Thermometer size={14} className="text-primary-500" /> Kelvin
-                </h4>
+            {/* Color Temperature */}
+            {availableFilters.stripType.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center gap-2">
+                  <Zap size={14} style={{ color: '#daa520' }} />
+                  Tip LED
+                </h3>
                 <div className="space-y-2">
-                  {availableFilters.kelvin.map(opt => (
-                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer group">
-                      <input type="checkbox" checked={selectedKelvin.includes(opt.value)} onChange={() => toggleKelvin(opt.value)} className="hidden" />
-                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${selectedKelvin.includes(opt.value) ? 'bg-primary-500 border-primary-500' : 'border-white/20'}`}>
-                        {selectedKelvin.includes(opt.value) && <CheckCircle size={12} className="text-black" />}
-                      </div>
-                      <span className="text-sm text-gray-400 group-hover:text-white">{opt.label}</span>
+                  {availableFilters.stripType.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedStripType.includes(opt.value)}
+                        onChange={() => toggleStripType(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
                     </label>
                   ))}
                 </div>
               </div>
+            )}
 
-              <div>
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Droplets size={14} className="text-primary-500" /> Protecție IP
-                </h4>
-                <div className="grid grid-cols-2 gap-2">
-                  {availableFilters.ip.map(opt => (
-                    <button 
-                      key={opt.value} 
-                      onClick={() => toggleIp(opt.value)}
-                      className={`px-3 py-2 rounded-xl text-xs font-medium border transition-all ${selectedIp.includes(opt.value) ? 'bg-primary-500 border-primary-500 text-black' : 'border-white/10 text-gray-400'}`}
-                    >
-                      {opt.value}
-                    </button>
+            {availableFilters.ledVoltage.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4">Voltaj</h3>
+                <div className="space-y-2">
+                  {availableFilters.ledVoltage.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedLedVoltage.includes(opt.value)}
+                        onChange={() => toggleLedVoltage(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Wattage Range */}
-              <div>
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <Zap size={14} className="text-primary-500" /> Putere (Watt)
-                </h4>
-                <div className="flex gap-2">
-                  <input 
-                    type="number" 
-                    placeholder="Min" 
-                    value={wattageMin} 
-                    onChange={(e) => setWattageMin(e.target.value)}
-                    className="w-1/2 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-xs text-white outline-none"
-                  />
-                  <input 
-                    type="number" 
-                    placeholder="Max" 
-                    value={wattageMax} 
-                    onChange={(e) => setWattageMax(e.target.value)}
-                    className="w-1/2 bg-white/5 border border-white/10 rounded-lg py-1 px-2 text-xs text-white outline-none"
-                  />
+            {availableFilters.lightColor.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4">Temperatura / Culoare</h3>
+                <div className="space-y-2">
+                  {availableFilters.lightColor.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedLightColor.includes(opt.value)}
+                        onChange={() => toggleLightColor(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </div>
+            )}
 
-              {/* Dimmable Toggle */}
-              <div>
-                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Opțiuni</h4>
-                <label className="flex items-center justify-between cursor-pointer group">
-                  <span className="text-xs text-gray-400">Dimmabil</span>
-                  <button 
-                    onClick={() => setIsDimmable(isDimmable === true ? null : true)}
-                    className={`w-10 h-5 rounded-full relative transition-all ${isDimmable === true ? 'bg-primary-500' : 'bg-white/10'}`}
-                  >
-                    <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${isDimmable === true ? 'right-1' : 'left-1'}`} />
-                  </button>
-                </label>
+            {/* Color Temperature */}
+            <div
+              className="rounded-2xl p-5"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center gap-2">
+                <Thermometer size={14} style={{ color: '#daa520' }} />
+                Temperatură Culoare
+              </h3>
+              <div className="space-y-2">
+                {availableFilters.kelvin.map((opt) => (
+                  <label key={opt.value} className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={selectedKelvin.includes(opt.value)}
+                      onChange={() => toggleKelvin(opt.value)}
+                      className="rounded"
+                      style={{ accentColor: '#daa520' }}
+                    />
+                    <span className="text-sm" style={{ color: '#6b7280' }}>
+                      {opt.label}
+                    </span>
+                    <span
+                      className="ml-auto w-4 h-4 rounded-full border"
+                      style={{
+                        background:
+                          opt.value === '3000'
+                            ? '#ffb347'
+                            : opt.value === '4000'
+                              ? '#fff5e6'
+                              : '#e8f4ff',
+                        borderColor: '#d1d5db',
+                      }}
+                    />
+                  </label>
+                ))}
               </div>
             </div>
 
-            <button onClick={clearFilters} className="w-full py-4 rounded-2xl border border-white/10 text-gray-400 text-sm font-bold hover:bg-white/5 transition-all">
-              Resetează Toate
+            {/* IP Rating */}
+            <div
+              className="rounded-2xl p-5"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center gap-2">
+                <Droplets size={14} style={{ color: '#daa520' }} />
+                Grad Protecție (IP)
+              </h3>
+              <div className="space-y-2">
+                {availableFilters.ip.map((opt) => (
+                  <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedIp.includes(opt.value)}
+                      onChange={() => toggleIp(opt.value)}
+                      className="rounded"
+                      style={{ accentColor: '#daa520' }}
+                    />
+                    <span className="text-sm" style={{ color: '#6b7280' }}>
+                      {opt.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Manufacturer */}
+            {availableFilters.brand.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4">Producator</h3>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {availableFilters.brand.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedBrand.includes(opt.value)}
+                        onChange={() => toggleBrand(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mounting Type */}
+            {availableFilters.mountingType.length > 0 && (
+              <div
+                className="rounded-2xl p-5"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                }}
+              >
+                <h3 className="font-semibold text-text-primary text-sm mb-4">Montaj</h3>
+                <div className="space-y-2">
+                  {availableFilters.mountingType.map((opt) => (
+                    <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedMountingType.includes(opt.value)}
+                        onChange={() => toggleMountingType(opt.value)}
+                        className="rounded"
+                        style={{ accentColor: '#daa520' }}
+                      />
+                      <span className="text-sm" style={{ color: '#6b7280' }}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Price Range */}
+            <div
+              className="rounded-2xl p-5"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <h3 className="font-semibold text-text-primary text-sm mb-4">Preț (RON)</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={priceMin}
+                  onChange={(e) => setPriceMin(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    color: '#111827',
+                  }}
+                />
+                <span style={{ color: '#6b7280' }}>—</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={priceMax}
+                  onChange={(e) => setPriceMax(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    color: '#111827',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Stock Filter */}
+            <div
+              className="rounded-2xl p-5"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <h3 className="font-semibold text-text-primary text-sm mb-4">Disponibilitate</h3>
+              <div className="space-y-2">
+                {[
+                  { label: 'Toate', value: 'all' as const },
+                  { label: 'Stoc', value: 'stock' as const },
+                  { label: 'Stoc Local', value: 'local' as const },
+                  { label: 'Stoc Furnizor', value: 'supplier' as const },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setStockFilter(opt.value)}
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm transition-all"
+                    style={{
+                      color: stockFilter === opt.value ? '#daa520' : '#6b7280',
+                      background:
+                        stockFilter === opt.value ? 'rgba(218,165,32,0.08)' : 'transparent',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            <button
+              onClick={clearFilters}
+              className="w-full text-center py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{
+                color: '#daa520',
+                border: '1px solid rgba(218,165,32,0.2)',
+                background: 'transparent',
+              }}
+            >
+              Resetează Filtrele
             </button>
           </aside>
 
-          {/* Main Grid */}
-          <main className="flex-1">
-            {/* Controls */}
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex bg-white/5 p-1 rounded-xl">
-                <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-primary-500 text-black shadow-lg' : 'text-gray-500'}`}><Grid3X3 size={20}/></button>
-                <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-primary-500 text-black shadow-lg' : 'text-gray-500'}`}><List size={20}/></button>
+          {/* ========== PRODUCT GRID ========== */}
+          <div className="flex-1 min-w-0">
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className="p-2 rounded-lg transition-all"
+                  style={{
+                    color: viewMode === 'grid' ? '#daa520' : '#9ca3af',
+                    background: viewMode === 'grid' ? 'rgba(218,165,32,0.08)' : 'transparent',
+                  }}
+                >
+                  <Grid3X3 size={18} />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className="p-2 rounded-lg transition-all"
+                  style={{
+                    color: viewMode === 'list' ? '#daa520' : '#9ca3af',
+                    background: viewMode === 'list' ? 'rgba(218,165,32,0.08)' : 'transparent',
+                  }}
+                >
+                  <List size={18} />
+                </button>
               </div>
-              <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white outline-none"
-              >
-                {sortOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <div className="relative w-full sm:w-auto">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="appearance-none w-full sm:w-auto px-4 py-2 pr-8 rounded-xl text-sm focus:outline-none cursor-pointer"
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    color: '#374151',
+                  }}
+                >
+                  {sortOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={14}
+                  className="absolute right-3 top-3 pointer-events-none"
+                  style={{ color: '#9ca3af' }}
+                />
+              </div>
             </div>
 
-            {loading && products.length === 0 ? (
-              <div className="py-20 text-center">
-                <Loader className="animate-spin mx-auto text-primary-500 mb-4" size={48} />
-                <p className="text-gray-500">Se încarcă produsele...</p>
+            {/* Error */}
+            {error && (
+              <div className="text-center py-16">
+                <p style={{ color: '#ef4444' }}>{error}</p>
+                <Button
+                  onClick={() => fetchProducts(1, false)}
+                  className="mt-4"
+                  style={{ background: '#daa520', color: '#000' }}
+                >
+                  Reîncearcă
+                </Button>
               </div>
-            ) : products.length === 0 ? (
-              <div className="py-20 text-center bg-white/2 rounded-3xl border border-dashed border-white/10">
-                <Package size={48} className="mx-auto text-gray-700 mb-4" />
-                <p className="text-white font-bold">Niciun produs găsit</p>
-                <button onClick={clearFilters} className="text-primary-500 text-sm mt-2">Vezi toate produsele</button>
+            )}
+
+            {/* No Results */}
+            {!error && filteredProducts.length === 0 && (
+              <div className="text-center py-20">
+                <Package size={48} className="mx-auto mb-4" style={{ color: '#9ca3af' }} />
+                <p className="text-lg font-medium text-text-primary mb-2">Niciun produs găsit</p>
+                <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
+                  Încercați alte criterii de căutare.
+                </p>
+                <button
+                  onClick={clearFilters}
+                  className="text-sm font-medium"
+                  style={{ color: '#daa520' }}
+                >
+                  Resetează filtrele
+                </button>
               </div>
-            ) : (
-              <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
-                {products.map(product => {
+            )}
+
+            {/* Grid View */}
+            {viewMode === 'grid' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredProducts.map((product, index) => {
                   const specs = parseSpecs(product);
+                  const shouldPrioritizeImage = currentPage === 1 && index < 2;
                   return (
-                    <div 
-                      key={product.id} 
-                      className={`group bg-white/2 border border-white/5 rounded-3xl overflow-hidden hover:border-primary-500/30 transition-all ${viewMode === 'list' ? 'flex' : ''}`}
+                    <div
+                      key={product.id}
+                      className="rounded-2xl overflow-hidden group transition-all duration-300 hover:-translate-y-1"
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        contentVisibility: 'auto',
+                        containIntrinsicSize: '430px',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(218,165,32,0.2)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                      }}
                     >
-                      <div className={`relative bg-white/5 overflow-hidden ${viewMode === 'list' ? 'w-48 h-48 flex-shrink-0' : 'h-64'}`}>
+                      {/* Image */}
+                      <div
+                        className="relative h-52 overflow-hidden"
+                        style={{ background: '#f3f4f6' }}
+                      >
                         {product.image_url ? (
-                          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                          <ResponsiveImage
+                            src={product.image_url}
+                            alt={product.name}
+                            loading={shouldPrioritizeImage ? 'eager' : 'lazy'}
+                            fetchPriority={shouldPrioritizeImage ? 'high' : 'low'}
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            width={640}
+                            height={520}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white/10"><Zap size={48} /></div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Zap size={40} style={{ color: '#d1d5db' }} />
+                          </div>
                         )}
-                        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                          <button onClick={() => setQuickViewProduct(product)} className="bg-white text-black px-6 py-2 rounded-full text-xs font-bold">Rapid</button>
-                          <button onClick={() => toggleCompare(product.id)} className="border border-white/30 text-white px-6 py-2 rounded-full text-xs font-bold backdrop-blur-sm">
-                            {compareList.includes(product.id) ? '✓ Compară' : '+ Compară'}
+                        {/* Quick View Overlay */}
+                        <div
+                          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
+                          style={{ background: 'rgba(0,0,0,0.5)' }}
+                        >
+                          <button
+                            onClick={() => setQuickViewProduct(product)}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium text-black"
+                            style={{ background: 'linear-gradient(135deg, #daa520, #ffd700)' }}
+                          >
+                            <Eye size={14} /> Vizualizare Rapidă
                           </button>
-                          {isAuthenticated && (
-                            <button 
-                              onClick={() => {
-                                fetchProjects();
-                                setShowProjectModal({ productId: product.id });
-                              }} 
-                              className="text-white/70 hover:text-white text-[10px] font-bold mt-1"
-                            >
-                              + Proiect
-                            </button>
-                          )}
                         </div>
+                        {/* Stock badge */}
+                        {(b2bSettings.showStock || isAuthenticated) && product.stock_local > 0 && (
+                          <div
+                            className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide"
+                            style={{ background: 'rgba(16, 185, 129, 0.9)', color: '#fff' }}
+                          >
+                            Stoc Local
+                          </div>
+                        )}
                       </div>
 
-                      <div className="p-6 flex-1 flex flex-col">
-                        <div className="flex-1">
-                          <span className="text-[10px] font-bold text-primary-500 uppercase tracking-widest">{product.category || 'LED'}</span>
-                          <Link to={`/b2b-store/product/${product.id}`}>
-                            <h3 className="text-white font-bold mt-1 line-clamp-2 hover:text-primary-500 transition-colors" title={product.name}>{product.name}</h3>
-                          </Link>
-                          <p className="text-xs text-gray-600 mt-1 font-mono">SKU: {product.sku}</p>
-                          
-                          <div className="flex flex-wrap gap-2 mt-4">
-                            {specs.watt && <span className="px-2 py-1 bg-white/5 rounded-lg text-[10px] text-gray-400 font-bold border border-white/5">⚡ {specs.watt}</span>}
-                            {specs.kelvin && <span className="px-2 py-1 bg-white/5 rounded-lg text-[10px] text-gray-400 font-bold border border-white/5">🌡 {specs.kelvin}K</span>}
-                          </div>
+                      {/* Content */}
+                      <div className="p-5">
+                        <p
+                          className="text-[10px] font-semibold uppercase tracking-wider mb-1.5"
+                          style={{ color: '#daa520' }}
+                        >
+                          {product.category || 'LED'}
+                        </p>
+                        <Link
+                          to={`/b2b-store/product/${product.id}`}
+                          onMouseEnter={() => prefetchProductDetails(product.id)}
+                          onFocus={() => prefetchProductDetails(product.id)}
+                          onTouchStart={() => prefetchProductDetails(product.id)}
+                        >
+                          <h3
+                            className="font-bold text-text-primary mb-1 line-clamp-2 hover:underline cursor-pointer leading-snug"
+                            title={product.name}
+                          >
+                            {product.name}
+                          </h3>
+                        </Link>
+                        <p className="text-xs mb-3" style={{ color: '#6b7280' }}>
+                          SKU: {product.sku}
+                        </p>
+                        {getManufacturer(product) && (
+                          <p className="text-xs mb-3" style={{ color: '#6b7280' }}>
+                            Producator: {getManufacturer(product)}
+                          </p>
+                        )}
+
+                        {/* Spec Badges */}
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {specs.watt && (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                              style={{
+                                background: 'rgba(218,165,32,0.1)',
+                                color: '#daa520',
+                                border: '1px solid rgba(218,165,32,0.2)',
+                              }}
+                            >
+                              ⚡ {specs.watt}
+                            </span>
+                          )}
+                          {specs.kelvin && (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                              style={{
+                                background: 'rgba(79,142,255,0.1)',
+                                color: '#4f8eff',
+                                border: '1px solid rgba(79,142,255,0.2)',
+                              }}
+                            >
+                              🌡 {specs.kelvin}
+                            </span>
+                          )}
+                          {specs.ip && (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                              style={{
+                                background: 'rgba(16,185,129,0.1)',
+                                color: '#10b981',
+                                border: '1px solid rgba(16,185,129,0.2)',
+                              }}
+                            >
+                              💧 {specs.ip}
+                            </span>
+                          )}
+                          {specs.lumen && (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                              style={{
+                                background: 'rgba(251,191,36,0.1)',
+                                color: '#fbbf24',
+                                border: '1px solid rgba(251,191,36,0.2)',
+                              }}
+                            >
+                              💡 {specs.lumen}
+                            </span>
+                          )}
                         </div>
 
-                        <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
-                          <div>
-                            {b2bSettings.showPrices ? (
-                              <>
-                                <span className="text-2xl font-black text-primary-500">{product.price.toFixed(2)}</span>
-                                <span className="text-xs text-gray-600 ml-1">{product.currency}</span>
-                              </>
+                        {/* Stock Status */}
+                        {(b2bSettings.showStock || isAuthenticated) && (
+                          <div className="mb-4 flex flex-col gap-1 text-xs">
+                            {product.stock_local > 0 ? (
+                              <span
+                                className="flex items-center gap-1.5"
+                                style={{ color: '#10b981' }}
+                              >
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full"
+                                  style={{ background: '#10b981' }}
+                                />
+                                Stoc Local: {product.stock_local} buc
+                              </span>
                             ) : (
-                              <span className="text-xs text-gray-600">Login pt preț</span>
+                              <span
+                                className="flex items-center gap-1.5"
+                                style={{ color: '#ef4444' }}
+                              >
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full"
+                                  style={{ background: '#ef4444' }}
+                                />
+                                Fără stoc local
+                              </span>
                             )}
+                            {getSupplierStockDisplay(product) && (
+                              <span
+                                className="flex items-center gap-1.5"
+                                style={{ color: getSupplierStockDisplay(product)!.color }}
+                              >
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full"
+                                  style={{ background: getSupplierStockDisplay(product)!.dot }}
+                                />
+                                {getSupplierStockDisplay(product)!.label}
+                              </span>
+                            )}
+                            <span
+                              className="flex items-center gap-1.5"
+                              style={{ color: '#6b7280' }}
+                            >
+                              <span
+                                className="w-1.5 h-1.5 rounded-full"
+                                style={{ background: '#6b7280' }}
+                              />
+                              Total: {getTotalStock(product)} buc
+                            </span>
                           </div>
-                          <button 
+                        )}
+
+                        {/* Price + Cart */}
+                        <div
+                          className="flex items-center justify-between pt-4"
+                          style={{ borderTop: '1px solid #e5e7eb' }}
+                        >
+                          {b2bSettings.showPrices || isAuthenticated ? (
+                            <div>
+                              <div className="text-xl font-bold" style={{ color: '#daa520' }}>
+                                {product.price.toFixed(2)}{' '}
+                                <span className="text-xs font-normal" style={{ color: '#6b7280' }}>
+                                  {product.currency}
+                                </span>
+                              </div>
+                              <div className="text-[10px]" style={{ color: '#6b7280' }}>
+                                fără TVA
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm" style={{ color: '#6b7280' }}>
+                              Autentifică-te pentru preț
+                            </div>
+                          )}
+                          <button
                             onClick={() => handleAddToCart(product)}
-                            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${addedToCart === product.id ? 'bg-green-500 text-white' : 'bg-primary-500 text-black hover:scale-110'}`}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+                            style={{
+                              background:
+                                addedToCart === product.id
+                                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                                  : 'linear-gradient(135deg, #daa520, #b8860b)',
+                              color: '#000',
+                            }}
+                            title="Adaugă în coș"
                           >
-                            {addedToCart === product.id ? <CheckCircle size={20}/> : <ShoppingCart size={20}/>}
+                            {addedToCart === product.id ? (
+                              <CheckCircle size={16} />
+                            ) : (
+                              <ShoppingCart size={16} />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -692,122 +1421,408 @@ export const B2BStoreCatalogPage: React.FC = () => {
               </div>
             )}
 
-            {hasMore && products.length > 0 && (
-              <div className="mt-12 text-center">
-                <Button 
-                  onClick={handleLoadMore} 
-                  disabled={loading}
-                  className="bg-white/5 hover:bg-white/10 text-white border border-white/10 px-10 h-14 rounded-2xl font-bold"
+            {/* List View */}
+            {viewMode === 'list' && (
+              <div className="space-y-3">
+                {filteredProducts.map((product, index) => {
+                  const specs = parseSpecs(product);
+                  const shouldPrioritizeImage = currentPage === 1 && index < 2;
+                  return (
+                    <div
+                      key={product.id}
+                      className="rounded-2xl overflow-hidden flex flex-col sm:flex-row transition-all duration-300"
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        contentVisibility: 'auto',
+                        containIntrinsicSize: '220px',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(218,165,32,0.2)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                      }}
+                    >
+                      {/* Image */}
+                      <div
+                        className="w-full h-52 sm:w-36 sm:h-36 md:w-48 md:h-auto flex-shrink-0"
+                        style={{ background: '#f3f4f6' }}
+                      >
+                        {product.image_url ? (
+                          <ResponsiveImage
+                            src={product.image_url}
+                            alt={product.name}
+                            loading={shouldPrioritizeImage ? 'eager' : 'lazy'}
+                            fetchPriority={shouldPrioritizeImage ? 'high' : 'low'}
+                            sizes="(max-width: 640px) 100vw, 40vw"
+                            width={480}
+                            height={360}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Zap size={32} style={{ color: '#d1d5db' }} />
+                          </div>
+                        )}
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-[10px] font-semibold uppercase tracking-wider mb-1"
+                            style={{ color: '#daa520' }}
+                          >
+                            {product.category || 'LED'} · {product.sku}
+                          </p>
+                          <Link
+                            to={`/b2b-store/product/${product.id}`}
+                            onMouseEnter={() => prefetchProductDetails(product.id)}
+                            onFocus={() => prefetchProductDetails(product.id)}
+                            onTouchStart={() => prefetchProductDetails(product.id)}
+                          >
+                            <h3 className="font-bold text-text-primary mb-2 hover:underline">
+                              {product.name}
+                            </h3>
+                          </Link>
+                          {getManufacturer(product) && (
+                            <p className="text-xs mb-2" style={{ color: '#6b7280' }}>
+                              Producator: {getManufacturer(product)}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {specs.watt && (
+                              <span
+                                className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                style={{ background: 'rgba(218,165,32,0.1)', color: '#daa520' }}
+                              >
+                                ⚡ {specs.watt}
+                              </span>
+                            )}
+                            {specs.kelvin && (
+                              <span
+                                className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                style={{ background: 'rgba(79,142,255,0.1)', color: '#4f8eff' }}
+                              >
+                                🌡 {specs.kelvin}
+                              </span>
+                            )}
+                            {specs.ip && (
+                              <span
+                                className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}
+                              >
+                                💧 {specs.ip}
+                              </span>
+                            )}
+                            {specs.lumen && (
+                              <span
+                                className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24' }}
+                              >
+                                💡 {specs.lumen}
+                              </span>
+                            )}
+                          </div>
+                          {(b2bSettings.showStock || isAuthenticated) && (
+                            <div className="flex gap-4 text-xs">
+                              {product.stock_local > 0 && (
+                                <span style={{ color: '#10b981' }}>
+                                  ● Stoc Local: {product.stock_local}
+                                </span>
+                              )}
+                              {getSupplierStockDisplay(product) && (
+                                <span style={{ color: getSupplierStockDisplay(product)!.color }}>
+                                  ● {getSupplierStockDisplay(product)!.label}
+                                </span>
+                              )}
+                              <span style={{ color: '#6b7280' }}>
+                                ● Total: {getTotalStock(product)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-start gap-4 flex-shrink-0">
+                          {b2bSettings.showPrices || isAuthenticated ? (
+                            <div className="text-left sm:text-right">
+                              <div className="text-xl font-bold" style={{ color: '#daa520' }}>
+                                {product.price.toFixed(2)} {product.currency}
+                              </div>
+                              <div className="text-[10px]" style={{ color: '#6b7280' }}>
+                                fără TVA
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-right" style={{ color: '#6b7280' }}>
+                              Autentifică-te
+                              <br />
+                              pentru preț
+                            </div>
+                          )}
+                          <button
+                            onClick={() => handleAddToCart(product)}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+                            style={{
+                              background:
+                                addedToCart === product.id
+                                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                                  : 'linear-gradient(135deg, #daa520, #b8860b)',
+                              color: '#000',
+                            }}
+                          >
+                            {addedToCart === product.id ? (
+                              <CheckCircle size={16} />
+                            ) : (
+                              <ShoppingCart size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {filteredProducts.length > 0 && currentPage < totalPages && (
+              <div className="mt-10 flex justify-center">
+                <Button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  variant="outline"
+                  className="rounded-full px-8"
+                  style={{ borderColor: 'rgba(218,165,32,0.2)', color: '#daa520' }}
                 >
-                  {loading ? <Loader className="animate-spin" /> : `Încarcă mai multe (afișat ${products.length} din ${totalProducts})`}
+                  {loadingMore ? 'Se incarca...' : 'Incarca Mai Multe'}
                 </Button>
               </div>
             )}
-          </main>
+
+            {!loading && filteredProducts.length > 0 && currentPage < totalPages && (
+              <div ref={loadMoreSentinelRef} className="h-1 w-full" aria-hidden="true" />
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Compare Bar */}
-      {compareList.length > 0 && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom duration-500">
-          <div className="bg-[#12121a]/95 border border-white/10 backdrop-blur-xl rounded-3xl p-6 shadow-2xl flex items-center gap-10">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-primary-500 rounded-2xl flex items-center justify-center text-black font-black">{compareList.length}</div>
-              <p className="text-white font-bold">Produse pentru comparat</p>
-            </div>
-            <div className="flex gap-4">
-              <button onClick={() => setCompareList([])} className="text-gray-500 hover:text-white font-bold px-4">Reset</button>
-              <button className="bg-primary-500 text-black px-8 py-3 rounded-2xl font-black shadow-lg shadow-primary-500/20">Compară Acum</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick View Modal */}
+      {/* ========== QUICK VIEW MODAL ========== */}
       {quickViewProduct && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90" onClick={() => setQuickViewProduct(null)}>
-          <div className="bg-[#12121a] border border-white/10 rounded-[40px] max-w-5xl w-full overflow-hidden flex flex-col md:flex-row shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="md:w-1/2 h-96 md:h-auto bg-white/2">
-              {quickViewProduct.image_url ? (
-                <img src={quickViewProduct.image_url} alt={quickViewProduct.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white/5"><Zap size={100} /></div>
-              )}
-            </div>
-            <div className="flex-1 p-12">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <span className="text-xs font-bold text-primary-500 uppercase tracking-widest">{quickViewProduct.category}</span>
-                  <h2 className="text-3xl font-black text-white mt-2">{quickViewProduct.name}</h2>
-                  <p className="text-gray-600 mt-2 font-mono uppercase tracking-tighter">{quickViewProduct.sku}</p>
-                </div>
-                <button onClick={() => setQuickViewProduct(null)} className="p-3 bg-white/5 rounded-2xl text-gray-500 hover:text-white"><X/></button>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.8)' }}
+          onClick={() => setQuickViewProduct(null)}
+        >
+          <div
+            className="w-full max-w-3xl rounded-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e5e7eb',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col md:flex-row">
+              {/* Image */}
+              <div className="w-full md:w-1/2 h-64 md:h-auto" style={{ background: '#f3f4f6' }}>
+                {quickViewProduct.image_url ? (
+                  <ResponsiveImage
+                    src={quickViewProduct.image_url}
+                    alt={quickViewProduct.name}
+                    loading="eager"
+                    fetchPriority="high"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    width={960}
+                    height={640}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Zap size={60} style={{ color: '#d1d5db' }} />
+                  </div>
+                )}
               </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-10">
+              {/* Details */}
+              <div className="flex-1 p-4 sm:p-7">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p
+                      className="text-[10px] font-semibold uppercase tracking-wider mb-1"
+                      style={{ color: '#daa520' }}
+                    >
+                      {quickViewProduct.category || 'LED'}
+                    </p>
+                    <h2 className="text-2xl font-bold text-text-primary">{quickViewProduct.name}</h2>
+                    <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
+                      SKU: {quickViewProduct.sku}
+                    </p>
+                    {getManufacturer(quickViewProduct) && (
+                      <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
+                        Producator: {getManufacturer(quickViewProduct)}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setQuickViewProduct(null)}
+                    className="p-1.5 rounded-lg"
+                    style={{ color: '#6b7280' }}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <p className="text-sm mb-6 leading-relaxed" style={{ color: '#6b7280' }}>
+                  {quickViewProduct.description || 'Produs de iluminat LED de înaltă calitate.'}
+                </p>
+
+                {/* Specs */}
                 {(() => {
                   const specs = parseSpecs(quickViewProduct);
                   return (
-                    <>
-                      {specs.watt && <div className="bg-white/2 p-4 rounded-3xl border border-white/5 text-center"><p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Putere</p><p className="text-white font-bold">{specs.watt}</p></div>}
-                      {specs.kelvin && <div className="bg-white/2 p-4 rounded-3xl border border-white/5 text-center"><p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Culoare</p><p className="text-white font-bold">{specs.kelvin}K</p></div>}
-                      {specs.ip && <div className="bg-white/2 p-4 rounded-3xl border border-white/5 text-center"><p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Protecție</p><p className="text-white font-bold">{specs.ip}</p></div>}
-                      {specs.lumen && <div className="bg-white/2 p-4 rounded-3xl border border-white/5 text-center"><p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Lumeni</p><p className="text-white font-bold">{specs.lumen}</p></div>}
-                    </>
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      {specs.watt && (
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-semibold"
+                          style={{
+                            background: 'rgba(218,165,32,0.1)',
+                            color: '#daa520',
+                            border: '1px solid rgba(218,165,32,0.2)',
+                          }}
+                        >
+                          ⚡ {specs.watt}
+                        </span>
+                      )}
+                      {specs.kelvin && (
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-semibold"
+                          style={{
+                            background: 'rgba(79,142,255,0.1)',
+                            color: '#4f8eff',
+                            border: '1px solid rgba(79,142,255,0.2)',
+                          }}
+                        >
+                          🌡 {specs.kelvin}
+                        </span>
+                      )}
+                      {specs.ip && (
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-semibold"
+                          style={{
+                            background: 'rgba(16,185,129,0.1)',
+                            color: '#10b981',
+                            border: '1px solid rgba(16,185,129,0.2)',
+                          }}
+                        >
+                          💧 {specs.ip}
+                        </span>
+                      )}
+                      {specs.lumen && (
+                        <span
+                          className="px-3 py-1 rounded-full text-xs font-semibold"
+                          style={{
+                            background: 'rgba(251,191,36,0.1)',
+                            color: '#fbbf24',
+                            border: '1px solid rgba(251,191,36,0.2)',
+                          }}
+                        >
+                          💡 {specs.lumen}
+                        </span>
+                      )}
+                    </div>
                   );
                 })()}
-              </div>
 
-              <div className="flex items-center justify-between mb-8">
-                {b2bSettings.showPrices ? (
-                  <div>
-                    <span className="text-4xl font-black text-white">{quickViewProduct.price.toFixed(2)}</span>
-                    <span className="text-lg text-gray-500 ml-2">{quickViewProduct.currency}</span>
+                {/* Stock */}
+                {(b2bSettings.showStock || isAuthenticated) && (
+                  <div className="mb-6 space-y-1.5 text-sm">
+                    {quickViewProduct.stock_local > 0 ? (
+                      <span className="flex items-center gap-2" style={{ color: '#10b981' }}>
+                        <span className="w-2 h-2 rounded-full" style={{ background: '#10b981' }} />
+                        Stoc Local: {quickViewProduct.stock_local} buc — Livrare 24h
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2" style={{ color: '#ef4444' }}>
+                        <span className="w-2 h-2 rounded-full" style={{ background: '#ef4444' }} />
+                        Fără stoc local
+                      </span>
+                    )}
+                    {getSupplierStockDisplay(quickViewProduct) && (
+                      <span
+                        className="flex items-center gap-2"
+                        style={{ color: getSupplierStockDisplay(quickViewProduct)!.color }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ background: getSupplierStockDisplay(quickViewProduct)!.dot }}
+                        />
+                        {getSupplierStockDisplay(quickViewProduct)!.label}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-2" style={{ color: '#6b7280' }}>
+                      <span className="w-2 h-2 rounded-full" style={{ background: '#6b7280' }} />
+                      Total: {getTotalStock(quickViewProduct)} buc
+                    </span>
+                  </div>
+                )}
+
+                {/* Price */}
+                {b2bSettings.showPrices || isAuthenticated ? (
+                  <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <div className="text-3xl font-bold" style={{ color: '#daa520' }}>
+                      {quickViewProduct.price.toFixed(2)}{' '}
+                      <span className="text-sm font-normal" style={{ color: '#6b7280' }}>
+                        {quickViewProduct.currency} fără TVA
+                      </span>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500">Autentifică-te pentru preț</p>
+                  <div className="mb-6 pb-6" style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <div className="text-lg" style={{ color: '#6b7280' }}>
+                      Autentifică-te pentru a vedea prețul
+                    </div>
+                  </div>
                 )}
-                <button onClick={() => handleAddToCart(quickViewProduct)} className="bg-primary-500 text-black px-10 py-4 rounded-2xl font-black shadow-lg shadow-primary-500/20">Adaugă în Coș</button>
-              </div>
-              
-              <Link to={`/b2b-store/product/${quickViewProduct.id}`} onClick={() => setQuickViewProduct(null)} className="block text-center text-gray-500 hover:text-white font-bold py-2">Vezi detalii complete →</Link>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Project Selection Modal */}
-      {showProjectModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/90" onClick={() => setShowProjectModal(null)}>
-          <div className="bg-[#12121a] border border-white/10 rounded-[32px] max-w-md w-full p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-black text-white">Adaugă în Proiect</h3>
-              <button onClick={() => setShowProjectModal(null)} className="p-2 text-gray-500 hover:text-white"><X/></button>
-            </div>
-
-            <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar mb-8">
-              {availableProjects.length === 0 ? (
-                <p className="text-gray-500 italic text-center py-4">Nu ai proiecte create.</p>
-              ) : (
-                availableProjects.map(proj => (
-                  <button 
-                    key={proj.id}
-                    onClick={() => handleAddToProject(proj.id, showProjectModal.productId)}
-                    className="w-full text-left p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-blue-600/20 hover:border-blue-500 transition-all flex items-center justify-between group"
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link to={`/b2b-store/product/${quickViewProduct.id}`} className="flex-1">
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl"
+                      style={{ borderColor: 'rgba(218,165,32,0.2)', color: '#daa520' }}
+                    >
+                      Vezi Detalii Complete
+                    </Button>
+                  </Link>
+                  <Button
+                    onClick={() => {
+                      if (quickViewProduct) {
+                        handleAddToCart(quickViewProduct);
+                        setTimeout(() => setQuickViewProduct(null), 1500);
+                      }
+                    }}
+                    className="flex-1 rounded-xl text-black font-semibold"
+                    style={{
+                      background:
+                        quickViewProduct && addedToCart === quickViewProduct.id
+                          ? 'linear-gradient(135deg, #10b981, #059669)'
+                          : 'linear-gradient(135deg, #daa520, #b8860b)',
+                    }}
                   >
-                    <span className="font-bold text-white group-hover:text-blue-400">{proj.name}</span>
-                    <ChevronRight size={16} className="text-gray-600" />
-                  </button>
-                ))
-              )}
+                    {quickViewProduct && addedToCart === quickViewProduct.id ? (
+                      <>
+                        <CheckCircle size={16} className="mr-2" />
+                        Adăugat în Coș!
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart size={16} className="mr-2" />
+                        Adaugă în Coș
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
-
-            <Link 
-              to="/b2b-portal/projects" 
-              className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-white/2 border border-dashed border-white/20 text-gray-400 hover:text-white hover:bg-white/5 transition-all font-bold text-sm"
-            >
-              <FolderPlus size={18} /> Creează Proiect Nou
-            </Link>
           </div>
         </div>
       )}

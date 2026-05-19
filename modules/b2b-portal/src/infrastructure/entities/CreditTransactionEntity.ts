@@ -11,6 +11,11 @@ import {
   Index,
 } from 'typeorm';
 
+const decimalNumberTransformer = {
+  to: (value: number) => value,
+  from: (value: string | null) => (value === null ? null : parseFloat(value)),
+};
+
 @Entity('credit_transactions')
 @Index('idx_credit_transactions_customer_id', ['customerId'])
 @Index('idx_credit_transactions_type', ['type'])
@@ -28,13 +33,13 @@ export class CreditTransactionEntity {
   })
   type!: string;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 12, scale: 2, transformer: decimalNumberTransformer })
   amount!: number;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 12, scale: 2, transformer: decimalNumberTransformer })
   balanceBefore!: number;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 12, scale: 2, transformer: decimalNumberTransformer })
   balanceAfter!: number;
 
   @Column('text', { nullable: true })

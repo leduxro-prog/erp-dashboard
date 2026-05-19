@@ -8,6 +8,15 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 IMAGE_NAME="${IMAGE_NAME:-cypher-erp-app:latest}"
 NETWORK_NAME="${NETWORK_NAME:-cypher-erp_cypher-network}"
 ENV_FILE="${ENV_FILE:-$PROJECT_ROOT/.env}"
+T0_GATE_SCRIPT="${T0_GATE_SCRIPT:-$SCRIPT_DIR/t0-go-live-check.sh}"
+RUN_T0_GATE="${RUN_T0_GATE:-true}"
+T0_GATE_SINCE_WINDOW="${T0_GATE_SINCE_WINDOW:-15m}"
+
+GO_LIVE_GATE_SCRIPT="${GO_LIVE_GATE_SCRIPT:-$SCRIPT_DIR/go-live-gate.sh}"
+RUN_FULL_GO_LIVE_GATE="${RUN_FULL_GO_LIVE_GATE:-false}"
+GO_LIVE_GATE_SINCE_WINDOW="${GO_LIVE_GATE_SINCE_WINDOW:-30m}"
+GO_LIVE_GATE_CHECKPOINTS="${GO_LIVE_GATE_CHECKPOINTS:-3}"
+GO_LIVE_GATE_INTERVAL_SEC="${GO_LIVE_GATE_INTERVAL_SEC:-600}"
 
 APP_CONTAINER="${APP_CONTAINER:-cypher-erp-app}"
 DB_CONTAINER="${DB_CONTAINER:-cypher-erp-db}"
@@ -281,6 +290,39 @@ start_and_verify_new_app() {
   expect_200 "http://localhost/api/v1/b2b/products/categories" || return 1
 }
 
+run_t0_gate() {
+  if [[ "$RUN_T0_GATE" != "true" ]]; then
+    log "RUN_T0_GATE=false, skipping mandatory T0 go-live gate"
+    return 0
+  fi
+
+  [[ -x "$T0_GATE_SCRIPT" ]] || fail "T0 gate script is missing or not executable: $T0_GATE_SCRIPT"
+
+  log "Running mandatory T0 go-live gate"
+  SINCE_WINDOW="$T0_GATE_SINCE_WINDOW" \
+    APP_CONTAINER="$APP_CONTAINER" \
+    REDIS_CONTAINER="$REDIS_CONTAINER" \
+    "$T0_GATE_SCRIPT"
+}
+
+run_full_go_live_gate_if_enabled() {
+  if [[ "$RUN_FULL_GO_LIVE_GATE" != "true" ]]; then
+    log "RUN_FULL_GO_LIVE_GATE=false, skipping full go-live gate"
+    return 0
+  fi
+
+  [[ -x "$GO_LIVE_GATE_SCRIPT" ]] || fail "Go-live gate script missing or not executable: $GO_LIVE_GATE_SCRIPT"
+
+  log "Running full go-live gate (includes backup + post-launch watch)"
+  SINCE_WINDOW="$GO_LIVE_GATE_SINCE_WINDOW" \
+    WATCH_CHECKPOINTS="$GO_LIVE_GATE_CHECKPOINTS" \
+    WATCH_INTERVAL_SEC="$GO_LIVE_GATE_INTERVAL_SEC" \
+    APP_CONTAINER="$APP_CONTAINER" \
+    REDIS_CONTAINER="$REDIS_CONTAINER" \
+    DB_CONTAINER="$DB_CONTAINER" \
+    "$GO_LIVE_GATE_SCRIPT"
+}
+
 main() {
   require_command docker
   require_command curl
@@ -316,6 +358,18 @@ main() {
     warn "New app deployment failed, attempting rollback"
     rollback_app_container || fail "Deploy failed and rollback failed"
     fail "Deploy failed; rollback completed"
+  fi
+
+  if ! run_t0_gate; then
+    warn "T0 gate failed, attempting rollback"
+    rollback_app_container || fail "T0 gate failed and rollback failed"
+    fail "Deploy failed at T0 gate; rollback completed"
+  fi
+
+  if ! run_full_go_live_gate_if_enabled; then
+    warn "Full go-live gate failed, attempting rollback"
+    rollback_app_container || fail "Full go-live gate failed and rollback failed"
+    fail "Deploy failed at full go-live gate; rollback completed"
   fi
 
   cleanup_backup_app_container

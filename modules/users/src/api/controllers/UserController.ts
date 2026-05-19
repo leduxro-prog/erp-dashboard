@@ -3,6 +3,7 @@ import { jwtService } from '@shared/services/JwtService';
 import { createModuleLogger } from '@shared/utils/logger';
 import { Request, Response, Router } from 'express';
 import * as jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 
 import { authRateLimiter } from '../../../../../src/middleware/rate-limiter';
 import { TwoFactorAuthService } from '../../application/services/TwoFactorAuthService';
@@ -14,6 +15,9 @@ import {
   resetPasswordSchema,
   validateBody,
 } from '../validators/auth.validators';
+
+// Whitelist of allowed Google accounts for ERP login
+const ALLOWED_GOOGLE_EMAILS = ['ledux.ro@gmail.com', 'flaviu.caba@gmail.com'];
 
 export class UserController {
   private router: Router;
@@ -48,6 +52,9 @@ export class UserController {
       validateBody(resetPasswordSchema),
       this.resetPassword.bind(this),
     );
+
+    // Google OAuth route
+    this.router.post('/auth/google', authRateLimiter, this.loginWithGoogle.bind(this));
 
     // 2FA routes are registered via twofa.routes.ts with proper auth middleware
 
@@ -111,7 +118,8 @@ export class UserController {
   private async login(req: Request, res: Response) {
     try {
       // Validation is done by Joi middleware - no need for manual checks
-      const { email, password } = req.body;
+      const { email, password, rememberMe } = req.body;
+      const persistentSession = rememberMe !== false;
 
       // Find user by email
       const user = await this.userService.findByEmail(email);
@@ -171,26 +179,28 @@ export class UserController {
         return res.status(500).json({ error: 'Server configuration error' });
       }
 
-      const token = jwt.sign({ userId: user.id, email: user.email, role: user.role }, jwtSecret, {
-        expiresIn: '24h',
-      });
+      const tokenPayload = {
+        id: String(user.id),
+        email: user.email,
+        role: user.role,
+      };
 
-      const refreshToken = jwt.sign({ userId: user.id, email: user.email }, jwtRefreshSecret, {
-        expiresIn: '7d',
-      });
+      const token = jwtService.generateAccessToken(tokenPayload);
+      const refreshToken = jwtService.generateRefreshToken(tokenPayload);
 
       // Update last login
       await this.userService.updateLastLogin(user.id);
 
-      // Set cookies
-      jwtService.setAuthCookies(res, token, refreshToken);
-
       // If 2FA is enabled, don't return full tokens yet
       if (user.twofa_enabled) {
         // Generate a temporary "pre-auth" token valid for 5 minutes
-        const preAuthToken = jwt.sign({ userId: user.id, isPreAuth: true }, jwtSecret, {
-          expiresIn: '5m',
-        });
+        const preAuthToken = jwt.sign(
+          { userId: user.id, isPreAuth: true, rememberMe: persistentSession },
+          jwtSecret,
+          {
+            expiresIn: '5m',
+          },
+        );
 
         return res.json({
           success: true,
@@ -198,6 +208,9 @@ export class UserController {
           preAuthToken,
         });
       }
+
+      // Set cookies only after full authentication (including non-2FA flow)
+      jwtService.setAuthCookies(res, token, refreshToken, { persistent: persistentSession });
 
       // Remove sensitive fields from response
       const userResponse = {
@@ -243,10 +256,21 @@ export class UserController {
           this.logger.info('Password reset email sent', { email });
         } catch (emailError) {
           this.logger.error('Failed to send password reset email', emailError);
-          // Don't expose email sending failures to the user
+          return res.status(503).json({
+            success: false,
+            emailRegistered: true,
+            message:
+              'Serviciul de trimitere email pentru resetare parola nu este disponibil momentan. Contacteaza administratorul.',
+          });
         }
       } else {
         this.logger.warn('No email sender configured for password reset');
+        return res.status(503).json({
+          success: false,
+          emailRegistered: true,
+          message:
+            'Serviciul de trimitere email pentru resetare parola nu este disponibil momentan. Contacteaza administratorul.',
+        });
       }
 
       res.json({
@@ -282,6 +306,121 @@ export class UserController {
         return res.status(400).json({ error: error.message });
       }
       this.logger.error('Error resetting password', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  }
+
+  private async loginWithGoogle(req: Request, res: Response) {
+    try {
+      const { credential, rememberMe } = req.body;
+      const persistentSession = rememberMe !== false;
+
+      if (!credential) {
+        return res.status(400).json({ error: 'Google credential token is required' });
+      }
+
+      const googleClientId = process.env.GOOGLE_CLIENT_ID;
+      if (!googleClientId) {
+        this.logger.error('GOOGLE_CLIENT_ID is not configured');
+        return res.status(500).json({ error: 'Google authentication is not configured' });
+      }
+
+      // Verify the Google ID token
+      const client = new OAuth2Client(googleClientId);
+      let payload: any;
+      try {
+        const ticket = await client.verifyIdToken({
+          idToken: credential,
+          audience: googleClientId,
+        });
+        payload = ticket.getPayload();
+      } catch (verifyError) {
+        this.logger.warn('Invalid Google token', verifyError);
+        return res.status(401).json({ error: 'Invalid Google token' });
+      }
+
+      if (!payload || !payload.email) {
+        return res.status(401).json({ error: 'Could not extract email from Google token' });
+      }
+
+      const email = payload.email.toLowerCase();
+
+      // Whitelist check
+      if (!ALLOWED_GOOGLE_EMAILS.includes(email)) {
+        this.logger.warn('Google login attempt from unauthorized email', { email });
+        return res.status(403).json({
+          error: 'Access denied',
+          message: `Contul ${email} nu este autorizat pentru acces la ERP. Contactați administratorul.`,
+        });
+      }
+
+      // Find or create user
+      const user = await this.userService.findOrCreateGoogleUser({
+        googleId: payload.sub,
+        email,
+        firstName: payload.given_name || email.split('@')[0],
+        lastName: payload.family_name || '',
+        avatarUrl: payload.picture,
+      });
+
+      if (!user.is_active) {
+        return res.status(403).json({ error: 'Account is deactivated' });
+      }
+
+      // Generate JWT tokens (same as regular login)
+      const jwtSecret = process.env.JWT_SECRET;
+      const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+
+      if (!jwtSecret || jwtSecret.length < 32) {
+        this.logger.error('JWT_SECRET is not set or is too short');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+
+      if (!jwtRefreshSecret || jwtRefreshSecret.length < 32) {
+        this.logger.error('JWT_REFRESH_SECRET is not set or is too short');
+        return res.status(500).json({ error: 'Server configuration error' });
+      }
+
+      const tokenPayload = {
+        id: String(user.id),
+        email: user.email,
+        role: user.role,
+      };
+
+      const token = jwtService.generateAccessToken(tokenPayload);
+      const refreshToken = jwtService.generateRefreshToken(tokenPayload);
+
+      // Update last login & reset failed attempts
+      await this.userService.updateLastLogin(user.id);
+      await this.userService.resetFailedLoginAttempts(user.id);
+
+      // Set cookies
+      jwtService.setAuthCookies(res, token, refreshToken, { persistent: persistentSession });
+
+      const userResponse = {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role: user.role,
+        is_active: user.is_active,
+        avatar_url: user.avatar_url,
+        auth_provider: user.auth_provider,
+      };
+
+      this.logger.info('Google OAuth login successful', {
+        userId: user.id,
+        email: user.email,
+      });
+
+      res.json({
+        success: true,
+        token,
+        refreshToken,
+        user: userResponse,
+      });
+    } catch (error) {
+      this.logger.error('Error during Google OAuth login', error);
       res.status(500).json({ error: 'Internal Server Error' });
     }
   }
@@ -411,20 +550,18 @@ export class UserController {
       }
 
       // 2FA Success - Generate full tokens
-      const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET!;
+      const persistentSession = decoded?.rememberMe !== false;
+      const tokenPayload = {
+        id: String(user.id),
+        email: user.email,
+        role: user.role,
+      };
 
-      const accessToken = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
-        jwtSecret,
-        { expiresIn: '24h' },
-      );
-
-      const refreshToken = jwt.sign({ userId: user.id, email: user.email }, jwtRefreshSecret, {
-        expiresIn: '7d',
-      });
+      const accessToken = jwtService.generateAccessToken(tokenPayload);
+      const refreshToken = jwtService.generateRefreshToken(tokenPayload);
 
       // Set cookies
-      jwtService.setAuthCookies(res, accessToken, refreshToken);
+      jwtService.setAuthCookies(res, accessToken, refreshToken, { persistent: persistentSession });
 
       const userResponse = {
         id: user.id,

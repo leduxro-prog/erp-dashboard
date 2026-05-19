@@ -173,10 +173,10 @@ describe('JwtService', () => {
   // ── Cookie Management (continued) ─────────────────────────────────
 
   describe('setAuthCookies', () => {
-    it('calls res.cookie exactly 3 times', () => {
+    it('calls res.cookie exactly 4 times', () => {
       const mockRes = { cookie: jest.fn() } as any;
       service.setAuthCookies(mockRes, 'access-tok', 'refresh-tok');
-      expect(mockRes.cookie).toHaveBeenCalledTimes(3);
+      expect(mockRes.cookie).toHaveBeenCalledTimes(4);
     });
 
     it('sets access_token cookie with httpOnly true and path /', () => {
@@ -216,6 +216,17 @@ describe('JwtService', () => {
       expect(statusCall![2]).toMatchObject({ httpOnly: false });
     });
 
+    it('sets auth_persist cookie for session preference', () => {
+      const mockRes = { cookie: jest.fn() } as any;
+      service.setAuthCookies(mockRes, 'access-tok', 'refresh-tok', { persistent: false });
+
+      const persistCall = mockRes.cookie.mock.calls.find((c: any[]) => c[0] === 'auth_persist');
+      expect(persistCall).toBeDefined();
+      expect(persistCall![1]).toBe('false');
+      expect(persistCall![2]).toMatchObject({ httpOnly: false, path: '/' });
+      expect(persistCall![2].maxAge).toBeUndefined();
+    });
+
     it('sets secure flag when NODE_ENV is production', () => {
       process.env.NODE_ENV = 'production';
       process.env.JWT_SECRET = 'test-unit-secret-key-for-jwt-service';
@@ -244,10 +255,10 @@ describe('JwtService', () => {
   });
 
   describe('clearAuthCookies', () => {
-    it('calls res.clearCookie exactly 3 times', () => {
+    it('calls res.clearCookie exactly 4 times', () => {
       const mockRes = { clearCookie: jest.fn() } as any;
       service.clearAuthCookies(mockRes);
-      expect(mockRes.clearCookie).toHaveBeenCalledTimes(3);
+      expect(mockRes.clearCookie).toHaveBeenCalledTimes(4);
     });
 
     it('clears access_token with path /', () => {
@@ -268,6 +279,12 @@ describe('JwtService', () => {
       const mockRes = { clearCookie: jest.fn() } as any;
       service.clearAuthCookies(mockRes);
       expect(mockRes.clearCookie).toHaveBeenCalledWith('auth_status', { path: '/' });
+    });
+
+    it('clears auth_persist with path /', () => {
+      const mockRes = { clearCookie: jest.fn() } as any;
+      service.clearAuthCookies(mockRes);
+      expect(mockRes.clearCookie).toHaveBeenCalledWith('auth_persist', { path: '/' });
     });
   });
 

@@ -55,6 +55,7 @@ export class WooCommerceSyncModule implements ICypherModule {
   readonly name = 'woocommerce-sync';
   readonly version = '2.0.0';
   readonly description = 'Real-time webhook intake and synchronization between WooCommerce and CYPHER ERP with outbox pattern and DLQ';
+  readonly featureFlag = 'WOOCOMMERCE_SYNC';
   readonly dependencies = ['inventory', 'orders'];
   readonly publishedEvents = [
     'woocommerce.product_synced',

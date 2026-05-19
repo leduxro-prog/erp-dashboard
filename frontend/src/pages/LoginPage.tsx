@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Shield, KeyRound } from 'lucide-react';
 import { authService } from '../services/auth.service';
+import { resolveGoogleLoginClientId } from './loginPage.google-config';
+
+type GoogleAuthModule = typeof import('@react-oauth/google');
+
+async function trackSuccessfulLogin(method: 'email' | 'google' | '2fa' | 'backup_code') {
+  const { trackLogin } = await import('../services/retargeting');
+
+  trackLogin({ method, user_type: 'erp_user', source: 'erp' });
+}
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +26,59 @@ const LoginPage: React.FC = () => {
   const [preAuthToken, setPreAuthToken] = useState('');
   const [twofaToken, setTwofaToken] = useState('');
   const [useBackupCode, setUseBackupCode] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
+  const [googleConfigLoaded, setGoogleConfigLoaded] = useState(false);
+  const [googleAuthModule, setGoogleAuthModule] = useState<GoogleAuthModule | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadGoogleConfig = async () => {
+      try {
+        const clientId = await resolveGoogleLoginClientId(() => authService.getGoogleAuthConfig());
+        if (!mounted) {
+          return;
+        }
+
+        setGoogleClientId(clientId);
+      } catch {
+        if (!mounted) {
+          return;
+        }
+
+        setGoogleClientId('');
+      } finally {
+        if (mounted) {
+          setGoogleConfigLoaded(true);
+        }
+      }
+    };
+
+    void loadGoogleConfig();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!googleConfigLoaded || !googleClientId || googleClientId === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
+      return;
+    }
+
+    let isActive = true;
+
+    import('@react-oauth/google').then((module) => {
+      if (isActive) {
+        setGoogleAuthModule(module);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [googleClientId, googleConfigLoaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,15 +92,17 @@ const LoginPage: React.FC = () => {
           token: twofaToken,
           preAuthToken,
           isBackupCode: useBackupCode,
-        });
+        }, rememberMe);
+        await trackSuccessfulLogin(useBackupCode ? 'backup_code' : '2fa');
         navigate('/dashboard');
       } else {
         // Initial login step
-        const response = await authService.login({ email, password });
+        const response = await authService.login({ email, password }, rememberMe);
         if (response.requires2FA) {
           setRequires2FA(true);
           setPreAuthToken(response.preAuthToken || '');
         } else {
+          await trackSuccessfulLogin('email');
           navigate('/dashboard');
         }
       }
@@ -57,12 +121,39 @@ const LoginPage: React.FC = () => {
     setError('');
   };
 
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    if (!credentialResponse.credential) {
+      setError('Google authentication failed - no credential received.');
+      return;
+    }
+    setError('');
+    setGoogleLoading(true);
+    try {
+      await authService.loginWithGoogle(credentialResponse.credential, rememberMe);
+      await trackSuccessfulLogin('google');
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Google login failed. Your account may not be authorized.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError(
+      'Google Sign-In a esuat. Verifica daca folosesti domeniul oficial ERP si ca browserul permite popup/cookies.',
+    );
+  };
+
+  const GoogleOAuthProvider = googleAuthModule?.GoogleOAuthProvider;
+  const GoogleLogin = googleAuthModule?.GoogleLogin;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-primary-900 to-slate-900 flex items-center justify-center p-4">
       {/* Background Decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-40 h-40 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse animation-delay-2000"></div>
+        <div className="absolute top-20 left-10 w-40 h-40 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-40 h-40 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse animation-delay-2000"></div>
       </div>
 
       {/* Login Card */}
@@ -70,7 +161,7 @@ const LoginPage: React.FC = () => {
         <div className="card backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl">
           {/* Logo & Title */}
           <div className="text-center mb-8">
-            <div className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">
+            <div className="text-5xl font-bold bg-gradient-to-r from-primary-400 to-primary-500 bg-clip-text text-transparent mb-2">
               CYPHER
             </div>
             <p className="text-white/60 text-sm">Enterprise Resource Planning</p>
@@ -100,7 +191,7 @@ const LoginPage: React.FC = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="email"
-                    className="input w-full bg-white/5 border border-white/20 text-white placeholder-white/40 focus:bg-white/10 focus:border-blue-400"
+                    className="input w-full bg-white/5 border border-white/20 text-white placeholder-white/40 focus:bg-white/10 focus:border-primary-400"
                   />
                 </div>
 
@@ -121,7 +212,7 @@ const LoginPage: React.FC = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       autoComplete="current-password"
-                      className="input w-full bg-white/5 border border-white/20 text-white placeholder-white/40 focus:bg-white/10 focus:border-blue-400"
+                      className="input w-full bg-white/5 border border-white/20 text-white placeholder-white/40 focus:bg-white/10 focus:border-primary-400"
                     />
                     <button
                       type="button"
@@ -144,7 +235,7 @@ const LoginPage: React.FC = () => {
                     />
                     <span className="text-white/60">Remember me</span>
                   </label>
-                  <Link to="/forgot-password" className="text-blue-400 hover:text-blue-300">
+                  <Link to="/forgot-password" className="text-primary-400 hover:text-primary-300">
                     Forgot password?
                   </Link>
                 </div>
@@ -153,8 +244,8 @@ const LoginPage: React.FC = () => {
               /* 2FA Token Input */
               <div className="space-y-4 py-4">
                 <div className="text-center">
-                  <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <Shield size={28} className="text-blue-400" />
+                  <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-primary-500/20 flex items-center justify-center">
+                    <Shield size={28} className="text-primary-400" />
                   </div>
                   <h3 className="text-white text-lg font-semibold mb-1">
                     Two-Factor Authentication
@@ -178,7 +269,7 @@ const LoginPage: React.FC = () => {
                     }
                     required
                     autoFocus
-                    className="w-full text-center text-2xl tracking-[0.3em] font-mono py-4 bg-white/5 border border-white/20 text-white rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                    className="w-full text-center text-2xl tracking-[0.3em] font-mono py-4 bg-white/5 border border-white/20 text-white rounded-xl focus:ring-2 focus:ring-primary-400 outline-none"
                   />
                 ) : (
                   <input
@@ -190,7 +281,7 @@ const LoginPage: React.FC = () => {
                     onChange={(e) => setTwofaToken(e.target.value.replace(/[^0-9]/g, ''))}
                     required
                     autoFocus
-                    className="w-full text-center text-3xl tracking-[0.5em] font-mono py-4 bg-white/5 border border-white/20 text-white rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                    className="w-full text-center text-3xl tracking-[0.5em] font-mono py-4 bg-white/5 border border-white/20 text-white rounded-xl focus:ring-2 focus:ring-primary-400 outline-none"
                   />
                 )}
 
@@ -198,7 +289,7 @@ const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleBack}
-                    className="text-blue-400 hover:text-blue-300 text-sm"
+                    className="text-primary-400 hover:text-primary-300 text-sm"
                   >
                     Back to login
                   </button>
@@ -224,9 +315,9 @@ const LoginPage: React.FC = () => {
               disabled={
                 loading ||
                 (requires2FA && !useBackupCode && twofaToken.length !== 6) ||
-                (requires2FA && useBackupCode && twofaToken.length < 6)
+                (requires2FA && useBackupCode && twofaToken.length !== 8)
               }
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-lg transition duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full py-3 px-4 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold rounded-lg transition duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? 'Verifying...' : requires2FA ? 'Verify Code' : 'Sign In'}
             </button>
@@ -245,27 +336,48 @@ const LoginPage: React.FC = () => {
               </div>
 
               {/* Social Login */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  className="py-2 px-3 bg-white/5 border border-white/20 rounded-lg text-white/60 hover:text-white hover:border-white/40 transition text-sm font-medium"
-                >
-                  Google
-                </button>
-                <button
-                  type="button"
-                  className="py-2 px-3 bg-white/5 border border-white/20 rounded-lg text-white/60 hover:text-white hover:border-white/40 transition text-sm font-medium"
-                >
-                  Microsoft
-                </button>
+              <div className="flex flex-col items-center gap-3">
+                {googleLoading ? (
+                  <div className="py-2 text-white/60 text-sm">Connecting with Google...</div>
+                ) : !googleConfigLoaded ? (
+                  <div className="py-2 text-white/60 text-sm">Loading Google Sign-In...</div>
+                ) : googleClientId &&
+                  googleClientId !== 'YOUR_GOOGLE_CLIENT_ID_HERE' &&
+                  !googleAuthModule ? (
+                  <div className="py-2 text-white/60 text-sm">Loading Google Sign-In...</div>
+                ) :
+                  googleClientId &&
+                  googleClientId !== 'YOUR_GOOGLE_CLIENT_ID_HERE' &&
+                  GoogleOAuthProvider &&
+                  GoogleLogin ? (
+                  <GoogleOAuthProvider clientId={googleClientId}>
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={handleGoogleError}
+                      theme="filled_black"
+                      size="large"
+                      width="350"
+                      text="signin_with"
+                      shape="rectangular"
+                    />
+                  </GoogleOAuthProvider>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-2 px-3 bg-white/5 border border-white/10 rounded-lg text-white/30 cursor-not-allowed text-sm font-medium"
+                  >
+                    Google (not configured - check backend config)
+                  </button>
+                )}
               </div>
 
               {/* Sign Up Link */}
               <p className="text-center text-white/60 text-sm mt-6">
                 Don't have an account?{' '}
-                <a href="#" className="text-blue-400 hover:text-blue-300 font-medium">
+                <Link to="/b2b-store/register" className="text-primary-400 hover:text-primary-300 font-medium">
                   Sign up here
-                </a>
+                </Link>
               </p>
             </>
           )}
@@ -275,13 +387,13 @@ const LoginPage: React.FC = () => {
         <div className="text-center mt-8 text-white/40 text-xs">
           <p>Powered by Ledux.ro</p>
           <div className="flex justify-center gap-4 mt-3">
-            <a href="#" className="hover:text-white/60">
+            <Link to="/b2b-store/privacy" className="hover:text-white/60">
               Privacy Policy
-            </a>
-            <a href="#" className="hover:text-white/60">
+            </Link>
+            <Link to="/b2b-store/terms" className="hover:text-white/60">
               Terms of Service
-            </a>
-            <a href="#" className="hover:text-white/60">
+            </Link>
+            <a href="/api-docs" target="_blank" rel="noreferrer" className="hover:text-white/60">
               Documentation
             </a>
           </div>

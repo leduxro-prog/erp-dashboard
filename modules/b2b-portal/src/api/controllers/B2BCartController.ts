@@ -119,10 +119,20 @@ export class B2BCartController {
 
       const product = await this.dataSource.query(
         `SELECT p.id, p.sku, p.name, p.base_price, p.is_active,
-                COALESCE(SUM(sl.quantity_available), 0) as stock_available,
+                COALESCE(
+                  SUM(
+                    CASE
+                      WHEN w.is_active = true AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+                        THEN sl.quantity_available
+                      ELSE 0
+                    END
+                  ),
+                  0
+                ) as stock_available,
                 (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.is_primary DESC LIMIT 1) as image_url
          FROM products p
          LEFT JOIN stock_levels sl ON p.id = sl.product_id
+         LEFT JOIN warehouses w ON w.id = sl.warehouse_id
          WHERE p.id = $1
          GROUP BY p.id, p.sku, p.name, p.base_price, p.is_active`,
         [product_id],
@@ -198,7 +208,7 @@ export class B2BCartController {
   ): Promise<void> {
     try {
       const customerId = this.getB2BCustomerId(req);
-      const { itemId } = req.params;
+      const itemId = req.params.itemId || req.params.item_id;
       const { quantity } = req.body;
 
       if (!customerId) {
@@ -250,8 +260,12 @@ export class B2BCartController {
       }
 
       const stockResult = await this.dataSource.query(
-        `SELECT COALESCE(SUM(quantity_available), 0) as stock_available
-         FROM stock_levels WHERE product_id = $1`,
+        `SELECT COALESCE(SUM(sl.quantity_available), 0) as stock_available
+         FROM stock_levels sl
+         JOIN warehouses w ON w.id = sl.warehouse_id
+         WHERE sl.product_id = $1
+           AND w.is_active = true
+           AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')`,
         [item[0].product_id],
       );
 
@@ -297,7 +311,7 @@ export class B2BCartController {
   ): Promise<void> {
     try {
       const customerId = this.getB2BCustomerId(req);
-      const { itemId } = req.params;
+      const itemId = req.params.itemId || req.params.item_id;
 
       if (!customerId) {
         res.status(401).json({
@@ -393,8 +407,12 @@ export class B2BCartController {
 
       for (const item of items) {
         const stockResult = await this.dataSource.query(
-          `SELECT COALESCE(SUM(quantity_available), 0) as stock_available
-           FROM stock_levels WHERE product_id = $1`,
+          `SELECT COALESCE(SUM(sl.quantity_available), 0) as stock_available
+           FROM stock_levels sl
+           JOIN warehouses w ON w.id = sl.warehouse_id
+           WHERE sl.product_id = $1
+             AND w.is_active = true
+             AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')`,
           [item.product_id],
         );
 
@@ -476,11 +494,21 @@ export class B2BCartController {
   private async getCartItemsWithDetails(cartId: number, tier: string): Promise<CartItemResponse[]> {
     const items = await this.dataSource.query(
       `SELECT ci.id, ci.product_id, ci.quantity, p.sku, p.name, p.base_price,
-              COALESCE(SUM(sl.quantity_available), 0) as stock_available,
+              COALESCE(
+                SUM(
+                  CASE
+                    WHEN w.is_active = true AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+                      THEN sl.quantity_available
+                    ELSE 0
+                  END
+                ),
+                0
+              ) as stock_available,
               (SELECT pi.image_url FROM product_images pi WHERE pi.product_id = ci.product_id ORDER BY pi.is_primary DESC LIMIT 1) as image_url
        FROM b2b_cart_items ci
        JOIN products p ON ci.product_id = p.id
        LEFT JOIN stock_levels sl ON ci.product_id = sl.product_id
+       LEFT JOIN warehouses w ON w.id = sl.warehouse_id
        WHERE ci.cart_id = $1
        GROUP BY ci.id, ci.product_id, ci.quantity, p.sku, p.name, p.base_price`,
       [cartId],

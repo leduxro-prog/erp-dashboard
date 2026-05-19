@@ -1,0 +1,18 @@
+# Optional environment for cypher-go-live-gate.service
+# Copy to /etc/default/cypher-go-live-gate and tune values.
+
+# Core containers
+APP_CONTAINER=cypher-erp-app-1
+REDIS_CONTAINER=cypher-erp-redis
+DB_CONTAINER=cypher-erp-db
+
+# Database backup target
+DB_USER=cypher_user
+DB_NAME=cypher_erp
+BACKUP_DIR=/opt/cypher-erp/backups
+
+# Gate behavior
+SINCE_WINDOW=30m
+WATCH_CHECKPOINTS=3
+WATCH_INTERVAL_SEC=600
+WATCH_LOG_FILE=/var/log/cypher-go-live-gate.log

@@ -28,7 +28,7 @@ describe('GetLowStockAlerts Use Case', () => {
     const result = await useCase.execute();
 
     expect(result).toHaveLength(2);
-    expect(mockRepository.getAlerts).toHaveBeenCalledWith(undefined);
+    expect(mockRepository.getAlerts.mock.calls[0][0]).toBeUndefined();
   });
 
   it('should retrieve acknowledged alerts when specified', async () => {

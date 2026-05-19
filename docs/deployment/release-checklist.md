@@ -4,7 +4,7 @@
 
 This checklist provides a comprehensive guide for releasing the Cypher ERP system to production. It covers pre-release preparation, deployment steps, post-deployment verification, and rollback procedures.
 
-**Last Updated:** 2026-02-13
+**Last Updated:** 2026-03-08
 **Current Version:** 0.1.0
 **Target SLA:** 5-minute rollback capability
 
@@ -13,6 +13,7 @@ This checklist provides a comprehensive guide for releasing the Cypher ERP syste
 ## Table of Contents
 
 - [Pre-Release Checklist](#pre-release-checklist)
+- [Launch Smoke Matrix](#launch-smoke-matrix)
 - [Deployment Steps](#deployment-steps)
 - [Post-Deployment Verification](#post-deployment-verification)
 - [Rollback Procedures](#rollback-procedures)
@@ -72,6 +73,31 @@ Complete all items in this section before initiating a release.
 
 ---
 
+## Launch Smoke Matrix
+
+Run `bash scripts/tests/launch-smoke.sh` before launch and use `bash scripts/go-live-gate.sh` as the final one-command go/no-go gate.
+
+### Required matrix
+
+- [ ] `/health` returns `200` and JSON payload confirms service is up
+- [ ] Public settings policy exposes only `general`, `b2b`, and `brandStrategy`
+- [ ] B2B visibility policy matches `catalogVisibility` without leaking protected fields
+- [ ] ERP login shell loads at `/login` with HTML app shell intact and a production `/assets/*.js` bootstrap
+- [ ] B2B storefront shell loads at `/b2b-store` with HTML app shell intact and a production `/assets/*.js` bootstrap
+- [ ] Static asset correctness covers `/favicon.ico`, `/erp/favicon.svg`, `/b2b/favicon.svg`, and both manifests
+- [ ] SEO status/config parity covers sitemap status, structured-data templates, and sitemap config route presence
+- [ ] ERP login shell and B2B storefront shell stay within bundle budgets via `scripts/tests/bundle-budget-check.sh`
+
+### Gate policy
+
+- `scripts/tests/launch-smoke.sh` keeps launch-critical public settings and B2B visibility checks inline; `scripts/tests/public-surface-smoke.sh` remains a broader regression suite outside the final go/no-go path
+- `scripts/tests/launch-smoke.sh` delegates to `scripts/tests/seo-smoke.sh` and `scripts/tests/bundle-budget-check.sh`
+- `scripts/go-live-gate.sh` now runs backup -> T0 gate -> Launch Smoke -> post-launch watch, auto-detects compose-labeled `frontend`/`app`/`db`/`redis`/`rabbitmq` containers, and still allows explicit `*_CONTAINER` overrides when needed
+- Route checks validate production HTML/bootstrap correctness; host identity and branding checks are separate from raw IP/localhost curl smoke and require explicit FQDN/browser validation when needed
+- Any failure in launch smoke or gate is an automatic `NO-GO`
+
+---
+
 ## Deployment Steps
 
 ### 1. Preparation (15 minutes before deployment)
@@ -96,8 +122,8 @@ git push origin "$RELEASE_VERSION"
 ### 2. Pre-Deployment Checks (5 minutes)
 
 ```bash
-# Run smoke tests on staging
-npm run test:smoke
+# Run launch smoke on the target environment
+API_BASE_URL=http://localhost:3000 WEB_BASE_URL=http://127.0.0.1:8080 bash scripts/tests/launch-smoke.sh
 
 # Verify all services are healthy
 curl http://staging.cypher.ro/health/live
@@ -159,11 +185,10 @@ docker compose ps
 ### 7. Smoke Tests (5 minutes)
 
 ```bash
-# Run smoke tests against production
-API_BASE_URL=https://erp.cypher.ro/api/v1 npm run test -- tests/smoke/ApiSmokeTests.ts
+# Run the final one-command release gate
+API_BASE_URL=http://localhost:3000 WEB_BASE_URL=http://127.0.0.1:8080 bash scripts/go-live-gate.sh
 
-# Check results
-# All tests should pass
+# Result must end with GO
 ```
 
 ---

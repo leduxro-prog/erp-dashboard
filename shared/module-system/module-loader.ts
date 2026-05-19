@@ -7,6 +7,7 @@ import { ICypherModule } from './module.interface';
 
 
 const logger = createModuleLogger('module-loader');
+const OPTIONAL_MODULES_WITH_RUNTIME_DEPS = new Set(['notifications', 'quotations']);
 
 /**
  * Discovers and dynamically loads CYPHER ERP modules from the modules/ directory.
@@ -114,10 +115,17 @@ export class ModuleLoader {
             `Module loaded: ${module.name} v${module.version} - ${module.description}`
           );
         } else {
-          logger.warn(`Module ${moduleName}: exported value is not a valid ICypherModule`);
+          logger.info(`Skipping folder "${moduleName}": export is not a runtime ICypherModule`);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        if (this.isOptionalRuntimeDependencyError(moduleName, message)) {
+          logger.info(
+            `Skipping optional module "${moduleName}": missing runtime dependency (${this.extractMissingDependency(message)})`
+          );
+          continue;
+        }
+
         logger.warn(`Failed to load module "${moduleName}": ${message}`);
       }
     }
@@ -340,12 +348,30 @@ export class ModuleLoader {
 
       return entries
         .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
+        .filter((entry) => this.hasModuleIndex(modulesPath, entry.name))
         .map((entry) => entry.name)
         .sort();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to read modules directory: ${message}`);
     }
+  }
+
+  private hasModuleIndex(modulesPath: string, moduleName: string): boolean {
+    const moduleSrcPath = path.join(modulesPath, moduleName, 'src');
+    const indexJs = path.join(moduleSrcPath, 'index.js');
+    const indexTs = path.join(moduleSrcPath, 'index.ts');
+
+    return fs.existsSync(indexJs) || fs.existsSync(indexTs);
+  }
+
+  private isOptionalRuntimeDependencyError(moduleName: string, message: string): boolean {
+    return OPTIONAL_MODULES_WITH_RUNTIME_DEPS.has(moduleName) && message.includes("Cannot find module '");
+  }
+
+  private extractMissingDependency(message: string): string {
+    const missingMatch = message.match(/Cannot find module '([^']+)'/);
+    return missingMatch?.[1] || 'unknown';
   }
 
   /**

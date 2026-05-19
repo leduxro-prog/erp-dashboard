@@ -3,6 +3,8 @@ import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { b2bApi } from '../../services/b2b-api';
 import { useGlobalLanguage } from '../../hooks/useLanguage';
 import { useB2BAuthStore } from '../../stores/b2b/b2b-auth.store';
+import { trackLogin } from '../../services/retargeting';
+import { resolveB2BStorePath } from '../../utils/runtime-branding';
 
 export const B2BLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -10,6 +12,8 @@ export const B2BLoginPage: React.FC = () => {
   const { language } = useGlobalLanguage();
   const isRo = language === 'ro';
   const { login, isAuthenticated } = useB2BAuthStore();
+  const hostname = typeof window === 'undefined' ? '' : window.location.hostname;
+  const storePath = (pathname: string) => resolveB2BStorePath(pathname, hostname);
 
   const queryParams = new URLSearchParams(location.search);
   const redirectParam = queryParams.get('redirect');
@@ -36,6 +40,7 @@ export const B2BLoginPage: React.FC = () => {
     try {
       const response = await b2bApi.login(email, password);
       login(response.token, response.refresh_token, response.customer);
+      trackLogin({ method: 'email', user_type: 'b2b', source: 'b2b_store' });
       navigate(redirectPath);
     } catch (err: any) {
       setError(
@@ -50,11 +55,11 @@ export const B2BLoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
+    <div className="min-h-screen flex items-center justify-center bg-surface-secondary">
+      <div className="max-w-md w-full bg-surface-primary rounded-lg shadow-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Cypher B2B Portal</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-text-primary">Cypher B2B Portal</h1>
+          <p className="text-text-secondary mt-2">
             {isRo ? 'Autentifică-te în contul tău B2B' : 'Login to your B2B account'}
           </p>
         </div>
@@ -67,7 +72,7 @@ export const B2BLoginPage: React.FC = () => {
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-medium text-text-secondary">
               Email
             </label>
             <input
@@ -76,13 +81,13 @@ export const B2BLoginPage: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-border-secondary rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               placeholder="your@company.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-text-secondary">
               {isRo ? 'Parolă' : 'Password'}
             </label>
             <input
@@ -91,13 +96,13 @@ export const B2BLoginPage: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-border-secondary rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               placeholder="••••••••"
             />
             <div className="mt-2 text-right">
               <Link
-                to="/b2b-store/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-500"
+                to={storePath('/forgot-password')}
+                className="text-sm text-primary-600 hover:text-primary-500"
               >
                 {isRo ? 'Ai uitat parola?' : 'Forgot password?'}
               </Link>
@@ -107,7 +112,7 @@ export const B2BLoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading
               ? isRo
@@ -120,7 +125,7 @@ export const B2BLoginPage: React.FC = () => {
         </form>
 
         <div className="mt-6 text-center">
-          <Link to="/b2b-store/register" className="text-sm text-blue-600 hover:text-blue-500">
+          <Link to={storePath('/register')} className="text-sm text-primary-600 hover:text-primary-500">
             {isRo ? 'Nu ai cont? Înregistrează-te aici' : "Don't have an account? Register here"}
           </Link>
         </div>

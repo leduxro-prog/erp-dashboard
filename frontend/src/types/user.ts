@@ -23,6 +23,7 @@ export interface User {
 export interface LoginRequest {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface LoginResponse {
@@ -38,6 +39,7 @@ export interface TwoFactorLoginRequest {
   token: string;
   preAuthToken: string;
   isBackupCode?: boolean;
+  rememberMe?: boolean;
 }
 
 export interface TwoFactorLoginResponse {

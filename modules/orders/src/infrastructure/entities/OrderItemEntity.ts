@@ -2,6 +2,11 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index } 
 
 import { OrderEntity } from './OrderEntity';
 
+const decimalNumberTransformer = {
+  to: (value: number | null) => value,
+  from: (value: string | null) => (value === null ? null : parseFloat(value)),
+};
+
 @Entity('order_items')
 @Index(['order_id'])
 @Index(['product_id'])
@@ -21,23 +26,23 @@ export class OrderItemEntity {
   @Column({ type: 'varchar', length: 255 })
   product_name!: string;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, transformer: decimalNumberTransformer })
   quantity!: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   quantity_delivered!: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, transformer: decimalNumberTransformer })
   unit_price!: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, transformer: decimalNumberTransformer })
   line_total!: number;
 
   @Column({ type: 'uuid', nullable: true })
   source_warehouse_id!: string | null;
 
   /** Immutable cost price captured at the moment of sale */
-  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true, default: null })
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true, default: null, transformer: decimalNumberTransformer })
   cost_price_snapshot!: number | null;
 
   /** Origin of the cost data (metadata, pricing_engine, estimated, etc.) */

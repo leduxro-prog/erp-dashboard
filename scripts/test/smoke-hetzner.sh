@@ -27,6 +27,15 @@ fi
 
 # Strip trailing slash
 BASE_URL="${BASE_URL%/}"
+CHECK_DIRECT_BACKEND_3000="${CHECK_DIRECT_BACKEND_3000:-false}"
+B2B_BASE_URL="${B2B_BASE_URL:-$BASE_URL}"
+B2B_BASE_URL="${B2B_BASE_URL%/}"
+CURL_COMMON_OPTS=(--connect-timeout 10 --max-time 15 -L)
+
+if [[ "$BASE_URL" =~ ^https?://([0-9]{1,3}\.){3}[0-9]{1,3}(/|$) ]]; then
+  echo "[WARN] BASE_URL uses a raw IP. Host-based ingress rules may fail on IP requests."
+  echo "[WARN] Prefer FQDN URLs (example: https://erp.ledux.ro)."
+fi
 
 PASS=0
 FAIL=0
@@ -40,7 +49,7 @@ check() {
   TOTAL=$((TOTAL + 1))
 
   local code
-  code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 15 "$url" 2>/dev/null || echo "000")
+  code=$(curl -s -o /dev/null -w '%{http_code}' "${CURL_COMMON_OPTS[@]}" "$url" 2>/dev/null || echo "000")
 
   if [ "$code" = "$expected_code" ]; then
     echo "[PASS] $name (HTTP $code)"
@@ -59,7 +68,7 @@ check_post_any() {
   TOTAL=$((TOTAL + 1))
 
   local code
-  code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 15 \
+  code=$(curl -s -o /dev/null -w '%{http_code}' "${CURL_COMMON_OPTS[@]}" \
     -X POST -H 'Content-Type: application/json' -d "$payload" "$url" 2>/dev/null || echo "000")
 
   for expected in "$@"; do
@@ -82,7 +91,7 @@ check_json_field() {
   TOTAL=$((TOTAL + 1))
 
   local body
-  body=$(curl -sf --connect-timeout 10 --max-time 15 "$url" 2>/dev/null || echo "")
+  body=$(curl -sf "${CURL_COMMON_OPTS[@]}" "$url" 2>/dev/null || echo "")
 
   if [ -z "$body" ]; then
     echo "[FAIL] $name -> $url (no response)"
@@ -110,8 +119,9 @@ echo "  Time:   $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "============================================"
 echo ""
 
-# Backend health (direct port)
-check "Backend health (port 3000)" "$BASE_URL:3000/health"
+if [ "${CHECK_DIRECT_BACKEND_3000}" = "true" ]; then
+  check "Backend health (port 3000)" "$BASE_URL:3000/health"
+fi
 
 # API v1 health (via nginx proxy)
 check "API v1 health (via nginx)"  "$BASE_URL/api/v1/health"
@@ -119,9 +129,8 @@ check "API v1 health (via nginx)"  "$BASE_URL/api/v1/health"
 # Frontend root (nginx serves React)
 check "Frontend root"              "$BASE_URL/"
 
-# B2B endpoints
-check "B2B products filters"       "$BASE_URL/api/v1/b2b/products/filters"
-check "B2B product categories"     "$BASE_URL/api/v1/b2b/products/categories"
+# B2B storefront
+check "B2B storefront"             "$B2B_BASE_URL/b2b-store"
 
 # Auth endpoints exist (should not be 404)
 check_post_any "ERP login endpoint exists" "$BASE_URL/api/v1/users/login" '{}' \

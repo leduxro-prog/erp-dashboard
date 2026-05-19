@@ -59,20 +59,95 @@ export interface SupplierOrder {
 }
 
 class SuppliersService {
+  private unwrapData<T>(response: any): T {
+    return (response?.data ?? response) as T;
+  }
+
+  private mapSupplier(row: any): Supplier {
+    return {
+      id: String(row?.id ?? ''),
+      name: String(row?.name ?? ''),
+      contact_email: row?.contact_email ?? row?.contactEmail ?? '',
+      contact_phone: row?.contact_phone ?? row?.contactPhone ?? '',
+      address: row?.address ?? row?.website ?? '',
+      website: row?.website ?? '',
+      is_active: Boolean(row?.is_active ?? row?.isActive ?? false),
+      last_sync_at: row?.last_sync_at ?? row?.lastSync ?? undefined,
+      created_at: row?.created_at ?? row?.createdAt ?? new Date().toISOString(),
+      updated_at: row?.updated_at ?? row?.updatedAt ?? new Date().toISOString(),
+    };
+  }
+
+  private mapSupplierProduct(row: any): SupplierProduct {
+    return {
+      id: String(row?.id ?? ''),
+      supplier_id: String(row?.supplier_id ?? row?.supplierId ?? ''),
+      supplier_sku: String(row?.supplier_sku ?? row?.supplierSku ?? ''),
+      name: String(row?.name ?? ''),
+      description: row?.description ?? undefined,
+      price: Number(row?.price ?? 0),
+      currency: row?.currency ?? 'RON',
+      stock_quantity: Number(row?.stock_quantity ?? row?.stockQuantity ?? 0),
+      category: row?.category ?? undefined,
+      image_url: row?.image_url ?? row?.imageUrl ?? undefined,
+      url: row?.url ?? undefined,
+      last_synced: row?.last_synced ?? row?.lastSynced ?? row?.lastScraped ?? new Date().toISOString(),
+    };
+  }
+
+  private mapSupplierStats(row: any): SupplierStatistics {
+    return {
+      total_products: Number(row?.total_products ?? row?.totalProducts ?? 0),
+      in_stock: Number(row?.in_stock ?? row?.inStock ?? 0),
+      low_stock: Number(row?.low_stock ?? row?.lowStock ?? 0),
+      out_of_stock: Number(row?.out_of_stock ?? row?.outOfStock ?? 0),
+      avg_price: Number(row?.avg_price ?? row?.averagePrice ?? 0),
+      categories: Array.isArray(row?.categories) ? row.categories : [],
+    };
+  }
+
+  private mapSkuMapping(row: any): SkuMapping {
+    return {
+      id: String(row?.id ?? ''),
+      supplier_id: String(row?.supplier_id ?? row?.supplierId ?? ''),
+      supplier_sku: String(row?.supplier_sku ?? row?.supplierSku ?? ''),
+      internal_product_id: row?.internal_product_id ?? row?.internalProductId ?? undefined,
+      internal_sku: row?.internal_sku ?? row?.internalSku ?? undefined,
+      product_name: row?.product_name ?? row?.productName ?? undefined,
+      created_at: row?.created_at ?? row?.createdAt ?? new Date().toISOString(),
+    };
+  }
+
+  private mapSupplierOrder(row: any): SupplierOrder {
+    return {
+      id: String(row?.id ?? ''),
+      supplier_id: String(row?.supplier_id ?? row?.supplierId ?? ''),
+      order_number: row?.order_number ?? row?.orderNumber ?? undefined,
+      status: String(row?.status ?? ''),
+      total_amount: Number(row?.total_amount ?? row?.totalAmount ?? 0),
+      created_at: row?.created_at ?? row?.createdAt ?? new Date().toISOString(),
+      updated_at: row?.updated_at ?? row?.updatedAt ?? new Date().toISOString(),
+    };
+  }
+
   // Suppliers
   async getSuppliers(activeOnly = false): Promise<Supplier[]> {
     const params = new URLSearchParams();
     if (activeOnly) params.set('activeOnly', 'true');
     const queryString = params.toString();
-    return apiClient.get<Supplier[]>(`/suppliers${queryString ? `?${queryString}` : ''}`);
+    const response: any = await apiClient.get(`/suppliers${queryString ? `?${queryString}` : ''}`);
+    const rows = this.unwrapData<any[]>(response);
+    return Array.isArray(rows) ? rows.map((row) => this.mapSupplier(row)) : [];
   }
 
   async getSupplier(id: string | number): Promise<Supplier> {
-    return apiClient.get<Supplier>(`/suppliers/${id}`);
+    const response: any = await apiClient.get(`/suppliers/${id}`);
+    return this.mapSupplier(this.unwrapData<any>(response));
   }
 
   async getSupplierStatistics(id: string | number): Promise<SupplierStatistics> {
-    return apiClient.get<SupplierStatistics>(`/suppliers/${id}/statistics`);
+    const response: any = await apiClient.get(`/suppliers/${id}/statistics`);
+    return this.mapSupplierStats(this.unwrapData<any>(response));
   }
 
   // Products
@@ -93,7 +168,9 @@ class SuppliersService {
     if (params?.offset) queryParams.set('offset', params.offset.toString());
 
     const queryString = queryParams.toString();
-    return apiClient.get<SupplierProduct[]>(`/suppliers/${id}/products${queryString ? `?${queryString}` : ''}`);
+    const response: any = await apiClient.get(`/suppliers/${id}/products${queryString ? `?${queryString}` : ''}`);
+    const rows = this.unwrapData<any[]>(response);
+    return Array.isArray(rows) ? rows.map((row) => this.mapSupplierProduct(row)) : [];
   }
 
   // Sync
@@ -107,11 +184,15 @@ class SuppliersService {
 
   // SKU Mappings
   async getSkuMappings(id: string | number): Promise<SkuMapping[]> {
-    return apiClient.get<SkuMapping[]>(`/suppliers/${id}/sku-mappings`);
+    const response: any = await apiClient.get(`/suppliers/${id}/sku-mappings`);
+    const rows = this.unwrapData<any[]>(response);
+    return Array.isArray(rows) ? rows.map((row) => this.mapSkuMapping(row)) : [];
   }
 
   async getUnmappedProducts(id: string | number): Promise<SupplierProduct[]> {
-    return apiClient.get<SupplierProduct[]>(`/suppliers/${id}/unmapped-products`);
+    const response: any = await apiClient.get(`/suppliers/${id}/unmapped-products`);
+    const rows = this.unwrapData<any[]>(response);
+    return Array.isArray(rows) ? rows.map((row) => this.mapSupplierProduct(row)) : [];
   }
 
   async createSkuMapping(supplierId: string | number, data: {
@@ -143,7 +224,9 @@ class SuppliersService {
     if (params?.offset) queryParams.set('offset', params.offset.toString());
 
     const queryString = queryParams.toString();
-    return apiClient.get<SupplierOrder[]>(`/suppliers/${supplierId}/orders${queryString ? `?${queryString}` : ''}`);
+    const response: any = await apiClient.get(`/suppliers/${supplierId}/orders${queryString ? `?${queryString}` : ''}`);
+    const rows = this.unwrapData<any[]>(response);
+    return Array.isArray(rows) ? rows.map((row) => this.mapSupplierOrder(row)) : [];
   }
 }
 

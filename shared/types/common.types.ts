@@ -25,7 +25,7 @@ export type Language = typeof LanguageEnum[keyof typeof LanguageEnum];
 
 /**
  * Currency enum (RON is the only supported currency)
- * VAT rate in Romania: 19%
+ * VAT rate in Romania: 21%
  */
 export const CurrencyEnum = {
   RON: 'RON',
@@ -98,7 +98,7 @@ export interface ApiResponse<T> {
 }
 
 /**
- * VAT constant (19% in Romania)
+ * VAT constant (21% in Romania)
  */
 export const VAT_RATE = 0.21;
 

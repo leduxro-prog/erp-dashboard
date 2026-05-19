@@ -55,7 +55,7 @@ describe('WooCommerce <-> Inventory Integration', () => {
             sku: 'WC-SKU-001',
           },
         ],
-        total: '357.00', // 300 + 19% VAT
+        total: '357.00', // Legacy WooCommerce fixture: 300 + 19% VAT
       };
 
       // Transform to internal format (what the sync service would do)

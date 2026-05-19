@@ -24,11 +24,12 @@ export interface StockSyncJobConfig {
  * - Graceful shutdown support
  */
 export class StockSyncJob {
-  private queue: Queue;
-  private worker: Worker;
+  private queue: Queue | null = null;
+  private worker: Worker | null = null;
   private readonly queueName: string;
   private readonly schedulePattern: string;
   private readonly logger = createModuleLogger('StockSyncJob');
+  private readonly isEnabled: boolean;
 
   /**
    * Create a new StockSyncJob instance
@@ -44,6 +45,12 @@ export class StockSyncJob {
   ) {
     this.queueName = config.queueName || 'smartbill-stock-sync';
     this.schedulePattern = config.schedulePattern || '*/15 * * * *';
+
+    this.isEnabled = Boolean(redisConnection);
+    if (!this.isEnabled) {
+      this.logger.warn('StockSyncJob disabled: Redis connection is unavailable');
+      return;
+    }
 
     const queueOptions: QueueOptions = {
       connection: redisConnection,
@@ -79,6 +86,11 @@ export class StockSyncJob {
    * Schedules recurring job and sets up event handlers for monitoring
    */
   async start(): Promise<void> {
+    if (!this.isEnabled || !this.queue || !this.worker) {
+      this.logger.warn('Stock sync job start skipped: queue is disabled');
+      return;
+    }
+
     // Add recurring job - every 15 minutes
     await this.queue.add(
       'sync-stock',
@@ -171,8 +183,12 @@ export class StockSyncJob {
    */
   async stop(): Promise<void> {
     try {
-      await this.worker.close();
-      await this.queue.close();
+      if (this.worker) {
+        await this.worker.close();
+      }
+      if (this.queue) {
+        await this.queue.close();
+      }
       this.logger.info('Stock sync job stopped');
     } catch (error) {
       this.logger.error('Error stopping stock sync job', {

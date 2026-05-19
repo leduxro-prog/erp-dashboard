@@ -17,6 +17,16 @@ import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
 const PROJECT_ROOT = process.cwd();
 const ROLLBACK_SCRIPT = join(PROJECT_ROOT, 'scripts', 'rollback.sh');
 const BACKUP_DIR = join(PROJECT_ROOT, 'backups');
+const COMMAND_ENV = {
+  ...process.env,
+  DB_PASSWORD: process.env.DB_PASSWORD || 'rollback-drill-db-password',
+  JWT_SECRET: process.env.JWT_SECRET || 'rollback-drill-jwt-secret',
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'rollback-drill-refresh-secret',
+  JWT_SECRET_B2B: process.env.JWT_SECRET_B2B || 'rollback-drill-b2b-secret',
+  JWT_REFRESH_SECRET_B2B: process.env.JWT_REFRESH_SECRET_B2B || 'rollback-drill-b2b-refresh-secret',
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || 'rollback-drill-redis-password',
+  MEILI_MASTER_KEY: process.env.MEILI_MASTER_KEY || 'rollback-drill-meili-key',
+};
 
 // Rollback drill result interface
 interface RollbackDrillResult {
@@ -36,6 +46,7 @@ function executeCommand(command: string, options = { silent: false }): string {
   try {
     return execSync(command, {
       encoding: 'utf-8',
+      env: COMMAND_ENV,
       stdio: silent ? 'pipe' : 'inherit',
     });
   } catch (error) {
@@ -216,11 +227,11 @@ describe('Rollback Drill Tests', () => {
       }
     });
 
-    it('should perform dry run with version specified', () => {
+    it('should perform dry run with rollback target specified', () => {
       const start = Date.now();
       try {
         const output = executeCommand(
-          `${ROLLBACK_SCRIPT} --dry-run --version v0.1.0 --force`,
+          `${ROLLBACK_SCRIPT} --dry-run --commit ${initialCommit} --force`,
           { silent: true }
         );
         const duration = Date.now() - start;
@@ -323,9 +334,9 @@ describe('Rollback Drill Tests', () => {
       try {
         const originalBranch = getCurrentGitBranch();
 
-        // Switch to main and back
-        executeCommand('git checkout main', { silent: true });
-        expect(getCurrentGitBranch()).toBe('main');
+        // Switch to detached HEAD and back. Checking out shared branches is unsafe in worktrees.
+        executeCommand('git checkout --detach HEAD', { silent: true });
+        expect(getCurrentGitBranch()).toBe('HEAD');
 
         executeCommand(`git checkout ${drillBranch}`, { silent: true });
         expect(getCurrentGitBranch()).toBe(drillBranch);
@@ -574,6 +585,7 @@ describe('Rollback Drill Tests', () => {
 
       expect(report.total_phases).toBeGreaterThan(0);
       expect(report.failed_phases).toBe(0);
+      expect(report.results).toBe(drillResults);
     });
 
     it('should verify rollback SLA compliance', () => {

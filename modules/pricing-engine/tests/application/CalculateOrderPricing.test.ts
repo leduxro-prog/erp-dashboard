@@ -89,8 +89,8 @@ describe('CalculateOrderPricing Use Case', () => {
     const result = await useCase.execute(items);
 
     expect(result.subtotal).toBe(500); // 5 * 100
-    expect(result.taxAmount).toBeCloseTo(95, 0); // 500 * 0.21
-    expect(result.grandTotal).toBeCloseTo(595, 0);
+    expect(result.taxAmount).toBeCloseTo(105, 0); // 500 * 0.21 VAT
+    expect(result.grandTotal).toBeCloseTo(605, 0);
   });
 
   it('should calculate order with multiple products', async () => {

@@ -9,6 +9,7 @@
  */
 
 import { IEventBus } from '@shared/module-system/module.interface';
+import { loadBrandStrategySync } from '@shared/utils/brand-strategy';
 import { createModuleLogger } from '@shared/utils/logger';
 import { Router, Request, Response, NextFunction } from 'express';
 import Redis from 'ioredis';
@@ -54,6 +55,8 @@ import { TypeOrmStructuredDataRepository } from './repositories/TypeOrmStructure
  * Acts as a service locator for the module.
  */
 export interface SeoModuleCompositionRoot {
+  dataSource: DataSource;
+
   // Repositories
   metadataRepository: ISeoMetadataRepository;
   sitemapRepository: ISitemapRepository;
@@ -115,9 +118,17 @@ export async function createSeoModuleCompositionRoot(
 
   // Instantiate domain services (stateless, pure functions)
   const scoreCalculator = new SeoScoreCalculator();
-  const metaTagGenerator = new MetaTagGenerator();
+  const brandStrategy = loadBrandStrategySync();
+  const metaTagGenerator = new MetaTagGenerator({
+    strategy: brandStrategy,
+    brandName: brandStrategy.brandName,
+    titleSuffix: brandStrategy.seo.titleSuffix,
+    defaultCta: brandStrategy.seo.metaDescriptionCta,
+  });
   const slugGenerator = new SlugGenerator();
-  const structuredDataGenerator = new StructuredDataGenerator('https://ledux.ro');
+  const structuredDataGenerator = new StructuredDataGenerator(
+    String(brandStrategy.website || 'https://ledux.ro').replace(/\/$/, ''),
+  );
 
   // Instantiate use cases
   const generateProductSeo = new GenerateProductSeo(
@@ -143,6 +154,7 @@ export async function createSeoModuleCompositionRoot(
 
   // Build the composition root object (needed by controller + router)
   const compositionRoot: SeoModuleCompositionRoot = {
+    dataSource,
     metadataRepository,
     sitemapRepository,
     structuredDataRepository,
@@ -190,12 +202,38 @@ function createSeoRouter(controller: SeoController, _logger: Logger): Router {
       Promise.resolve(fn(req, res, next)).catch(next);
     };
 
+  // ── Public SEO Assets ─────────────────────────────────────────────
+
+  // GET /seo-automation/sitemap.xml
+  router.get(
+    '/sitemap.xml',
+    asyncHandler((req, res, next) => controller.getPublicSitemap(req, res, next)),
+  );
+
+  // GET /seo-automation/sitemap/:type.xml
+  router.get(
+    '/sitemap/:type.xml',
+    asyncHandler((req, res, next) => controller.getPublicSitemapByType(req, res, next)),
+  );
+
+  // GET /seo-automation/robots.txt
+  router.get(
+    '/robots.txt',
+    asyncHandler((req, res, next) => controller.getRobotsTxt(req, res, next)),
+  );
+
   // ── Product SEO Metadata ─────────────────────────────────────────
 
   // 1. POST /seo/products/:productId/generate
   router.post(
     '/products/:productId/generate',
     asyncHandler((req, res, next) => controller.generateSeoMetadata(req, res, next)),
+  );
+
+  // 1b. GET /seo/products/status
+  router.get(
+    '/products/status',
+    asyncHandler((req, res, next) => controller.getProductSeoStatus(req, res, next)),
   );
 
   // 2. POST /seo/products/:productId/audit
@@ -238,10 +276,54 @@ function createSeoRouter(controller: SeoController, _logger: Logger): Router {
     asyncHandler((req, res, next) => controller.listSeoAudits(req, res, next)),
   );
 
+  // 7b. GET /seo/audits/summary
+  router.get(
+    '/audits/summary',
+    asyncHandler((req, res, next) => controller.getAuditSummary(req, res, next)),
+  );
+
+  // 7c. POST /seo/audits/run
+  router.post(
+    '/audits/run',
+    asyncHandler((req, res, next) => controller.runAudit(req, res, next)),
+  );
+
+  // 7d. POST /seo/audits/reaudit/:productId
+  router.post(
+    '/audits/reaudit/:productId',
+    asyncHandler((req, res, next) => controller.reauditProduct(req, res, next)),
+  );
+
+  // 7e. POST /seo/audits/:auditId/issues/:issueId/fix
+  router.post(
+    '/audits/:auditId/issues/:issueId/fix',
+    asyncHandler((req, res, next) => controller.fixAuditIssue(req, res, next)),
+  );
+
+  // 7f. POST /seo/audits/:auditId/issues/:issueId/mark-fixed
+  router.post(
+    '/audits/:auditId/issues/:issueId/mark-fixed',
+    asyncHandler((req, res, next) => controller.markAuditIssueFixed(req, res, next)),
+  );
+
   // 8. GET /seo/audits/:id
   router.get(
     '/audits/:id',
     asyncHandler((req, res, next) => controller.getSeoAuditDetails(req, res, next)),
+  );
+
+  // Legacy metadata aliases used by existing frontend service
+  router.get(
+    '/metadata/:productId',
+    asyncHandler((req, res, next) => controller.getSeoMetadataLegacy(req, res, next)),
+  );
+  router.post(
+    '/metadata/:productId/generate',
+    asyncHandler((req, res, next) => controller.generateSeoMetadataLegacy(req, res, next)),
+  );
+  router.put(
+    '/metadata/:productId',
+    asyncHandler((req, res, next) => controller.updateSeoMetadataLegacy(req, res, next)),
   );
 
   // ── Sitemap Management ───────────────────────────────────────────
@@ -252,6 +334,24 @@ function createSeoRouter(controller: SeoController, _logger: Logger): Router {
     asyncHandler((req, res, next) => controller.generateSitemap(req, res, next)),
   );
 
+  // 9b. POST /seo/sitemap/regenerate
+  router.post(
+    '/sitemap/regenerate',
+    asyncHandler((req, res, next) => controller.regenerateSitemap(req, res, next)),
+  );
+
+  // 9c. POST /seo/sitemap/submit
+  router.post(
+    '/sitemap/submit',
+    asyncHandler((req, res, next) => controller.submitSitemap(req, res, next)),
+  );
+
+  // 9d. PUT /seo/sitemap/config
+  router.put(
+    '/sitemap/config',
+    asyncHandler((req, res, next) => controller.updateSitemapConfig(req, res, next)),
+  );
+
   // 10. GET /seo/sitemap/status
   router.get(
     '/sitemap/status',
@@ -260,13 +360,25 @@ function createSeoRouter(controller: SeoController, _logger: Logger): Router {
 
   // ── Structured Data ──────────────────────────────────────────────
 
-  // 11. GET /seo/structured-data/:productId
+  // 11. GET /seo/structured-data/templates
+  router.get(
+    '/structured-data/templates',
+    asyncHandler((req, res, next) => controller.getStructuredDataTemplates(req, res, next)),
+  );
+
+  // 12. POST /seo/structured-data/validate
+  router.post(
+    '/structured-data/validate',
+    asyncHandler((req, res, next) => controller.validateStructuredDataPayload(req, res, next)),
+  );
+
+  // 13. GET /seo/structured-data/:productId
   router.get(
     '/structured-data/:productId',
     asyncHandler((req, res, next) => controller.getStructuredData(req, res, next)),
   );
 
-  // 12. PUT /seo/structured-data/:productId
+  // 14. PUT /seo/structured-data/:productId
   router.put(
     '/structured-data/:productId',
     asyncHandler((req, res, next) => controller.updateStructuredData(req, res, next)),
@@ -274,7 +386,7 @@ function createSeoRouter(controller: SeoController, _logger: Logger): Router {
 
   // ── Health Check ─────────────────────────────────────────────────
 
-  // 13. GET /seo/health
+  // 15. GET /seo/health
   router.get(
     '/health',
     asyncHandler((req, res, next) => controller.getSeoModuleHealth(req, res, next)),

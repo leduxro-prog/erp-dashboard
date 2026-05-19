@@ -11,6 +11,11 @@ import {
 import { OrderItemEntity } from './OrderItemEntity';
 import { OrderStatusHistoryEntity } from './OrderStatusHistoryEntity';
 
+const decimalNumberTransformer = {
+  to: (value: number | null) => value,
+  from: (value: string | null) => (value === null ? null : parseFloat(value)),
+};
+
 // Re-export the canonical OrderStatus from shared/constants (matches DB enum exactly).
 // Previously this file defined an 8-state UPPER_CASE enum that diverged from the
 // PostgreSQL `order_status` type. Now unified to the single 14-state source of truth.
@@ -53,22 +58,22 @@ export class OrderEntity {
   })
   status!: OrderStatus;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   subtotal!: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   discount_amount!: number;
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0, transformer: decimalNumberTransformer })
   tax_rate!: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   tax_amount!: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   shipping_cost!: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0, transformer: decimalNumberTransformer })
   grand_total!: number;
 
   @Column({ type: 'varchar', length: 3, default: 'USD' })

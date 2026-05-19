@@ -410,6 +410,7 @@ describe('Order Creation Tests', () => {
       const customer = await helper.createTestCustomer();
       const cart = await helper.createTestCart(customer.id, {
         status: CartStatus.ACTIVE,
+        orderId: undefined,
       });
 
       // Act
@@ -565,7 +566,7 @@ describe('Order Creation Tests', () => {
       expect(orderItems.length).toBe(3);
 
       // Verify total matches
-      const itemsTotal = orderItems.reduce((sum, item) => sum + item.total_price, 0);
+      const itemsTotal = orderItems.reduce((sum, item) => sum + item.line_total, 0);
       expect(itemsTotal).toBe(1400);
     });
 

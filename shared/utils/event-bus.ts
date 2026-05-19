@@ -42,7 +42,7 @@ class EventBus {
   private subscriberClient: Redis | null = null;
   private subscribers: SubscriberMap = new Map();
   private isConnected = false;
-  private messageHandlerRegistered = false;
+  private connectingPromise: Promise<void> | null = null;
 
   get client(): Redis | null {
     return this.publisherClient;
@@ -81,36 +81,50 @@ class EventBus {
       return;
     }
 
-    try {
-      const redisConfig = this.getRedisConfig();
-
-      // Create separate clients for publishing and subscribing
-      this.publisherClient = new Redis(redisConfig);
-      this.subscriberClient = new Redis(redisConfig);
-
-      // Set up error handlers
-      this.publisherClient.on('error', (err) => {
-        logger.error('Publisher Redis error', { error: err.message });
-      });
-
-      this.subscriberClient.on('error', (err) => {
-        logger.error('Subscriber Redis error', { error: err.message });
-      });
-
-      // Wait for connections to be ready
-      await Promise.all([this.publisherClient.ping(), this.subscriberClient.ping()]);
-
-      this.isConnected = true;
-      logger.info('EventBus: Redis connections established');
-
-      // Re-subscribe to existing channels
-      await this.resubscribeAll();
-    } catch (error) {
-      logger.error('Failed to connect to Redis', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
+    if (this.connectingPromise) {
+      await this.connectingPromise;
+      return;
     }
+
+    this.connectingPromise = (async () => {
+      try {
+        const redisConfig = this.getRedisConfig();
+
+        // Create separate clients for publishing and subscribing
+        this.publisherClient = new Redis(redisConfig);
+        this.subscriberClient = new Redis(redisConfig);
+
+        // Set up error handlers
+        this.publisherClient.on('error', (err) => {
+          logger.error('Publisher Redis error', { error: err.message });
+        });
+
+        this.subscriberClient.on('error', (err) => {
+          logger.error('Subscriber Redis error', { error: err.message });
+        });
+
+        // Wait for connections to be ready
+        await Promise.all([
+          this.publisherClient.ping(),
+          this.subscriberClient.ping(),
+        ]);
+
+        this.isConnected = true;
+        logger.info('EventBus: Redis connections established');
+
+        // Re-subscribe to existing channels
+        await this.resubscribeAll();
+      } catch (error) {
+        logger.error('Failed to connect to Redis', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      } finally {
+        this.connectingPromise = null;
+      }
+    })();
+
+    await this.connectingPromise;
   }
 
   /**
@@ -154,7 +168,7 @@ class EventBus {
               error: lastError.message,
             });
             // Wait before retrying
-            await new Promise((resolve) => setTimeout(resolve, delayMs));
+            await new Promise(resolve => setTimeout(resolve, delayMs));
           } else {
             logger.error('Resubscribe failed after max retries', {
               channel,
@@ -219,7 +233,10 @@ class EventBus {
    *   // event is automatically deserialized from JSON
    * });
    */
-  async subscribe(channel: string, handler: (data: unknown) => void): Promise<void> {
+  async subscribe(
+    channel: string,
+    handler: (data: unknown) => void
+  ): Promise<void> {
     try {
       if (!this.isConnected) {
         await this.connect();
@@ -231,26 +248,20 @@ class EventBus {
       }
       this.subscribers.get(channel)!.push({ handler });
 
-      // Register the message listener only once
-      if (!this.messageHandlerRegistered) {
-        this.messageHandlerRegistered = true;
-        this.subscriberClient!.on('message', (subscribedChannel, message) => {
-          const channelSubscribers = this.subscribers.get(subscribedChannel);
-          if (channelSubscribers) {
-            for (const subscriber of channelSubscribers) {
-              try {
-                const data = JSON.parse(message);
-                subscriber.handler(data);
-              } catch (error) {
-                logger.error('Failed to process event', {
-                  channel: subscribedChannel,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-              }
-            }
+      // Subscribe to Redis channel
+      this.subscriberClient!.on('message', (subscribedChannel, message) => {
+        if (subscribedChannel === channel) {
+          try {
+            const data = JSON.parse(message);
+            handler(data);
+          } catch (error) {
+            logger.error('Failed to process event', {
+              channel,
+              error: error instanceof Error ? error.message : String(error),
+            });
           }
-        });
-      }
+        }
+      });
 
       await this.subscriberClient!.subscribe(channel, (err, count) => {
         if (err) {

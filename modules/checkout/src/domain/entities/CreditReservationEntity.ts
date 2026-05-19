@@ -15,6 +15,11 @@ import {
   Index,
 } from 'typeorm';
 
+const decimalNumberTransformer = {
+  to: (value: number) => value,
+  from: (value: string | null) => (value === null ? null : parseFloat(value)),
+};
+
 export enum CreditReservationStatus {
   ACTIVE = 'ACTIVE',
   CAPTURED = 'CAPTURED',
@@ -38,13 +43,13 @@ export class CreditReservationEntity {
   @Column('uuid')
   orderId!: string;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 12, scale: 2, transformer: decimalNumberTransformer })
   amount!: number;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 12, scale: 2, transformer: decimalNumberTransformer })
   balanceBefore!: number;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 12, scale: 2, transformer: decimalNumberTransformer })
   balanceAfter!: number;
 
   @Column({

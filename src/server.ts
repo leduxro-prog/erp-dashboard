@@ -40,7 +40,7 @@ import { validateEnv, ConfigSchema } from './config/env.validation';
 import { buildHostTopology } from './config/host-topology';
 import { AppDataSource } from './data-source';
 import authRoutes from './routes/auth.routes';
-
+import { createWebsiteSyncRouter } from './routes/website-sync.routes';
 
 dotenv.config();
 
@@ -53,15 +53,15 @@ const bootstrapLogger = createModuleLogger('bootstrap');
 async function createModuleContext(
   dataSource: any,
   eventBus: any,
-  config: ConfigSchema,
+  config: ConfigSchema
 ): Promise<IModuleContext> {
   // TODO: Implement CacheManager interface with multi-layer caching
   const cacheManager = {
     get: async (key: string) => null,
-    set: async (key: string, value: unknown, ttl?: number) => {},
-    del: async (key: string) => {},
+    set: async (key: string, value: unknown, ttl?: number) => { },
+    del: async (key: string) => { },
     delPattern: async (pattern: string) => 0,
-    flush: async () => {},
+    flush: async () => { },
     getStats: async () => ({ hitRate: 0, size: 0, keys: 0 }),
   };
 
@@ -79,7 +79,7 @@ async function createModuleContext(
       return envValue === 'true' || envValue === '1';
     },
     getAll: () => ({}),
-    set: async (featureName: string, enabled: boolean) => {},
+    set: async (featureName: string, enabled: boolean) => { },
   };
 
   return {
@@ -186,12 +186,11 @@ async function bootstrap(): Promise<void> {
         frameguard: {
           action: 'deny',
         },
-      }),
+      })
     );
 
     // Step 7: Configure standard middleware
     app.use(cors(corsOptions));
-    app.use(cookieParser());
     app.use(compression());
     app.disable('x-powered-by'); // Disable X-Powered-By header
     app.use(morgan('combined'));
@@ -204,7 +203,7 @@ async function bootstrap(): Promise<void> {
         extended: true,
         limit: '10kb',
         parameterLimit: 50,
-      }),
+      })
     );
 
     // Step 9: Request ID middleware (MUST BE FIRST in middleware chain for tracing)
@@ -217,10 +216,8 @@ async function bootstrap(): Promise<void> {
     app.use(sanitizeMiddleware);
 
     // Step 12: Audit trail middleware (logs all requests)
-    // Initialize database-backed audit log service and pass to middleware
     const auditLogger = createAuditLogger();
-    const auditLogService = new AuditLogService(AppDataSource);
-    app.use(createAuditMiddleware(auditLogger, auditLogService));
+    app.use(createAuditMiddleware(auditLogger));
 
     // Step 13: CSRF protection middleware
     const csrfEnabled = config.NODE_ENV === 'production';
@@ -228,38 +225,20 @@ async function bootstrap(): Promise<void> {
       createCSRFMiddleware({
         allowedOrigins,
         enabled: csrfEnabled,
-      }),
+      })
     );
 
     // Step 14: Apply rate limiting
-    app.use('/api', globalApiLimiter); // Global API rate limiter: 100 req / 15 min per IP
-
-    // Step 14a: B2B Portal gets a higher rate limit (300 req / 15 min) for catalog browsing
-    app.use('/api/v1/b2b', b2bApiLimiter);
+    app.use(globalApiLimiter); // General API rate limiter
 
     // Step 14b: Apply stricter rate limiting to auth endpoints
-    app.use('/api/v1/users/login', loginLimiter); // Login: 5 attempts / 15 min per IP
-    app.use('/api/v1/users/2fa', authLimiter); // 2FA endpoints: 10 attempts / 15 min
-    app.use('/api/v1/orders', writeOperationLimiter); // Write ops: 30 / min
-    app.use('/api/v1/settings', writeOperationLimiter); // Write ops: 30 / min
+    app.use('/auth', authLimiter);
 
     // Step 14c: Metrics collection middleware
     app.use(createMetricsMiddleware());
 
     // Step 15: Health check endpoint
-    const startTime = Date.now();
-    registerHealthRoutes(app, startTime); // Root level
-    registerHealthRoutes(app, startTime, config.API_PREFIX); // API prefix level
-
     app.get('/health', (_req: Request, res: Response): void => {
-      res.status(200).json({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        environment: config.NODE_ENV,
-      });
-    });
-
-    app.get(`${config.API_PREFIX}/health`, (_req: Request, res: Response): void => {
       res.status(200).json({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -272,9 +251,9 @@ async function bootstrap(): Promise<void> {
     registerApiDocsRoutes(app);
     bootstrapLogger.info('API documentation routes registered');
 
-    // Step 16b: Register auth routes (JWT refresh/logout with HttpOnly cookies)
-    app.use(`${config.API_PREFIX}/auth`, authRoutes);
-    bootstrapLogger.info('Auth routes registered (refresh, logout)');
+    // Step 16a: Register website sync routes protected by service token auth
+    app.use(config.API_PREFIX, createWebsiteSyncRouter(AppDataSource, process.env));
+    bootstrapLogger.info('Website sync routes registered');
 
     // Step 17: Load and register modules
     await loadAndRegisterModules();
@@ -294,7 +273,7 @@ async function bootstrap(): Promise<void> {
     // Step 20: Mount module routers
     bootstrapLogger.info('Mounting module routers...');
     const apiPrefix = config.API_PREFIX;
-    for (const [moduleName, module] of registry.getAllModules()) {
+    for (const [moduleName, module] of registry.getStartedModules()) {
       try {
         const router = module.getRouter();
         const mountPath = `${apiPrefix}/${moduleName}`;
@@ -312,7 +291,7 @@ async function bootstrap(): Promise<void> {
     bootstrapLogger.info('Registering system monitoring endpoints...');
 
     // GET /api/v1/system/modules - List all loaded modules with health
-    app.get(`${apiPrefix}/system/modules`, authenticate, async (_req: Request, res: Response) => {
+    app.get(`${apiPrefix}/system/modules`, async (_req: Request, res: Response) => {
       try {
         const health = await registry.getHealth();
         const modules = registry.getAllModules();
@@ -342,7 +321,7 @@ async function bootstrap(): Promise<void> {
     });
 
     // GET /api/v1/system/metrics - System metrics (JSON format)
-    app.get(`${apiPrefix}/system/metrics`, authenticate, (_req: Request, res: Response) => {
+    app.get(`${apiPrefix}/system/metrics`, (_req: Request, res: Response) => {
       try {
         const metrics = registry.getMetrics();
         res.status(200).json(metrics);
@@ -372,196 +351,11 @@ async function bootstrap(): Promise<void> {
     });
 
     // GET /api/v1/system/metrics/detailed - Detailed route-level metrics
-    app.use(`${apiPrefix}/system/metrics/detailed`, authenticate, createMetricsEndpoint());
+    app.use(`${apiPrefix}/system/metrics/detailed`, createMetricsEndpoint());
 
     bootstrapLogger.info('System monitoring endpoints registered');
     bootstrapLogger.info(`Prometheus metrics available at /metrics`);
     bootstrapLogger.info(`Detailed metrics available at ${apiPrefix}/system/metrics/detailed`);
-
-    // Step 21b: Admin DLQ (Dead Letter Queue) management endpoints
-    // Unified replay/inspect for WooCommerce webhooks, SmartBill failures, and outbox events
-    const dlqService = new UnifiedDlqService(AppDataSource);
-
-    // GET /api/v1/admin/dlq/stats - DLQ statistics across all sources
-    app.get(
-      `${apiPrefix}/admin/dlq/stats`,
-      authenticate,
-      requireRole(['admin']),
-      async (_req: Request, res: Response) => {
-        try {
-          const stats = await dlqService.getStats();
-          res.status(200).json({ status: 'ok', data: stats });
-        } catch (error) {
-          res.status(500).json({
-            error: 'Failed to get DLQ stats',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      },
-    );
-
-    // GET /api/v1/admin/dlq/entries - List DLQ entries (query: source, limit, offset)
-    app.get(
-      `${apiPrefix}/admin/dlq/entries`,
-      authenticate,
-      requireRole(['admin']),
-      async (req: Request, res: Response) => {
-        try {
-          const source = req.query.source as 'woocommerce' | 'smartbill' | 'outbox' | undefined;
-          const limit = parseInt((req.query.limit as string) || '50', 10);
-          const offset = parseInt((req.query.offset as string) || '0', 10);
-          const entries = await dlqService.listEntries({ source, limit, offset });
-          res
-            .status(200)
-            .json({ status: 'ok', data: entries, meta: { limit, offset, count: entries.length } });
-        } catch (error) {
-          res.status(500).json({
-            error: 'Failed to list DLQ entries',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      },
-    );
-
-    // POST /api/v1/admin/dlq/replay/:source/:id - Replay a single DLQ entry
-    app.post(
-      `${apiPrefix}/admin/dlq/replay/:source/:id`,
-      authenticate,
-      requireRole(['admin']),
-      async (req: Request, res: Response) => {
-        try {
-          const { source, id } = req.params;
-          let result;
-          if (source === 'woocommerce') {
-            result = await dlqService.replayWooWebhook(id);
-          } else if (source === 'outbox') {
-            result = await dlqService.replayOutboxEvent(id);
-          } else {
-            res.status(400).json({
-              error: 'Invalid source',
-              message: 'Source must be "woocommerce" or "outbox"',
-            });
-            return;
-          }
-          res.status(200).json({ status: 'ok', data: result });
-        } catch (error) {
-          res.status(500).json({
-            error: 'Replay failed',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      },
-    );
-
-    // POST /api/v1/admin/dlq/replay-all/:source - Bulk replay all retryable entries for a source
-    app.post(
-      `${apiPrefix}/admin/dlq/replay-all/:source`,
-      authenticate,
-      requireRole(['admin']),
-      async (req: Request, res: Response) => {
-        try {
-          const source = req.params.source as 'woocommerce' | 'outbox';
-          if (source !== 'woocommerce' && source !== 'outbox') {
-            res.status(400).json({
-              error: 'Invalid source',
-              message: 'Source must be "woocommerce" or "outbox"',
-            });
-            return;
-          }
-          const result = await dlqService.replayAll(source);
-          res.status(200).json({ status: 'ok', data: result });
-        } catch (error) {
-          res.status(500).json({
-            error: 'Bulk replay failed',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      },
-    );
-
-    bootstrapLogger.info(`Admin DLQ endpoints registered at ${apiPrefix}/admin/dlq/*`);
-
-    // Step 21c: Audit Log API endpoints
-    bootstrapLogger.info('Registering audit log endpoints...');
-
-    // GET /api/v1/admin/audit-logs - Query audit logs with filters and pagination
-    app.get(
-      `${apiPrefix}/admin/audit-logs`,
-      authenticate,
-      requireRole(['admin']),
-      async (req: Request, res: Response) => {
-        try {
-          const result = await auditLogService.query({
-            userId: req.query.userId as string | undefined,
-            userEmail: req.query.userEmail as string | undefined,
-            action: req.query.action as string | undefined,
-            resourceType: req.query.resourceType as string | undefined,
-            resourceId: req.query.resourceId as string | undefined,
-            startDate: req.query.startDate as string | undefined,
-            endDate: req.query.endDate as string | undefined,
-            search: req.query.search as string | undefined,
-            page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
-            limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 25,
-            sortBy: (req.query.sortBy as string) || 'created_at',
-            sortDir: (req.query.sortDir as 'ASC' | 'DESC') || 'DESC',
-          });
-          res.status(200).json({ status: 'ok', ...result });
-        } catch (error) {
-          res.status(500).json({
-            error: 'Failed to query audit logs',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      },
-    );
-
-    // GET /api/v1/admin/audit-logs/stats - Aggregated audit statistics
-    app.get(
-      `${apiPrefix}/admin/audit-logs/stats`,
-      authenticate,
-      requireRole(['admin']),
-      async (_req: Request, res: Response) => {
-        try {
-          const stats = await auditLogService.getStats();
-          res.status(200).json({ status: 'ok', data: stats });
-        } catch (error) {
-          res.status(500).json({
-            error: 'Failed to get audit log stats',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      },
-    );
-
-    // GET /api/v1/admin/audit-logs/export - Export audit logs as CSV
-    app.get(
-      `${apiPrefix}/admin/audit-logs/export`,
-      authenticate,
-      requireRole(['admin']),
-      async (req: Request, res: Response) => {
-        try {
-          const csv = await auditLogService.export({
-            userId: req.query.userId as string | undefined,
-            userEmail: req.query.userEmail as string | undefined,
-            action: req.query.action as string | undefined,
-            resourceType: req.query.resourceType as string | undefined,
-            startDate: req.query.startDate as string | undefined,
-            endDate: req.query.endDate as string | undefined,
-            search: req.query.search as string | undefined,
-          });
-          res.setHeader('Content-Type', 'text/csv');
-          res.setHeader('Content-Disposition', 'attachment; filename=audit-logs.csv');
-          res.status(200).send(csv);
-        } catch (error) {
-          res.status(500).json({
-            error: 'Failed to export audit logs',
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      },
-    );
-
-    bootstrapLogger.info(`Audit log endpoints registered at ${apiPrefix}/admin/audit-logs/*`);
 
     // Step 22: Global error handling middleware
     app.use((err: Error, _req: Request, res: Response, _next: NextFunction): void => {
@@ -571,7 +365,7 @@ async function bootstrap(): Promise<void> {
       });
       res.status(500).json({
         error: 'Internal Server Error',
-        ...(config.NODE_ENV !== 'production' && { message: err.message }),
+        message: err.message,
       });
     });
 

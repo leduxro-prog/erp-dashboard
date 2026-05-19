@@ -7,6 +7,36 @@ import {
   IWhatsAppService,
 } from '../../src/application/use-cases/SendQuote';
 import { IQuoteRepository } from '../../src/domain/repositories/IQuoteRepository';
+import { Quote } from '../../src/domain/entities/Quote';
+
+const makeQuote = (overrides: Partial<Quote> = {}): Quote => {
+  const quote = new Quote(
+    'quote-1',
+    'QTE-001',
+    'customer-1',
+    'John Doe',
+    'john@example.com',
+    [
+      {
+        id: 'item-1',
+        productId: 'product-1',
+        sku: 'SKU-001',
+        productName: 'Product 1',
+        quantity: 1,
+        unitPrice: 100,
+        lineTotal: 100,
+      },
+    ],
+    { street: 'Main 1', city: 'Bucharest', postcode: '010001', country: 'RO' },
+    { street: 'Main 1', city: 'Bucharest', postcode: '010001', country: 'RO' },
+    'Net 15',
+    '2-3 days',
+    'tester',
+  );
+
+  Object.assign(quote, overrides);
+  return quote;
+};
 
 describe('SendQuote Use Case', () => {
   let useCase: SendQuote;
@@ -33,23 +63,17 @@ describe('SendQuote Use Case', () => {
 
   it('should send quote successfully', async () => {
     const validUntil = new Date('2026-03-01T00:00:00.000Z');
-    const mockQuote = {
-      id: 'quote-1',
-      quoteNumber: 'QTE-001',
-      customerName: 'John Doe',
-      customerEmail: 'john@example.com',
-      validUntil,
-      isExpired: jest.fn().mockReturnValue(false),
-      send: jest.fn(),
-    };
+    const mockQuote = makeQuote({ validUntil });
+    const sendSpy = jest.spyOn(mockQuote, 'send');
+    jest.spyOn(mockQuote, 'isExpired').mockReturnValue(false);
 
-    mockRepository.findById.mockResolvedValue(mockQuote as unknown as Awaited<ReturnType<typeof mockRepository.findById>>);
+    mockRepository.findById.mockResolvedValue(mockQuote);
     mockRepository.update.mockImplementation(async quote => quote);
     mockEmailService.sendQuoteEmail.mockResolvedValue(undefined);
 
     await useCase.execute('quote-1');
 
-    expect(mockQuote.send).toHaveBeenCalledTimes(1);
+    expect(sendSpy).toHaveBeenCalledTimes(1);
     expect(mockRepository.update).toHaveBeenCalledWith(mockQuote);
     expect(mockEmailService.sendQuoteEmail).toHaveBeenCalledWith(
       'john@example.com',
@@ -66,35 +90,22 @@ describe('SendQuote Use Case', () => {
   });
 
   it('should throw error when quote is expired', async () => {
-    const mockQuote = {
-      id: 'quote-1',
-      quoteNumber: 'QTE-001',
-      customerName: 'John Doe',
-      customerEmail: 'john@example.com',
-      validUntil: new Date('2026-03-01T00:00:00.000Z'),
-      isExpired: jest.fn().mockReturnValue(true),
-      send: jest.fn(),
-    };
+    const mockQuote = makeQuote({ validUntil: new Date('2026-03-01T00:00:00.000Z') });
+    const sendSpy = jest.spyOn(mockQuote, 'send');
+    jest.spyOn(mockQuote, 'isExpired').mockReturnValue(true);
 
-    mockRepository.findById.mockResolvedValue(mockQuote as unknown as Awaited<ReturnType<typeof mockRepository.findById>>);
+    mockRepository.findById.mockResolvedValue(mockQuote);
 
     await expect(useCase.execute('quote-1')).rejects.toThrow(QuoteExpiredError);
-    expect(mockQuote.send).not.toHaveBeenCalled();
+    expect(sendSpy).not.toHaveBeenCalled();
     expect(mockRepository.update).not.toHaveBeenCalled();
   });
 
   it('should handle email service failure gracefully', async () => {
-    const mockQuote = {
-      id: 'quote-1',
-      quoteNumber: 'QTE-001',
-      customerName: 'John Doe',
-      customerEmail: 'john@example.com',
-      validUntil: new Date('2026-03-01T00:00:00.000Z'),
-      isExpired: jest.fn().mockReturnValue(false),
-      send: jest.fn(),
-    };
+    const mockQuote = makeQuote({ validUntil: new Date('2026-03-01T00:00:00.000Z') });
+    jest.spyOn(mockQuote, 'isExpired').mockReturnValue(false);
 
-    mockRepository.findById.mockResolvedValue(mockQuote as unknown as Awaited<ReturnType<typeof mockRepository.findById>>);
+    mockRepository.findById.mockResolvedValue(mockQuote);
     mockRepository.update.mockImplementation(async quote => quote);
     mockEmailService.sendQuoteEmail.mockRejectedValue(new Error('Email service down'));
 
@@ -103,17 +114,10 @@ describe('SendQuote Use Case', () => {
   });
 
   it('should send WhatsApp message when requested', async () => {
-    const mockQuote = {
-      id: 'quote-1',
-      quoteNumber: 'QTE-001',
-      customerName: 'John Doe',
-      customerEmail: 'john@example.com',
-      validUntil: new Date('2026-03-01T00:00:00.000Z'),
-      isExpired: jest.fn().mockReturnValue(false),
-      send: jest.fn(),
-    };
+    const mockQuote = makeQuote({ validUntil: new Date('2026-03-01T00:00:00.000Z') });
+    jest.spyOn(mockQuote, 'isExpired').mockReturnValue(false);
 
-    mockRepository.findById.mockResolvedValue(mockQuote as unknown as Awaited<ReturnType<typeof mockRepository.findById>>);
+    mockRepository.findById.mockResolvedValue(mockQuote);
     mockRepository.update.mockImplementation(async quote => quote);
     mockEmailService.sendQuoteEmail.mockResolvedValue(undefined);
     mockWhatsAppService.sendQuoteMessage.mockResolvedValue(undefined);
@@ -128,17 +132,10 @@ describe('SendQuote Use Case', () => {
   });
 
   it('should not send WhatsApp message by default', async () => {
-    const mockQuote = {
-      id: 'quote-1',
-      quoteNumber: 'QTE-001',
-      customerName: 'John Doe',
-      customerEmail: 'john@example.com',
-      validUntil: new Date('2026-03-01T00:00:00.000Z'),
-      isExpired: jest.fn().mockReturnValue(false),
-      send: jest.fn(),
-    };
+    const mockQuote = makeQuote({ validUntil: new Date('2026-03-01T00:00:00.000Z') });
+    jest.spyOn(mockQuote, 'isExpired').mockReturnValue(false);
 
-    mockRepository.findById.mockResolvedValue(mockQuote as unknown as Awaited<ReturnType<typeof mockRepository.findById>>);
+    mockRepository.findById.mockResolvedValue(mockQuote);
     mockRepository.update.mockImplementation(async quote => quote);
     mockEmailService.sendQuoteEmail.mockResolvedValue(undefined);
 

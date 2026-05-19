@@ -183,7 +183,7 @@ export class CalculateOrderPricing {
     const subtotalAfterDiscounts = subtotal - totalDiscount;
     const discountPercentage = subtotal > 0 ? totalDiscount / subtotal : 0;
 
-    // Step 7: Calculate VAT (19% for Romania)
+    // Step 7: Calculate VAT (21% for Romania)
     const taxAmount = subtotalAfterDiscounts * VAT_RATE_ROMANIA;
     const grandTotal = subtotalAfterDiscounts + taxAmount;
 

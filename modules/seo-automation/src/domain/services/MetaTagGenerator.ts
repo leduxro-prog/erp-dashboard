@@ -72,6 +72,13 @@ export interface GeneratedMetaTags {
   focusKeyword: string;
 }
 
+export interface MetaTagGeneratorConfig {
+  strategy?: unknown;
+  brandName?: string;
+  titleSuffix?: string;
+  defaultCta?: string;
+}
+
 /**
  * MetaTagGenerator - Domain Service
  *
@@ -79,9 +86,17 @@ export interface GeneratedMetaTags {
  */
 export class MetaTagGenerator {
   /**
-   * Ledux.ro brand suffix for titles
+   * Brand suffix for titles
    */
-  private readonly brandSuffix = 'Ledux.ro';
+  private readonly brandSuffix: string;
+
+  private readonly defaultCta: string;
+
+  constructor(config: MetaTagGeneratorConfig = {}) {
+    this.brandSuffix = config.titleSuffix?.trim() || config.brandName?.trim() || 'Ledux.ro';
+    this.defaultCta =
+      config.defaultCta?.trim() || 'Livrare rapida in toata Romania. Garantie.';
+  }
 
   /**
    * Generate meta tags for a product
@@ -176,7 +191,7 @@ export class MetaTagGenerator {
   private generateProductDescription(product: ProductData): string {
     const priceText = product.price ? ` la ${product.price} lei` : '';
     const featureText = product.features?.[0] ? `cu ${product.features[0]}` : 'de calitate';
-    const baseDescription = `Cumpara ${product.name} ${featureText}${priceText}. Livrare rapida in toata Romania. Garantie.`;
+    const baseDescription = `Cumpara ${product.name} ${featureText}${priceText}. ${this.defaultCta}`;
     return baseDescription;
   }
 

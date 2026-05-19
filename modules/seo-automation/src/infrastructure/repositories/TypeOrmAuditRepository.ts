@@ -72,9 +72,13 @@ export class TypeOrmAuditRepository implements IAuditRepository {
   }
 
   private toEntity(domain: SeoAuditResult): SeoAuditResultEntity {
+    const isUuid = (value: string | undefined): boolean =>
+      !!value &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
     const entity = new SeoAuditResultEntity();
     entity.id = domain.id;
-    entity.metadataId = domain.entityId || domain.id;
+    entity.metadataId = isUuid(domain.entityId) ? (domain.entityId as string) : domain.id;
     entity.status = 'COMPLETED';
     entity.score = domain.score;
     entity.issues = domain.issues.map((i) => i.toJSON()) as unknown as Record<string, unknown>;

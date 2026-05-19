@@ -9,7 +9,7 @@ import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { AIAssistant } from '../shared/AIAssistant';
 import { ChatWidget } from '../Chat';
-import { ThemeVariant } from '../../styles/themes';
+import { ThemeVariant, isDarkTheme } from '../../styles/themes';
 import { useUIStore } from '../../stores/ui.store';
 
 interface Breadcrumb {
@@ -43,11 +43,16 @@ const ROUTE_BREADCRUMBS: Record<string, Breadcrumb[]> = {
 
 export const AppLayout: React.FC = () => {
   const location = useLocation();
-  const { sidebarCollapsed, toggleSidebar, theme } = useUIStore();
+  const {
+    sidebarCollapsed,
+    toggleSidebar,
+    themeVariant,
+    setThemeVariant,
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  } = useUIStore();
   const [isAIOpen, setIsAIOpen] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<ThemeVariant>(
-    (theme === 'dark' ? ThemeVariant.VENTURA_DARK : ThemeVariant.SONOMA_LIGHT) as ThemeVariant
-  );
+  const currentTheme = themeVariant as ThemeVariant;
 
   // Get breadcrumbs from current route
   const breadcrumbs: Breadcrumb[] = ROUTE_BREADCRUMBS[location.pathname] || [
@@ -74,29 +79,41 @@ export const AppLayout: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    htmlElement.setAttribute('data-theme', currentTheme);
+    htmlElement.classList.toggle('dark', isDarkTheme(currentTheme));
+  }, [currentTheme]);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname, setMobileMenuOpen]);
+
   const handleThemeChange = (theme: ThemeVariant) => {
-    setCurrentTheme(theme);
-    // Persist to store if needed
+    setThemeVariant(theme);
   };
 
   return (
-    <div className="flex h-screen w-full bg-gradient-to-br from-gray-900 via-gray-900 to-black overflow-hidden">
+    <div className="flex min-h-screen w-full bg-background-primary text-text-primary overflow-x-hidden transition-colors duration-300">
       {/* Sidebar */}
       <Sidebar
         isCollapsed={sidebarCollapsed}
         onCollapsedChange={toggleSidebar}
         currentTheme={currentTheme}
         onThemeChange={handleThemeChange}
+        isMobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* TopBar */}
         <TopBar
           breadcrumbs={breadcrumbs}
           currentTheme={currentTheme}
           notificationCount={3}
           onAIClick={() => setIsAIOpen(!isAIOpen)}
+          onToggleSidebar={() => setMobileMenuOpen(true)}
           onSearch={(query) => {
             console.log('Search:', query);
           }}
@@ -104,14 +121,18 @@ export const AppLayout: React.FC = () => {
 
         {/* Content */}
         <main className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto p-6">
+          <div className="h-full overflow-y-auto p-3 sm:p-4 lg:p-6 bg-background-primary transition-colors duration-300">
             <Outlet />
           </div>
         </main>
       </div>
 
       {/* AI Assistant */}
-      <AIAssistant isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} currentTheme={currentTheme} />
+      <AIAssistant
+        isOpen={isAIOpen}
+        onClose={() => setIsAIOpen(false)}
+        currentTheme={currentTheme}
+      />
 
       {/* B2B Chatbot Widget */}
       <ChatWidget />

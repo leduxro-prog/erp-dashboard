@@ -1,11 +1,22 @@
-import { SkuMapping } from '../entities/SkuMapping';
 import { Supplier } from '../entities/Supplier';
+import { SupplierProduct, SupplierProductSpecification } from '../entities/SupplierProduct';
+import { SkuMapping } from '../entities/SkuMapping';
 import { SupplierOrder } from '../entities/SupplierOrder';
-import { SupplierProduct } from '../entities/SupplierProduct';
 
 export interface BulkUpsertResult {
   updated: number;
   created: number;
+}
+
+export interface SupplierSyncReport {
+  createdAt: Date;
+  syncStatus: string;
+  errorMessage?: string | null;
+}
+
+export interface ProductSpecificationUpsertOptions {
+  conflictPolicy: 'merge_non_empty';
+  source: string;
 }
 
 export interface ISupplierRepository {
@@ -24,6 +35,10 @@ export interface ISupplierRepository {
   bulkUpsertProducts(
     products: SupplierProduct[],
   ): Promise<BulkUpsertResult>;
+  upsertProductSpecifications(
+    specifications: SupplierProductSpecification[],
+    options: ProductSpecificationUpsertOptions,
+  ): Promise<number>;
 
   // SKU Mapping operations
   getSkuMapping(
@@ -48,4 +63,5 @@ export interface ISupplierRepository {
   // Sync tracking
   updateLastSync(supplierId: number, syncTime: Date): Promise<void>;
   getLastSync(supplierId: number): Promise<Date | null>;
+  getSyncReports(supplierId: number, limit: number): Promise<SupplierSyncReport[]>;
 }

@@ -1,5 +1,6 @@
 import { authenticate, AuthenticatedRequest } from '@shared/middleware/auth.middleware';
 import { createModuleLogger } from '@shared/utils/logger';
+import { jwtService } from '@shared/services/JwtService';
 import { Router, Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
 
@@ -148,7 +149,7 @@ export function createTwoFactorRoutes(
   // POST /2fa/verify - Verify 2FA token during login (uses pre-auth token)
   router.post('/verify', async (req: Request, res: Response) => {
     try {
-      const { token, preAuthToken, isBackupCode } = req.body;
+      const { token, preAuthToken, isBackupCode, rememberMe } = req.body;
       if (!token || !preAuthToken) {
         res.status(400).json({ error: 'Token and preAuthToken are required' });
         return;
@@ -162,9 +163,13 @@ export function createTwoFactorRoutes(
         return;
       }
 
-      let decoded: { userId: number; isPreAuth?: boolean };
+      let decoded: { userId: number; isPreAuth?: boolean; rememberMe?: boolean };
       try {
-        decoded = jwt.verify(preAuthToken, jwtSecret) as { userId: number; isPreAuth?: boolean };
+        decoded = jwt.verify(preAuthToken, jwtSecret) as {
+          userId: number;
+          isPreAuth?: boolean;
+          rememberMe?: boolean;
+        };
       } catch (_err) {
         res.status(401).json({ error: 'Invalid or expired pre-authentication token' });
         return;
@@ -200,25 +205,22 @@ export function createTwoFactorRoutes(
       }
 
       // 2FA verified - issue full auth tokens
-      const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
-      if (!jwtRefreshSecret) {
-        logger.error('JWT_REFRESH_SECRET not configured');
-        res.status(500).json({ error: 'Server configuration error' });
-        return;
-      }
-
-      const accessToken = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
-        jwtSecret,
-        { expiresIn: '24h' },
-      );
-
-      const refreshToken = jwt.sign({ userId: user.id, email: user.email }, jwtRefreshSecret, {
-        expiresIn: '7d',
-      });
+      const tokenPayload = {
+        id: String(user.id),
+        email: user.email,
+        role: user.role,
+      };
+      const accessToken = jwtService.generateAccessToken(tokenPayload);
+      const refreshToken = jwtService.generateRefreshToken(tokenPayload);
+      const persistentSession =
+        decoded.rememberMe !== undefined ? decoded.rememberMe : rememberMe !== false;
 
       // Update last login
       await userService.updateLastLogin(user.id);
+
+      jwtService.setAuthCookies(res, accessToken, refreshToken, {
+        persistent: persistentSession,
+      });
 
       const userResponse = {
         id: user.id,

@@ -21,13 +21,16 @@ router.post('/refresh', (req: Request, res: Response): void => {
     const refreshToken =
       cookies?.refresh_token ||
       ((req.body as Record<string, unknown>)?.refreshToken as string | undefined);
+    const rememberMe = (req.body as Record<string, unknown>)?.rememberMe;
+    const persistentSession =
+      typeof rememberMe === 'boolean' ? rememberMe : cookies?.auth_persist !== 'false';
 
     if (!refreshToken) {
       res.status(401).json({ error: 'No refresh token provided' });
       return;
     }
 
-    let payload: TokenPayload;
+    let payload: TokenPayload & { userId?: string | number };
     try {
       payload = jwtService.verifyRefreshToken(refreshToken);
     } catch (err) {
@@ -40,17 +43,26 @@ router.post('/refresh', (req: Request, res: Response): void => {
       return;
     }
 
+    const resolvedUserId = payload.id || payload.userId;
+    if (!resolvedUserId || !payload.email) {
+      jwtService.clearAuthCookies(res);
+      res.status(401).json({ error: 'Invalid or expired refresh token' });
+      return;
+    }
+
     const tokenPayload: TokenPayload = {
-      id: payload.id,
+      id: String(resolvedUserId),
       email: payload.email,
-      role: payload.role,
+      role: payload.role || 'user',
     };
 
     const newAccessToken = jwtService.generateAccessToken(tokenPayload);
     const newRefreshToken = jwtService.generateRefreshToken(tokenPayload);
 
     // Set new HttpOnly cookies
-    jwtService.setAuthCookies(res, newAccessToken, newRefreshToken);
+    jwtService.setAuthCookies(res, newAccessToken, newRefreshToken, {
+      persistent: persistentSession,
+    });
 
     // Also return tokens in body for backwards compatibility
     res.status(200).json({

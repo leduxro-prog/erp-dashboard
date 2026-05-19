@@ -41,7 +41,9 @@
  */
 
 import { IEventBus } from '@shared/module-system/module.interface';
+import { loadBrandStrategySync } from '@shared/utils/brand-strategy';
 import { Logger } from 'winston';
+import { v4 as uuidv4 } from 'uuid';
 
 import { SeoEntityType } from '../../domain/entities/SeoIssue';
 import { SeoMetadata } from '../../domain/entities/SeoMetadata';
@@ -80,6 +82,14 @@ export interface GenerateProductSeoOutput {
  * Implements SRP: focuses only on generation workflow.
  */
 export class GenerateProductSeo {
+  private isEntityLocaleDuplicateError(error: unknown): boolean {
+    const err = error as { code?: string; message?: string };
+    return (
+      String(err?.code || '') === '23505' &&
+      String(err?.message || '').includes('idx_seo_metadata_entity_locale')
+    );
+  }
+
   /**
    * Create a new GenerateProductSeo use case
    *
@@ -142,18 +152,30 @@ export class GenerateProductSeo {
         ip_rating: (product as any).ip_rating,
       });
 
+      const trimToLength = (value: string | undefined, max: number): string =>
+        String(value || '').trim().slice(0, max);
+
       // Step 3: Generate slug
-      const slug = this.slugGenerator.generate(product.name);
+      const slug = trimToLength(this.slugGenerator.generate(product.name), 255);
+      const metaTitle = trimToLength(generatedTags.title || product.name, 60);
+      const metaDescription = trimToLength(generatedTags.description || productDescriptionFallback(product), 160);
+      const focusKeyword = trimToLength(generatedTags.focusKeyword || product.name, 255);
+      const brandStrategy = loadBrandStrategySync();
+      const canonicalUrl = `${String(brandStrategy.website || 'https://ledux.ro').replace(/\/$/, '')}/produs/${slug}/`;
+      const productDescription =
+        product.description ||
+        metaDescription ||
+        `${brandStrategy.promise} ${brandStrategy.seo.metaDescriptionCta}`;
 
       // Step 4: Generate structured data
       const structuredDataJson = this.structuredDataGenerator.generateProduct({
         id: product.id,
         name: product.name,
-        description: product.description || 'High-quality LED lighting product',
+        description: productDescription,
         price: product.price || 0,
         currency: 'RON',
         imageUrl: product.image,
-        brand: 'Ledux',
+        brand: brandStrategy.brandName || 'Ledux',
         sku: product.sku,
         category: product.category,
         color: (product as any).color,
@@ -163,30 +185,39 @@ export class GenerateProductSeo {
 
       // Step 5: Calculate score
       const score = this.scoreCalculator.calculate({
-        metaTitle: generatedTags.title,
-        metaDescription: generatedTags.description,
+        metaTitle,
+        metaDescription,
         slug,
-        focusKeyword: generatedTags.focusKeyword,
-        canonicalUrl: `https://ledux.ro/products/${slug}`,
-        ogTitle: generatedTags.title,
-        ogDescription: generatedTags.description,
+        focusKeyword,
+        canonicalUrl,
+        ogTitle: metaTitle,
+        ogDescription: metaDescription,
         structuredDataPresent: true,
       });
 
+      const existingMetadata = await this.metadataRepository.findByEntity('PRODUCT', input.productId, locale);
+      const existingStructuredData = await this.structuredDataRepository.findByEntity(
+        SeoEntityType.PRODUCT,
+        input.productId,
+      );
+      const existingProductSchema = existingStructuredData.find(
+        (item) => item.schemaType === SchemaType.PRODUCT,
+      );
+
       // Step 6: Create metadata entity
       const metadata = new SeoMetadata({
-        id: `meta-${input.productId}-${locale}`,
+        id: existingMetadata?.id || uuidv4(),
         entityType: 'PRODUCT',
         entityId: input.productId,
         locale,
-        metaTitle: generatedTags.title,
-        metaDescription: generatedTags.description,
+        metaTitle,
+        metaDescription,
         slug,
-        canonicalUrl: `https://ledux.ro/products/${slug}`,
-        ogTitle: generatedTags.title,
-        ogDescription: generatedTags.description,
+        canonicalUrl,
+        ogTitle: metaTitle,
+        ogDescription: metaDescription,
         ogImage: product.image,
-        focusKeyword: generatedTags.focusKeyword,
+        focusKeyword,
         seoScore: score,
       });
 
@@ -201,7 +232,7 @@ export class GenerateProductSeo {
 
       // Step 8: Create structured data entity
       const structuredData = new StructuredData({
-        id: `sd-${input.productId}-${locale}`,
+        id: existingProductSchema?.id || uuidv4(),
         entityType: SeoEntityType.PRODUCT,
         entityId: input.productId,
         schemaType: SchemaType.PRODUCT,
@@ -212,19 +243,63 @@ export class GenerateProductSeo {
       structuredData.validate();
 
       // Step 10: Save to database
-      const savedMetadata = await this.metadataRepository.save(metadata);
+      let savedMetadata: SeoMetadata;
+      try {
+        savedMetadata = await this.metadataRepository.save(metadata);
+      } catch (error) {
+        if (!this.isEntityLocaleDuplicateError(error)) {
+          throw error;
+        }
+
+        const concurrentMetadata = await this.metadataRepository.findByEntity(
+          'PRODUCT',
+          input.productId,
+          locale,
+        );
+
+        if (!concurrentMetadata) {
+          throw error;
+        }
+
+        savedMetadata = await this.metadataRepository.save(
+          new SeoMetadata({
+            id: concurrentMetadata.id,
+            entityType: 'PRODUCT',
+            entityId: input.productId,
+            locale,
+            metaTitle,
+            metaDescription,
+            slug,
+            canonicalUrl,
+            ogTitle: metaTitle,
+            ogDescription: metaDescription,
+            ogImage: product.image,
+            focusKeyword,
+            seoScore: score,
+          }),
+        );
+      }
+
       const savedStructuredData = await this.structuredDataRepository.save(structuredData);
 
       const executionTime = Date.now() - startTime;
 
-      // Step 11: Publish event
-      await this.eventBus.publish('seo.metadata_generated', {
-        productId: input.productId,
-        locale,
-        score,
-        focusKeyword: generatedTags.focusKeyword,
-        executionTimeMs: executionTime,
-      });
+      // Step 11: Publish event (best-effort)
+      try {
+        await this.eventBus.publish('seo.metadata_generated', {
+          productId: input.productId,
+          locale,
+          score,
+          focusKeyword,
+          executionTimeMs: executionTime,
+        });
+      } catch (eventError) {
+        this.logger.warn('Failed to publish seo.metadata_generated event', {
+          productId: input.productId,
+          locale,
+          error: eventError instanceof Error ? eventError.message : String(eventError),
+        });
+      }
 
       this.logger.info('SEO metadata generated successfully', {
         productId: input.productId,
@@ -237,7 +312,7 @@ export class GenerateProductSeo {
         metadata: savedMetadata,
         structuredData: savedStructuredData,
         score,
-        focusKeyword: generatedTags.focusKeyword,
+        focusKeyword,
       };
     } catch (error) {
       this.logger.error('Failed to generate SEO metadata', {
@@ -249,4 +324,11 @@ export class GenerateProductSeo {
       throw error;
     }
   }
+}
+
+function productDescriptionFallback(product: {
+  description?: string;
+  name?: string;
+}): string {
+  return product.description || `${product.name || 'Produs'} de calitate pentru aplicatii profesionale.`;
 }

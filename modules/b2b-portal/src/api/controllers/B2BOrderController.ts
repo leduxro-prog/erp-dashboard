@@ -1,12 +1,12 @@
+import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
-
-import { VAT_RATE } from '@shared/constants';
 import { AuthenticatedRequest } from '@shared/middleware/auth.middleware';
-import { Response, NextFunction } from 'express';
 import { DataSource, QueryRunner } from 'typeorm';
-
 import { TierCalculationService } from '../../domain/services/TierCalculationService';
-
+import { ValidationError } from '@shared/errors/BaseError';
+import { InsufficientCreditError, CustomerSuspendedError } from '../../domain/errors/b2b.errors';
+import { VAT_RATE } from '@shared/constants';
+import { getEventBus } from '@shared/utils/event-bus';
 
 interface CartItem {
   id: string;
@@ -95,6 +95,16 @@ export class B2BOrderController {
     this.tierService = new TierCalculationService();
   }
 
+  async downloadOrderModelPdf(_req: Request, res: Response, _next: NextFunction): Promise<void> {
+    res.status(501).json({
+      success: false,
+      error: {
+        code: 'ORDER_MODEL_PDF_NOT_IMPLEMENTED',
+        message: 'Order model PDF generation is not implemented.',
+      },
+    });
+  }
+
   private getB2BCustomerId(req: AuthenticatedRequest): string | number | undefined {
     const b2bCustomer = (req as any).b2bCustomer;
     return b2bCustomer?.customer_id ?? b2bCustomer?.id;
@@ -149,9 +159,19 @@ export class B2BOrderController {
       const stockResult = await queryRunner.query(
         `SELECT 
           p.id, p.name, p.sku,
-          COALESCE(SUM(sl.quantity_available), 0) as stock_available
+          COALESCE(
+            SUM(
+              CASE
+                WHEN w.is_active = true AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+                  THEN sl.quantity_available
+                ELSE 0
+              END
+            ),
+            0
+          ) as stock_available
          FROM products p
          LEFT JOIN stock_levels sl ON p.id = sl.product_id
+         LEFT JOIN warehouses w ON w.id = sl.warehouse_id
          WHERE p.id = $1 AND p.is_active = true
          GROUP BY p.id, p.name, p.sku`,
         [item.product_id],
@@ -517,7 +537,17 @@ export class B2BOrderController {
         await queryRunner.query(
           `UPDATE stock_levels 
            SET quantity_available = quantity_available - $1, updated_at = NOW()
-           WHERE product_id = $2`,
+           WHERE id = (
+             SELECT sl.id
+             FROM stock_levels sl
+             JOIN warehouses w ON w.id = sl.warehouse_id
+             WHERE sl.product_id = $2
+               AND w.is_active = true
+               AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+               AND sl.quantity_available >= $1
+             ORDER BY sl.quantity_available DESC
+             LIMIT 1
+           )`,
           [item.quantity, item.product_id],
         );
       }
@@ -560,6 +590,23 @@ export class B2BOrderController {
       }
 
       await queryRunner.commitTransaction();
+
+      // Emit b2b.order.created event for SmartBill proforma generation
+      try {
+        const eventBus = getEventBus();
+        await eventBus.publish('b2b.order.created', {
+          b2bOrderId: order.id,
+          orderNumber: order.order_number,
+          customerId,
+          companyName: customer.company_name,
+          totalAmount: Math.round(totalAmount * 100) / 100,
+          currency: 'RON',
+          createdAt: order.created_at,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (_eventError) {
+        // Event emission failure should not affect order response
+      }
 
       res.status(201).json({
         success: true,
@@ -986,7 +1033,16 @@ export class B2BOrderController {
         await queryRunner.query(
           `UPDATE stock_levels 
            SET quantity_available = quantity_available + $1, updated_at = NOW()
-           WHERE product_id = $2`,
+           WHERE id = (
+             SELECT sl.id
+             FROM stock_levels sl
+             JOIN warehouses w ON w.id = sl.warehouse_id
+             WHERE sl.product_id = $2
+               AND w.is_active = true
+               AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+             ORDER BY sl.quantity_available DESC
+             LIMIT 1
+           )`,
           [item.quantity, item.product_id],
         );
       }
@@ -1190,9 +1246,19 @@ export class B2BOrderController {
         const productResult = await this.dataSource.query(
           `SELECT 
             p.id, p.sku, p.name, p.base_price, p.is_active,
-            COALESCE(SUM(sl.quantity_available), 0) as stock_available
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN w.is_active = true AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+                    THEN sl.quantity_available
+                  ELSE 0
+                END
+              ),
+              0
+            ) as stock_available
            FROM products p
            LEFT JOIN stock_levels sl ON p.id = sl.product_id
+           LEFT JOIN warehouses w ON w.id = sl.warehouse_id
            WHERE LOWER(p.sku) = LOWER($1)
            GROUP BY p.id, p.sku, p.name, p.base_price, p.is_active`,
           [item.sku],
@@ -1349,9 +1415,19 @@ export class B2BOrderController {
 
         const productResult = await queryRunner.query(
           `SELECT p.id, p.sku, p.name, p.is_active,
-                  COALESCE(SUM(sl.quantity_available), 0) as stock_available
+                  COALESCE(
+                    SUM(
+                      CASE
+                        WHEN w.is_active = true AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+                          THEN sl.quantity_available
+                        ELSE 0
+                      END
+                    ),
+                    0
+                  ) as stock_available
            FROM products p
            LEFT JOIN stock_levels sl ON p.id = sl.product_id
+           LEFT JOIN warehouses w ON w.id = sl.warehouse_id
            WHERE p.id = $1
            GROUP BY p.id, p.sku, p.name, p.is_active`,
           [product_id],
@@ -1464,10 +1540,20 @@ export class B2BOrderController {
         `SELECT 
           oi.product_id, oi.sku, oi.product_name, oi.quantity, 
           oi.unit_price, p.is_active, p.base_price,
-          COALESCE(SUM(sl.quantity_available), 0) as stock_available
+          COALESCE(
+            SUM(
+              CASE
+                WHEN w.is_active = true AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
+                  THEN sl.quantity_available
+                ELSE 0
+              END
+            ),
+            0
+          ) as stock_available
          FROM b2b_order_items oi
          LEFT JOIN products p ON oi.product_id = p.id
          LEFT JOIN stock_levels sl ON p.id = sl.product_id
+         LEFT JOIN warehouses w ON w.id = sl.warehouse_id
          WHERE oi.order_id = $1
          GROUP BY oi.id, oi.product_id, oi.sku, oi.product_name, oi.quantity, 
                   oi.unit_price, p.is_active, p.base_price`,

@@ -6,7 +6,7 @@ const projectRoot = path.resolve(__dirname, '../..');
 const launchSmokePath = path.join(projectRoot, 'scripts/tests/launch-smoke.sh');
 const seoSmokePath = path.join(projectRoot, 'scripts/tests/seo-smoke.sh');
 const goLiveGatePath = path.join(projectRoot, 'scripts/go-live-gate.sh');
-const releaseChecklistPath = path.join(projectRoot, 'docs/release-checklist.md');
+const releaseChecklistPath = path.join(projectRoot, 'docs/deployment/release-checklist.md');
 const launchValidationPath = path.join(projectRoot, 'docs/LAUNCH_VALIDATION_2026-03-08.md');
 
 function readFile(filePath: string): string {

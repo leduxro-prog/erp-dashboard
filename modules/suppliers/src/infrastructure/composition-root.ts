@@ -1,17 +1,13 @@
 import { Router } from 'express';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 
-import { SupplierController } from '../api/controllers/SupplierController';
+import { createModuleLogger } from '@shared/utils/logger';
+
 import { createSupplierRoutes } from '../api/routes/supplier.routes';
-import { GetSupplierProducts } from '../application/use-cases/GetSupplierProducts';
-import { MapSku } from '../application/use-cases/MapSku';
-import { PlaceSupplierOrder } from '../application/use-cases/PlaceSupplierOrder';
-import { ScrapeSupplierStock } from '../application/use-cases/ScrapeSupplierStock';
-
-import { SkuMappingEntityDb } from './entities/SkuMappingEntityDb';
 import { SupplierEntityDb } from './entities/SupplierEntityDb';
 import { SupplierOrderEntityDb } from './entities/SupplierOrderEntityDb';
 import { SupplierProductEntityDb } from './entities/SupplierProductEntityDb';
+import { SkuMappingEntityDb } from './entities/SkuMappingEntityDb';
 import { SupplierSyncJob } from './jobs/SupplierSyncJob';
 import { TypeOrmSupplierRepository } from './repositories/TypeOrmSupplierRepository';
 
@@ -20,6 +16,8 @@ import { TypeOrmSupplierRepository } from './repositories/TypeOrmSupplierReposit
  * Orchestrates dependency injection and creates configured Express router
  */
 export function createSuppliersRouter(dataSource: DataSource): Router {
+  const logger = createModuleLogger('suppliers-composition-root');
+
   // Get TypeORM repositories from DataSource
   const supplierRepo = dataSource.getRepository(SupplierEntityDb);
   const supplierProductRepo = dataSource.getRepository(SupplierProductEntityDb);
@@ -31,7 +29,8 @@ export function createSuppliersRouter(dataSource: DataSource): Router {
     supplierRepo,
     supplierProductRepo,
     skuMappingRepo,
-    supplierOrderRepo
+    supplierOrderRepo,
+    dataSource,
   );
 
   // Instantiate infrastructure services with proper Redis config
@@ -42,17 +41,19 @@ export function createSuppliersRouter(dataSource: DataSource): Router {
   };
   const supplierSyncJob = new SupplierSyncJob(supplierRepository, redisConfig);
 
-  // Instantiate use-cases with injected repositories
-  // Note: ScrapeSupplierStock is created inside SupplierSyncJob, so we don't instantiate it here
-  const mapSku = new MapSku(supplierRepository);
-  const placeSupplierOrder = new PlaceSupplierOrder(supplierRepository);
-  const getSupplierProducts = new GetSupplierProducts(supplierRepository);
+  const supplierSyncAutorun = String(process.env.SUPPLIER_SYNC_AUTORUN ?? 'true').toLowerCase();
+  const shouldScheduleSupplierSync = supplierSyncAutorun !== '0' && supplierSyncAutorun !== 'false';
 
-  // Instantiate controller with injected dependencies
-  const controller = new SupplierController(
-    supplierRepository,
-    supplierSyncJob,
-  );
+  if (shouldScheduleSupplierSync) {
+    void supplierSyncJob.scheduleSync().catch((error) => {
+      logger.error('Failed to schedule recurring supplier sync job', { error });
+    });
+  } else {
+    void supplierSyncJob.disableRecurringSync().catch((error) => {
+      logger.error('Failed to disable recurring supplier sync job', { error });
+    });
+    logger.warn('Recurring supplier sync disabled by SUPPLIER_SYNC_AUTORUN');
+  }
 
   // Create and return configured Express router
   return createSupplierRoutes(supplierRepository, supplierSyncJob);

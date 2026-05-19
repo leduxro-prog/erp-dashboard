@@ -214,6 +214,9 @@ jobs:
       - name: Check Prettier formatting
         run: npx prettier --check 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'
 
+      - name: Run VAT literal guard
+        run: node scripts/check-vat-literals.cjs
+
       - name: TypeScript type checking
         run: npx tsc --noEmit
 
@@ -293,7 +296,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:${{ env.POSTGRES_VERSION }}
+        image: postgres:15-alpine
         env:
           POSTGRES_DB: cypher_erp_test
           POSTGRES_USER: cypher_user
@@ -307,7 +310,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: redis:${{ env.REDIS_VERSION }}
+        image: redis:7-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -352,7 +355,7 @@ jobs:
           fi
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: ./coverage/coverage-final.json
           flags: unittests
@@ -377,7 +380,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:${{ env.POSTGRES_VERSION }}
+        image: postgres:15-alpine
         env:
           POSTGRES_DB: cypher_erp_test
           POSTGRES_USER: cypher_user
@@ -391,7 +394,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: redis:${{ env.REDIS_VERSION }}
+        image: redis:7-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -440,7 +443,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:${{ env.POSTGRES_VERSION }}
+        image: postgres:15-alpine
         env:
           POSTGRES_DB: cypher_erp_test
           POSTGRES_USER: cypher_user
@@ -454,7 +457,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: redis:${{ env.REDIS_VERSION }}
+        image: redis:7-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -809,42 +812,15 @@ jobs:
   # ==============================================================================
   deploy:
     name: Deploy
-    runs-on: ubuntu-latest
     needs: [gate-summary, manual-approval]
     if: |
       always() &&
       (inputs.skip_manual_approval == true || needs.manual-approval.result == 'success') &&
       needs.gate-summary.outputs.can_deploy == 'true'
-
-    environment:
-      name: ${{ inputs.environment }}
-      url: https://erp.cypher.ro
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to ${{ inputs.environment }}
-        run: |
-          echo "Deploying version ${{ needs.gate-summary.outputs.version }} to ${{ inputs.environment }}"
-          # Add actual deployment commands here
-          # For example: deploy to server, update k8s, etc.
-
-      - name: Run post-deployment smoke tests
-        run: |
-          echo "Running post-deployment smoke tests..."
-          # Add smoke test commands against deployed environment
-
-      - name: Create release tag
-        if: inputs.environment == 'production'
-        run: |
-          git tag -a "v${{ needs.gate-summary.outputs.version }}" -m "Release ${{ needs.gate-summary.outputs.version }}"
-          git push origin "v${{ needs.gate-summary.outputs.version }}"
-
-      - name: Notify deployment success
-        run: |
-          echo "Deployment completed successfully"
-          # Add notification commands (Slack, email, etc.)
+    uses: ./.github/workflows/deploy-hetzner.yml
+    with:
+      skip_build_checks: true
+    secrets: inherit
 
   # ==============================================================================
   # Job 13: Rollback (On Failure)
@@ -856,10 +832,9 @@ jobs:
     if: failure()
 
     steps:
-      - name: Execute rollback
+      - name: Rollback note
         run: |
-          echo "Deployment failed - executing rollback"
-          # Add rollback commands here
+          echo "Deployment failed. Rollback is handled by deploy-hetzner workflow rollback job."
 
       - name: Notify rollback
         run: |
