@@ -691,6 +691,8 @@ export class FinancialTransactionService {
     const date = new Date();
     const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
 
+    await em.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`${prefix}${dateStr}`]);
+
     // Find last order number for today
     const lastOrder = await em
       .getRepository(OrderEntity)

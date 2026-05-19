@@ -228,16 +228,7 @@ describe('Consumer Crash Recovery', () => {
         }
       }
 
-      // Eventually process all messages
-      const finalConsumer = await rmq.consume(topology.queue, (msg) => {
-        if (!msg) return;
-        totalProcessed++;
-        rmq.getChannel()?.ack(msg);
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      await rmq.cancelConsumer(finalConsumer.consumerTag);
+      await rmq.cancelAllConsumers();
       if (totalProcessed < messages.length) {
         const recovered = await rmq.collectMessages(topology.queue, messages.length, 5000);
         totalProcessed += recovered.length;
