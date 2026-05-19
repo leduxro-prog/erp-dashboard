@@ -58,6 +58,6 @@ If deployment fails, the rollback script provides automated recovery:
 
 ## Documentation
 
-- [Release Checklist](../../docs/release-checklist.md)
+- [Release Checklist](../../docs/deployment/release-checklist.md)
 - [Deployment Guide](../../DEPLOYMENT_GUIDE.md)
 - [CI/CD Setup Summary](../../CI_CD_SETUP_SUMMARY.md)

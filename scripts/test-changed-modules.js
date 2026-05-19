@@ -64,14 +64,14 @@ function main() {
 
   if (runFull || modulePaths.size === 0) {
     console.log('Running full test suite due to shared/core changes.');
-    const full = spawnSync('npm', ['test'], { stdio: 'inherit' });
+    const full = spawnSync('npm', ['test', '--', '--runInBand'], { stdio: 'inherit' });
     process.exit(full.status || 1);
   }
 
   const targets = Array.from(modulePaths);
   console.log(`Running tests for changed targets: ${targets.join(', ')}`);
 
-  const result = spawnSync('npx', ['jest', '--passWithNoTests', ...targets], {
+  const result = spawnSync('npx', ['jest', '--runInBand', '--passWithNoTests', ...targets], {
     stdio: 'inherit',
   });
   process.exit(result.status || 1);

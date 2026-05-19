@@ -272,6 +272,7 @@ async function buildApp(): Promise<Express> {
         'searchProductImage',
         'selectSearchedImage',
       ]) as never,
+      { getRouter: () => express.Router() } as never,
     ),
   );
   app.use('/api/v1/smartbill', createSmartBillRoutes(buildOkController([
