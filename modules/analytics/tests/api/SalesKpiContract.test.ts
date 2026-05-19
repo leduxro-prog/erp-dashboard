@@ -57,17 +57,17 @@ function createApp(options?: { failReadModel?: boolean; topProductsAsString?: bo
   };
 
   const controller = new AnalyticsController(
-    {},
-    {},
-    {},
-    {},
-    {},
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    {} as any,
     {
       info: () => undefined,
       warn: () => undefined,
       error: () => undefined,
       debug: () => undefined,
-    },
+    } as any,
     dataSource as any,
     new SalesKpiQueryService(dataSource as any),
   );
