@@ -1,6 +1,6 @@
 import { createModuleLogger } from '@shared/utils/logger';
 import { DataSource } from 'typeorm';
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 
 const logger = createModuleLogger('ImportPricesFromExcel');
 

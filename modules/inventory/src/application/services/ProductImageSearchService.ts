@@ -309,11 +309,11 @@ export class ProductImageSearchService {
         headers: { 'User-Agent': this.USER_AGENT },
       });
 
-      const contentType = response.headers['content-type'] || '';
+      const contentType = this.getHeaderString(response.headers['content-type']);
       if (!contentType.startsWith('image/')) return false;
 
       // Check minimum file size (avoid tiny placeholder images)
-      const contentLength = parseInt(response.headers['content-length'] || '0', 10);
+      const contentLength = parseInt(this.getHeaderString(response.headers['content-length']) || '0', 10);
       if (contentLength > 0 && contentLength < 2000) return false; // <2KB likely icon/placeholder
 
       return true;
@@ -340,7 +340,7 @@ export class ProductImageSearchService {
         maxContentLength: 10 * 1024 * 1024, // 10MB limit
       });
 
-      const contentType = response.headers['content-type'] || '';
+      const contentType = this.getHeaderString(response.headers['content-type']);
       if (!contentType.startsWith('image/')) {
         this.logger.warn(`Downloaded content is not an image: ${contentType}`);
         return null;
@@ -385,5 +385,11 @@ export class ProductImageSearchService {
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private getHeaderString(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value)) return value.join(', ');
+    return '';
   }
 }
