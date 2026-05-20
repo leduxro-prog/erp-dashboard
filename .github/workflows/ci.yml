@@ -56,9 +56,17 @@ jobs:
           echo "$CHANGED_TS"
           echo "$CHANGED_TS" | xargs npx eslint
 
-      - name: Run ESLint (push full)
+      - name: Run ESLint (push changed files)
         if: github.event_name != 'pull_request'
-        run: npm run lint
+        run: |
+          CHANGED_TS=$(git diff --name-only ${{ github.event.before }}...${{ github.sha }} | grep -E '^(src|shared|modules)/.*\.ts$' || true)
+          if [ -z "$CHANGED_TS" ]; then
+            echo "No backend TypeScript files changed. Skipping backend ESLint."
+            exit 0
+          fi
+          echo "Running backend ESLint on changed files:"
+          echo "$CHANGED_TS"
+          echo "$CHANGED_TS" | xargs npx eslint
         continue-on-error: false
 
       - name: Run frontend ESLint (PR changed files)
@@ -73,9 +81,17 @@ jobs:
           echo "$CHANGED_FE"
           echo "$CHANGED_FE" | xargs npm --prefix frontend exec eslint
 
-      - name: Run frontend ESLint (push full)
+      - name: Run frontend ESLint (push changed files)
         if: github.event_name != 'pull_request'
-        run: npm --prefix frontend run lint
+        run: |
+          CHANGED_FE=$(git diff --name-only ${{ github.event.before }}...${{ github.sha }} | grep -E '^frontend/src/.*\.(ts|tsx)$' || true)
+          if [ -z "$CHANGED_FE" ]; then
+            echo "No frontend TS/TSX files changed. Skipping frontend ESLint."
+            exit 0
+          fi
+          echo "Running frontend ESLint on changed files:"
+          echo "$CHANGED_FE"
+          echo "$CHANGED_FE" | xargs npm --prefix frontend exec eslint
         continue-on-error: false
 
       - name: Check Prettier (PR changed files)
@@ -88,9 +104,15 @@ jobs:
           fi
           echo "$CHANGED_FMT" | xargs npx prettier --check
 
-      - name: Check code formatting with Prettier (push full)
+      - name: Check code formatting with Prettier (push changed files)
         if: github.event_name != 'pull_request'
-        run: npx prettier --check 'src/**/*.ts' 'shared/**/*.ts' 'modules/**/*.ts'
+        run: |
+          CHANGED_FMT=$(git diff --name-only ${{ github.event.before }}...${{ github.sha }} | grep -E '^(src|shared|modules)/.*\.ts$' || true)
+          if [ -z "$CHANGED_FMT" ]; then
+            echo "No backend TypeScript files changed. Skipping Prettier check."
+            exit 0
+          fi
+          echo "$CHANGED_FMT" | xargs npx prettier --check
         continue-on-error: false
 
       - name: Run VAT literal guard

@@ -82,6 +82,8 @@ describe('AuditLogService Integration', () => {
       await dataSource.query(
         `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()`,
       );
+      await dataSource.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS entity_type VARCHAR(100)`);
+      await dataSource.query(`ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS entity_id INTEGER`);
 
       // Legacy schema compatibility: ensure omitted legacy columns have defaults
       await dataSource.query(
