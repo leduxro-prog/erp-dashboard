@@ -127,6 +127,8 @@ jobs:
     name: Deploy to Hetzner
     needs: [build_checks]
     if: always() && (needs.build_checks.result == 'success' || needs.build_checks.result == 'skipped')
+    outputs:
+      deploy_enabled: ${{ steps.deploy-preflight.outputs.deploy_enabled }}
     environment:
       name: production
       url: ${{ vars.APP_BASE_URL }}
@@ -135,7 +137,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check deployment configuration
+        id: deploy-preflight
+        env:
+          HETZNER_HOST: ${{ secrets.HETZNER_HOST }}
+          HETZNER_USER: ${{ secrets.HETZNER_USER }}
+          HETZNER_SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          HETZNER_TARGET_DIR: ${{ secrets.HETZNER_TARGET_DIR }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+        run: |
+          if [ -z "${HETZNER_HOST:-}" ] || [ -z "${HETZNER_USER:-}" ] || [ -z "${HETZNER_SSH_KEY:-}" ] || [ -z "${HETZNER_TARGET_DIR:-}" ] || [ -z "${APP_BASE_URL:-}" ]; then
+            echo "deploy_enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Hetzner deploy skipped because required deployment secrets are not configured."
+            exit 0
+          fi
+          echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
+
       - name: Setup SSH key
+        if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/hetzner_deploy
@@ -143,6 +162,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Verify SSH connection
+        if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: |
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=accept-new \
@@ -151,6 +171,7 @@ jobs:
             "echo 'SSH connection verified'"
 
       - name: Create pre-deploy backup
+        if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: |
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
@@ -158,6 +179,7 @@ jobs:
             "systemctl start cypher-k8s-backup.service"
 
       - name: Sync application files
+        if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/hetzner_deploy -o StrictHostKeyChecking=no" \
@@ -171,6 +193,7 @@ jobs:
             ./ ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:${{ secrets.HETZNER_TARGET_DIR }}
 
       - name: Capture current deployment revisions
+        if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: |
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
@@ -178,6 +201,7 @@ jobs:
             "kubectl -n cypher get deploy cypher-app cypher-frontend -o wide"
 
       - name: Build images and roll out Kubernetes
+        if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: |
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
@@ -202,10 +226,11 @@ jobs:
              systemctl start cypher-launch-readiness.service"
 
       - name: Wait for services to stabilize
+        if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: sleep 30
 
       - name: Cleanup SSH key
-        if: always()
+        if: always() && steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: rm -f ~/.ssh/hetzner_deploy
 
   # ============================================================================
@@ -215,7 +240,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Smoke Tests
     needs: [deploy]
-    if: needs.deploy.result == 'success'
+    if: needs.deploy.result == 'success' && needs.deploy.outputs.deploy_enabled == 'true'
 
     steps:
       - name: Checkout code
