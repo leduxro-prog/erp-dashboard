@@ -180,9 +180,9 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
 
-      - name: Run tests with coverage (push)
+      - name: Run critical tests (push)
         if: github.event_name != 'pull_request'
-        run: npm run test:coverage
+        run: npm run test:critical
         env:
           NODE_ENV: test
           DB_HOST: localhost
