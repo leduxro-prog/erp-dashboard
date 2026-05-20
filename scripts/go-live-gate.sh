@@ -18,6 +18,7 @@ SINCE_WINDOW="${SINCE_WINDOW:-30m}"
 WATCH_CHECKPOINTS="${WATCH_CHECKPOINTS:-3}"
 WATCH_INTERVAL_SEC="${WATCH_INTERVAL_SEC:-600}"
 WATCH_LOG_FILE="${WATCH_LOG_FILE:-/tmp/cypher-postlaunch-watch.log}"
+GATE_MODE="${GATE_MODE:-readiness}"
 
 PASS=0
 FAIL=0
@@ -227,11 +228,23 @@ main() {
 
   section "Go-Live Gate"
   printf 'Time: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'Mode: %s\n' "$GATE_MODE"
 
-  run_prelaunch_backup
-  run_t0_gate
-  run_launch_smoke
-  run_postlaunch_watch
+  case "$GATE_MODE" in
+    readiness)
+      run_t0_gate
+      run_postlaunch_watch
+      ;;
+    launch-smoke)
+      run_prelaunch_backup
+      run_t0_gate
+      run_launch_smoke
+      run_postlaunch_watch
+      ;;
+    *)
+      bad "Unknown GATE_MODE=$GATE_MODE (expected readiness or launch-smoke)"
+      ;;
+  esac
 
   section "Decision"
   printf 'Checks: PASS=%d FAIL=%d\n' "$PASS" "$FAIL"

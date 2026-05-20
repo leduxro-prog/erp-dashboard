@@ -341,16 +341,34 @@ create_backup() {
 
     # Backup docker volumes
     log_info "Backing up Docker volumes..."
-    docker compose -f "$COMPOSE_FILE" exec -T db pg_dump -U cypher_user cypher_erp > "$backup_path/database.sql" 2>/dev/null || true
+    local database_backup="$backup_path/database_rollback_${backup_timestamp}.sql"
+    if ! docker compose -f "$COMPOSE_FILE" exec -T db pg_dump -U cypher_user cypher_erp > "$database_backup"; then
+        log_error "Database backup failed"
+        update_rollback_state "create_backup" "failed" "Database backup failed"
+        exit 1
+    fi
 
     # Backup configuration
     log_info "Backing up configuration..."
-    cp -r "$PROJECT_ROOT/.env" "$backup_path/" 2>/dev/null || true
-    cp -r "$PROJECT_ROOT/config" "$backup_path/" 2>/dev/null || true
+    if ! cp -r "$PROJECT_ROOT/.env" "$backup_path/"; then
+        log_error "Configuration backup failed: .env"
+        update_rollback_state "create_backup" "failed" "Configuration backup failed: .env"
+        exit 1
+    fi
+
+    if ! cp -r "$PROJECT_ROOT/config" "$backup_path/"; then
+        log_error "Configuration backup failed: config"
+        update_rollback_state "create_backup" "failed" "Configuration backup failed: config"
+        exit 1
+    fi
 
     # Backup current git state
     log_info "Backing up git state..."
-    git -C "$PROJECT_ROOT" show > "$backup_path/current_commit.patch" 2>/dev/null || true
+    if ! git -C "$PROJECT_ROOT" show > "$backup_path/current_commit.patch"; then
+        log_error "Git state backup failed"
+        update_rollback_state "create_backup" "failed" "Git state backup failed"
+        exit 1
+    fi
 
     log_success "Backup created at: $backup_path"
     update_rollback_state "create_backup" "completed"
@@ -412,7 +430,7 @@ rollback_database() {
     docker compose -f "$COMPOSE_FILE" stop app || true
 
     # Restore database
-    if docker compose -f "$COMPOSE_FILE" exec -T db psql -U cypher_user -d cypher_erp < "$latest_backup"; then
+    if docker compose -f "$COMPOSE_FILE" exec -T db psql -v ON_ERROR_STOP=1 --single-transaction -U cypher_user -d cypher_erp < "$latest_backup"; then
         log_success "Database rolled back"
     else
         log_error "Database rollback failed"

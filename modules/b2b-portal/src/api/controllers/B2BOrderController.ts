@@ -288,7 +288,7 @@ export class B2BOrderController {
       }
 
       const body: CreateOrderRequest = req.body;
-      let items: Array<{ product_id: string | number; quantity: number; price?: number }> = [];
+      let items: Array<{ product_id: string | number; quantity: number }> = [];
       let cartId: string | null = null;
 
       if (body.items && body.items.length > 0) {
@@ -311,7 +311,6 @@ export class B2BOrderController {
         items = cartResult[0].items.map((item: CartItem) => ({
           product_id: item.product_id,
           quantity: item.quantity,
-          price: item.base_price,
         }));
       }
 
@@ -404,7 +403,7 @@ export class B2BOrderController {
         }
 
         const product = productResult[0];
-        const basePrice = item.price ?? parseFloat(product.base_price) ?? 0;
+        const basePrice = parseFloat(product.base_price) || 0;
         const itemDiscount = basePrice * totalDiscountPercent;
         const unitPrice = basePrice - itemDiscount;
         const totalPrice = unitPrice * item.quantity;
@@ -534,7 +533,7 @@ export class B2BOrderController {
           ],
         );
 
-        await queryRunner.query(
+        const stockUpdateResult = await queryRunner.query(
           `UPDATE stock_levels 
            SET quantity_available = quantity_available - $1, updated_at = NOW()
            WHERE id = (
@@ -544,12 +543,34 @@ export class B2BOrderController {
              WHERE sl.product_id = $2
                AND w.is_active = true
                AND (w.code ILIKE 'SB-%' OR w.name ILIKE 'magazin')
-               AND sl.quantity_available >= $1
-             ORDER BY sl.quantity_available DESC
-             LIMIT 1
-           )`,
+                AND sl.quantity_available >= $1
+              ORDER BY sl.quantity_available DESC
+              LIMIT 1
+            )
+            RETURNING id`,
           [item.quantity, item.product_id],
         );
+
+        if (stockUpdateResult.length === 0) {
+          await queryRunner.rollbackTransaction();
+          res.status(400).json({
+            success: false,
+            error: {
+              code: 'INSUFFICIENT_STOCK',
+              message: 'Some products have insufficient stock',
+              details: [
+                {
+                  product_id: item.product_id,
+                  product_name: item.product_name,
+                  requested: item.quantity,
+                  available: 0,
+                  shortfall: item.quantity,
+                },
+              ],
+            },
+          });
+          return;
+        }
       }
 
       const newUsedCredit = creditValidation.usedCredit + totalAmount;

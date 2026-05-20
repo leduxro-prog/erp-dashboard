@@ -145,15 +145,18 @@ describe('Consumer Crash Recovery', () => {
 
       // First consumer processes some then crashes
       let firstBatch: any[] = [];
-      await rmq.consume(topology.queue, (msg) => {
+      let hasCrashed = false;
+      await rmq.consume(topology.queue, async (msg) => {
         if (!msg) return;
 
         const content = JSON.parse(msg.content.toString());
         firstBatch.push(content);
 
-        if (firstBatch.length >= 5) {
-          // Crash after 5 messages
-          throw new Error('Simulated crash');
+        if (!hasCrashed && firstBatch.length >= 5) {
+          hasCrashed = true;
+          // Simulate a hard consumer crash without throwing from amqplib's delivery callback.
+          await rmq.simulateChannelFailure(0);
+          return;
         }
 
         rmq.getChannel()?.ack(msg);
@@ -305,6 +308,8 @@ describe('Consumer Crash Recovery', () => {
       // Verify state was saved
       expect(savedState).toBeDefined();
       expect(Number(savedState?.last_processed_offset)).toBeGreaterThanOrEqual(5);
+
+      await rmq.cancelAllConsumers();
 
       const resumePublish = await rmq.publish(topology.exchange, topology.routingKey, {
         id: crypto.randomUUID(),

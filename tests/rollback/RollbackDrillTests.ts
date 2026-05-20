@@ -175,6 +175,25 @@ describe('Rollback Drill Tests', () => {
       }
     });
 
+    it('should use strict and consistent database backup/restore artifacts', () => {
+      const script = readFileSync(ROLLBACK_SCRIPT, 'utf-8');
+
+      expect(script).toContain('database_rollback_${backup_timestamp}.sql');
+      expect(script).toContain('find "$BACKUP_DIR" -name "database_*.sql"');
+      expect(script).toContain('psql -v ON_ERROR_STOP=1');
+      expect(script).not.toContain('pg_dump -U cypher_user cypher_erp > "$backup_path/database.sql" 2>/dev/null || true');
+    });
+
+    it('should fail rollback backup when required recovery artifacts cannot be copied', () => {
+      const script = readFileSync(ROLLBACK_SCRIPT, 'utf-8');
+
+      expect(script).toContain('Configuration backup failed');
+      expect(script).toContain('Git state backup failed');
+      expect(script).not.toContain('cp -r "$PROJECT_ROOT/.env" "$backup_path/" 2>/dev/null || true');
+      expect(script).not.toContain('cp -r "$PROJECT_ROOT/config" "$backup_path/" 2>/dev/null || true');
+      expect(script).not.toContain('git -C "$PROJECT_ROOT" show > "$backup_path/current_commit.patch" 2>/dev/null || true');
+    });
+
     it('should verify backup directory exists or can be created', () => {
       if (!existsSync(BACKUP_DIR)) {
         try {
@@ -303,19 +322,17 @@ describe('Rollback Drill Tests', () => {
   describe('Phase 4: Application Code Rollback Simulation', () => {
     it('should simulate git checkout to previous commit', () => {
       const start = Date.now();
+      const simulationWorktree = join('/tmp', `cypher-rollback-drill-${Date.now()}`);
       try {
         const currentCommit = getCurrentGitCommit();
         const parentCommit = executeCommand('git rev-parse HEAD~1', { silent: true }).trim();
 
-        // Checkout parent commit
-        executeCommand(`git checkout ${parentCommit}`, { silent: true });
+        // Simulate rollback in an isolated worktree so local remediation changes remain untouched.
+        executeCommand(`git worktree add --detach ${simulationWorktree} ${parentCommit}`, { silent: true });
 
         // Verify we're on a different commit
-        const newCommit = getCurrentGitCommit();
+        const newCommit = executeCommand(`git -C ${simulationWorktree} rev-parse HEAD`, { silent: true }).trim();
         expect(newCommit).not.toBe(currentCommit);
-
-        // Return to drill branch
-        executeCommand(`git checkout ${drillBranch}`, { silent: true });
 
         const duration = Date.now() - start;
 
@@ -326,6 +343,10 @@ describe('Rollback Drill Tests', () => {
       } catch (error) {
         recordDrillResult('app_rollback', 'failed', Date.now() - start);
         throw error;
+      } finally {
+        try {
+          executeCommand(`git worktree remove --force ${simulationWorktree}`, { silent: true });
+        } catch {}
       }
     });
 

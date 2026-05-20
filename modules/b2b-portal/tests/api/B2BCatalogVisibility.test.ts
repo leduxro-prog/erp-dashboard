@@ -248,4 +248,29 @@ describe('B2B catalog visibility policy', () => {
       stock_supplier: 8,
     });
   });
+
+  it('marks anonymous catalog responses as public cacheable', async () => {
+    const app = createApp('public');
+
+    const response = await request(app).get('/api/v1/b2b/products');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toContain('public');
+    expect(response.headers['vary']).toBe('Accept-Encoding');
+  });
+
+  it('marks authenticated catalog responses as private and varies by auth state', async () => {
+    const app = createApp('public');
+    const token = createB2BToken();
+
+    const response = await request(app)
+      .get('/api/v1/b2b/products')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers['cache-control']).toContain('private');
+    expect(response.headers['vary']).toContain('Authorization');
+    expect(response.headers['vary']).toContain('Cookie');
+    expect(response.headers['vary']).toContain('Accept-Encoding');
+  });
 });

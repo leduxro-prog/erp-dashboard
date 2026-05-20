@@ -155,8 +155,7 @@ jobs:
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "systemctl start cypher-k8s-backup.service" \
-          || echo "::warning::Pre-deploy DB backup failed (non-blocking)"
+            "systemctl start cypher-k8s-backup.service"
 
       - name: Sync application files
         run: |
@@ -194,6 +193,7 @@ jobs:
              docker save cypher-erp-frontend:latest -o \"$FRONTEND_TAR\" && \
              k3s ctr images import \"$APP_TAR\" && \
              k3s ctr images import \"$FRONTEND_TAR\" && \
+             kubectl kustomize orchestration/k8s/overlays/staging >/tmp/cypher-kustomize-rendered.yaml && \
              kubectl apply -k orchestration/k8s/overlays/staging && \
              kubectl -n cypher rollout restart deployment/cypher-app deployment/cypher-frontend && \
              kubectl -n cypher rollout status deployment/cypher-app --timeout=240s && \

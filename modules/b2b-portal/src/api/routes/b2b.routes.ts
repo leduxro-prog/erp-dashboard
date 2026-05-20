@@ -69,15 +69,24 @@ const csvUpload = multer({
 
 const catalogCacheHeaders = (ttlSeconds = 60) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const bucket = Math.floor(Date.now() / (ttlSeconds * 1000));
-    const etag = `W/"${createHash('sha1').update(`${req.originalUrl}:${bucket}`).digest('hex')}"`;
-
-    res.setHeader(
-      'Cache-Control',
-      `public, max-age=${ttlSeconds}, s-maxage=${ttlSeconds}, stale-while-revalidate=${ttlSeconds}`,
+    const isAuthenticatedB2B = Boolean(
+      (req as B2BAuthenticatedRequest).b2bCustomer?.id || req.headers.authorization || req.cookies,
     );
+    const bucket = Math.floor(Date.now() / (ttlSeconds * 1000));
+    const cacheScope = isAuthenticatedB2B ? 'b2b-auth' : 'public';
+    const etag = `W/"${createHash('sha1').update(`${cacheScope}:${req.originalUrl}:${bucket}`).digest('hex')}"`;
+
+    if (isAuthenticatedB2B) {
+      res.setHeader('Cache-Control', `private, max-age=${ttlSeconds}`);
+      res.setHeader('Vary', 'Authorization, Cookie, Accept-Encoding');
+    } else {
+      res.setHeader(
+        'Cache-Control',
+        `public, max-age=${ttlSeconds}, s-maxage=${ttlSeconds}, stale-while-revalidate=${ttlSeconds}`,
+      );
+      res.setHeader('Vary', 'Accept-Encoding');
+    }
     res.setHeader('ETag', etag);
-    res.setHeader('Vary', 'Accept-Encoding');
 
     if (req.headers['if-none-match'] === etag) {
       res.status(304).end();
@@ -447,7 +456,8 @@ export function createB2BRoutes(
    */
   router.get(
     '/customers',
-    authenticateB2B,
+    authenticate,
+    requireRole(['admin']),
     queryValidationMiddleware(listCustomersSchema),
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       controller.listCustomers(req, res, next),
@@ -526,6 +536,7 @@ export function createB2BRoutes(
   router.post(
     '/orders',
     authenticateB2B,
+    validationMiddleware(createB2BOrderSchema),
     asyncHandler((req: AuthenticatedRequest, res: Response, next: NextFunction) =>
       orderController.createOrder(req, res, next),
     ),

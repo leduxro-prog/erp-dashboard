@@ -35,6 +35,7 @@ export interface CartData {
 
 class B2BApiClient {
   private client: AxiosInstance;
+  private refreshClient: AxiosInstance;
 
   private unwrapData(payload: any) {
     return payload?.data ?? payload;
@@ -57,6 +58,12 @@ class B2BApiClient {
         'Content-Type': 'application/json',
       },
     });
+    this.refreshClient = axios.create({
+      baseURL: '/api/v1',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     this.client.interceptors.request.use((config) => {
       const { token } = useB2BAuthStore.getState();
@@ -69,7 +76,15 @@ class B2BApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       async (error) => {
-        if (error.response?.status === 401) {
+        const originalRequest = error.config as any;
+
+        if (
+          error.response?.status === 401 &&
+          originalRequest &&
+          !originalRequest._retry &&
+          !String(originalRequest.url || '').includes('/b2b-auth/refresh')
+        ) {
+          originalRequest._retry = true;
           const { refreshToken, logout } = useB2BAuthStore.getState();
           if (refreshToken) {
             try {
@@ -81,8 +96,8 @@ class B2BApiClient {
                   response.refresh_token,
                   useB2BAuthStore.getState().customer!,
                 );
-              error.config.headers.Authorization = `Bearer ${response.token}`;
-              return this.client(error.config);
+              originalRequest.headers.Authorization = `Bearer ${response.token}`;
+              return this.client(originalRequest);
             } catch (refreshError) {
               logout();
               window.location.href = '/b2b-store/login';
@@ -121,7 +136,7 @@ class B2BApiClient {
   }
 
   async refreshToken(refreshToken: string) {
-    const response = await this.client.post('/b2b-auth/refresh', {
+    const response = await this.refreshClient.post('/b2b-auth/refresh', {
       refresh_token: refreshToken,
     });
     return response.data;

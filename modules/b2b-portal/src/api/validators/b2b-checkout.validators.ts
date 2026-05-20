@@ -20,8 +20,7 @@ export const createB2BOrderSchema = Joi.object({
         product_id: Joi.alternatives().try(Joi.string(), Joi.number().integer()).required(),
         sku: Joi.string().max(100).optional(),
         quantity: Joi.number().integer().positive().required(),
-        price: Joi.number().positive().required(),
-      })
+      }).unknown(false)
     )
     .min(1)
     .required(),
