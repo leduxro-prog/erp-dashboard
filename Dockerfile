@@ -13,10 +13,11 @@ RUN apk add --no-cache python3 make g++
 
 # Copy package files
 COPY package*.json ./
+COPY .npmrc ./
 COPY tsconfig.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies from the lockfile to avoid re-resolving peer dependencies in CI.
+RUN npm ci
 
 # Copy application source
 COPY src ./src
