@@ -126,8 +126,8 @@ export class OutboxProcessor {
       const actualBatchSize = batchSize || this.config.batch.size;
       this.logger.debug('Starting batch processing', { batchSize: actualBatchSize });
 
-      // Fetch pending events
-      const events = await this.repository.fetchPendingEvents(
+      // Claim pending events atomically so only rows transitioned to processing are published.
+      const events = await this.repository.claimPendingEvents(
         actualBatchSize,
         this.config.relay.consumerName,
         this.config.retry.maxAttempts
@@ -146,15 +146,10 @@ export class OutboxProcessor {
         };
       }
 
-      this.logger.info('Fetched events for processing', { count: events.length });
-
-      // Mark events as processing
-      const eventIds = events.map((e) => e.id);
-      const markedCount = await this.repository.markEventsProcessing(eventIds);
-      this.logger.debug('Marked events as processing', { count: markedCount });
+      this.logger.info('Claimed events for processing', { count: events.length });
 
       if (this.metrics) {
-        this.metrics.setBatchSize(markedCount);
+        this.metrics.setBatchSize(events.length);
       }
 
       // Process each event

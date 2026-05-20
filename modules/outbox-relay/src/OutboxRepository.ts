@@ -272,6 +272,62 @@ export class OutboxRepository {
   }
 
   /**
+   * Atomically claims pending events for processing and returns only rows owned by this claim.
+   *
+   * A single UPDATE statement keeps the SKIP LOCKED selection and status transition in one
+   * transaction boundary, preventing competing relays from publishing the same stale fetch.
+   */
+  public async claimPendingEvents(
+    batchSize: number,
+    consumerName: string = 'outbox-relay',
+    maxAttempts: number = 3
+  ): Promise<OutboxEvent[]> {
+    const startTime = Date.now();
+
+    try {
+      const query = `
+        UPDATE shared.outbox_events
+        SET status = 'processing',
+            attempts = attempts + 1,
+            updated_at = NOW()
+        WHERE id IN (
+          SELECT id
+          FROM shared.outbox_events
+          WHERE status = 'pending'
+            AND next_attempt_at <= NOW()
+            AND attempts < $1
+            AND NOT EXISTS (
+              SELECT 1 FROM shared.processed_events pe
+              WHERE pe.event_id = shared.outbox_events.event_id
+                AND pe.consumer_name = $2
+                AND pe.status = 'completed'
+            )
+          ORDER BY priority DESC, occurred_at ASC
+          LIMIT $3
+          FOR UPDATE SKIP LOCKED
+        )
+        RETURNING *
+      `;
+
+      const result = await this.pool.query<OutboxEvent>(query, [maxAttempts, consumerName, batchSize]);
+
+      this.logger.debug('Claimed pending events', {
+        count: result.rows.length,
+        batchSize,
+        duration: Date.now() - startTime,
+      });
+
+      return result.rows;
+    } catch (error) {
+      this.logger.error('Failed to claim pending events', error as Error, {
+        batchSize,
+        consumerName,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Marks events as processing
    *
    * @param eventIds - Array of event IDs to mark
