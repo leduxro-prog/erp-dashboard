@@ -294,6 +294,8 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     needs: [pre-deployment-checks, code-quality]
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     services:
       postgres:
@@ -356,16 +358,18 @@ jobs:
           fi
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+        if: hashFiles('coverage/coverage-final.json') != '' && env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v6
         with:
           files: ./coverage/coverage-final.json
           flags: unittests
           name: codecov-release-gate
+          token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
       - name: Upload test results
         uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && hashFiles('coverage/**') != ''
         with:
           name: test-results-${{ github.sha }}
           path: coverage/
