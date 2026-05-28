@@ -28,7 +28,7 @@
     "ioredis": "^5.3.0",
     "pdfkit": "^0.13.0",
     "typeorm": "^0.3.0",
-    "uuid": "^9.0.0"
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@types/jest": "^29.0.0",
