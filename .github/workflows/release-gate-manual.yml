@@ -43,6 +43,7 @@ env:
   NODE_VERSION: '20.x'
   POSTGRES_VERSION: '15-alpine'
   REDIS_VERSION: '7-alpine'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ==============================================================================
