@@ -453,7 +453,7 @@ const ChatView: React.FC<{
     if (!messageInput.trim() && !selectedMedia) return;
 
     if (selectedMedia) {
-      toast('Media upload not implemented yet');
+      toast.error('Media upload not implemented yet');
     } else {
       sendMessageMutation.mutate({ message: messageInput.trim() });
     }

@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { createModuleLogger } from '@shared/utils/logger';
 
 export interface ImageSearchResult {
@@ -310,7 +311,8 @@ export class ProductImageSearchService {
       });
 
       const contentType = this.getHeaderString(response.headers['content-type']);
-      if (!contentType.startsWith('image/')) return false;
+      const allowedContentTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedContentTypes.includes(contentType.split(';')[0].trim().toLowerCase())) return false;
 
       // Check minimum file size (avoid tiny placeholder images)
       const contentLength = parseInt(this.getHeaderString(response.headers['content-length']) || '0', 10);
@@ -320,6 +322,43 @@ export class ProductImageSearchService {
     } catch {
       return false;
     }
+  }
+
+  private detectAllowedImageExtension(buffer: Buffer): string | null {
+    if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+      return '.jpg';
+    }
+
+    if (
+      buffer.length >= 8 &&
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47 &&
+      buffer[4] === 0x0d &&
+      buffer[5] === 0x0a &&
+      buffer[6] === 0x1a &&
+      buffer[7] === 0x0a
+    ) {
+      return '.png';
+    }
+
+    if (
+      buffer.length >= 12 &&
+      buffer.toString('ascii', 0, 4) === 'RIFF' &&
+      buffer.toString('ascii', 8, 12) === 'WEBP'
+    ) {
+      return '.webp';
+    }
+
+    if (
+      buffer.length >= 6 &&
+      (buffer.toString('ascii', 0, 6) === 'GIF87a' || buffer.toString('ascii', 0, 6) === 'GIF89a')
+    ) {
+      return '.gif';
+    }
+
+    return null;
   }
 
   /**
@@ -337,27 +376,24 @@ export class ProductImageSearchService {
         timeout: 15000,
         maxRedirects: 3,
         headers: { 'User-Agent': this.USER_AGENT },
-        maxContentLength: 10 * 1024 * 1024, // 10MB limit
+        maxContentLength: 5 * 1024 * 1024,
       });
 
       const contentType = this.getHeaderString(response.headers['content-type']);
-      if (!contentType.startsWith('image/')) {
+      const allowedContentTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedContentTypes.includes(contentType.split(';')[0].trim().toLowerCase())) {
         this.logger.warn(`Downloaded content is not an image: ${contentType}`);
         return null;
       }
 
-      // Determine file extension from content-type
-      const extMap: Record<string, string> = {
-        'image/jpeg': '.jpg',
-        'image/png': '.png',
-        'image/webp': '.webp',
-        'image/gif': '.gif',
-        'image/svg+xml': '.svg',
-      };
-      const ext = extMap[contentType] || '.jpg';
-
       // Validate minimum file size (at least 3KB for a real product image)
       const buffer = Buffer.from(response.data);
+      const ext = this.detectAllowedImageExtension(buffer);
+      if (!ext) {
+        this.logger.warn(`Downloaded content failed image signature validation: ${contentType}`);
+        return null;
+      }
+
       if (buffer.length < 3000) {
         this.logger.warn(`Image too small (${buffer.length} bytes), likely placeholder`);
         return null;
@@ -366,7 +402,7 @@ export class ProductImageSearchService {
       // Build filename: productId-sku-timestamp.ext
       const safeSku = sku.replace(/[^a-zA-Z0-9-_]/g, '_').substring(0, 50);
       const timestamp = Date.now().toString(36);
-      const filename = `${productId}-${safeSku}-${timestamp}${ext}`;
+      const filename = `${productId}-${safeSku}-${timestamp}-${randomUUID()}${ext}`;
       const filePath = path.join(this.UPLOADS_DIR, filename);
 
       fs.writeFileSync(filePath, buffer);

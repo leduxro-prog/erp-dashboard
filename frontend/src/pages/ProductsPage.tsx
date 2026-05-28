@@ -132,9 +132,9 @@ function ImageUploadModal({ product, onClose, onUploaded }: ImageUploadModalProp
 
   // ── Upload tab handlers ──
   const handleFile = (file: File) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!allowed.includes(file.type)) {
-      setError(tr('Format invalid. Doar JPG, PNG, WebP, GIF, SVG.', 'Invalid format. Only JPG, PNG, WebP, GIF, SVG.'));
+      setError(tr('Format invalid. Doar JPG, PNG, WebP, GIF.', 'Invalid format. Only JPG, PNG, WebP, GIF.'));
       return;
     }
     if (file.size > 5 * 1024 * 1024) {

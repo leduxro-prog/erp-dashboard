@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { DataSource } from 'typeorm';
 
 import { getReadDataSource } from '@shared/database/read-replica-manager';
@@ -31,8 +33,13 @@ export class InventoryController {
     '.png',
     '.webp',
     '.gif',
-    '.svg',
-    '.avif',
+  ]);
+
+  private readonly allowedRemoteImageMimeTypes = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
   ]);
 
   private isValidProductImageUrl(imageUrl: unknown): boolean {
@@ -47,7 +54,8 @@ export class InventoryController {
 
     if (trimmed.startsWith('/uploads/products/')) {
       const lowerPath = trimmed.toLowerCase();
-      return Array.from(this.allowedImageExtensions).some((ext) => lowerPath.includes(ext));
+      const finalExt = lowerPath.slice(lowerPath.lastIndexOf('.'));
+      return this.allowedImageExtensions.has(finalExt);
     }
 
     try {
@@ -73,8 +81,11 @@ export class InventoryController {
 
     try {
       const checkResponse = async (response: globalThis.Response): Promise<boolean> => {
-        const contentType = (response.headers.get('content-type') || '').toLowerCase();
-        return response.ok && contentType.startsWith('image/');
+        const contentType = (response.headers.get('content-type') || '')
+          .split(';')[0]
+          .trim()
+          .toLowerCase();
+        return response.ok && this.allowedRemoteImageMimeTypes.has(contentType);
       };
 
       const headResponse = await fetch(imageUrl, {
@@ -2952,9 +2963,22 @@ export class InventoryController {
    * Expects multipart/form-data with field "image"
    */
   async uploadProductImage(req: Request, res: Response): Promise<void> {
+    const file = (req as any).file;
+    let dbCommitted = false;
+    const cleanupUploadedFile = async (): Promise<void> => {
+      if (!file?.path) {
+        return;
+      }
+
+      try {
+        await fs.promises.unlink(file.path);
+      } catch (unlinkError) {
+        this.logger.warn(`Failed to clean up uploaded image ${file.path}: ${unlinkError instanceof Error ? unlinkError.message : String(unlinkError)}`);
+      }
+    };
+
     try {
       const { productId } = req.params;
-      const file = (req as any).file;
 
       if (!file) {
         res
@@ -2964,63 +2988,73 @@ export class InventoryController {
       }
 
       if (!this.dataSource) {
+        await cleanupUploadedFile();
         res.status(500).json(errorResponse('INTERNAL_ERROR', 'DataSource not available', 500));
         return;
       }
 
-      // Verify product exists
-      const product = await this.dataSource.query('SELECT id, name FROM products WHERE id = $1', [
-        productId,
-      ]);
+      const transactionResult = await this.dataSource.transaction(async (manager) => {
+        const product = await manager.query('SELECT id, name FROM products WHERE id = $1', [productId]);
 
-      if (product.length === 0) {
+        if (product.length === 0) {
+          return { found: false as const };
+        }
+
+        const imageUrl = `/uploads/products/${file.filename}`;
+        const altText = req.body.alt_text || product[0].name || '';
+        const isPrimary = req.body.is_primary !== 'false';
+
+        if (isPrimary) {
+          await manager.query('UPDATE product_images SET is_primary = false WHERE product_id = $1', [
+            productId,
+          ]);
+        }
+
+        const result = await manager.query(
+          `INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order, created_at)
+           VALUES ($1, $2, $3, $4, 0, NOW())
+           RETURNING id, image_url, alt_text, is_primary`,
+          [productId, imageUrl, altText, isPrimary],
+        );
+
+        if (isPrimary) {
+          await manager.query('UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2', [
+            imageUrl,
+            productId,
+          ]);
+        }
+
+        return { found: true as const, result: result[0], imageUrl, altText, isPrimary };
+      });
+
+      if (!transactionResult.found) {
+        await cleanupUploadedFile();
         res.status(404).json(errorResponse('NOT_FOUND', 'Produs negasit', 404));
         return;
       }
 
-      const imageUrl = `/uploads/products/${file.filename}`;
-      const altText = req.body.alt_text || product[0].name || '';
-      const isPrimary = req.body.is_primary !== 'false';
+      dbCommitted = true;
 
-      // If setting as primary, unset other primaries
-      if (isPrimary) {
-        await this.dataSource.query(
-          'UPDATE product_images SET is_primary = false WHERE product_id = $1',
-          [productId],
-        );
-      }
+      await this.inventoryListCache?.invalidateAll().catch((cacheError) => {
+        this.logger.warn(`Failed to invalidate inventory list cache after image upload: ${cacheError instanceof Error ? cacheError.message : String(cacheError)}`);
+      });
 
-      // Insert into product_images table
-      const result = await this.dataSource.query(
-        `INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order, created_at)
-         VALUES ($1, $2, $3, $4, 0, NOW())
-         RETURNING id, image_url, alt_text, is_primary`,
-        [productId, imageUrl, altText, isPrimary],
-      );
-
-      // Also update image_url on the product itself (for quick access)
-      if (isPrimary) {
-        await this.dataSource.query(
-          'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2',
-          [imageUrl, productId],
-        );
-      }
-
-      await this.inventoryListCache?.invalidateAll();
-
-      this.logger.info(`Image uploaded for product ${productId}: ${imageUrl}`);
+      this.logger.info(`Image uploaded for product ${productId}: ${transactionResult.imageUrl}`);
 
       res.status(201).json(
         successResponse({
-          id: result[0].id,
-          image_url: imageUrl,
-          alt_text: altText,
-          is_primary: isPrimary,
+          id: transactionResult.result.id,
+          image_url: transactionResult.imageUrl,
+          alt_text: transactionResult.altText,
+          is_primary: transactionResult.isPrimary,
           filename: file.filename,
           size: file.size,
         }),
       );
     } catch (error) {
+      if (!dbCommitted) {
+        await cleanupUploadedFile();
+      }
       this.logger.error('Error uploading product image:', error);
       res.status(500).json(errorResponse('INTERNAL_ERROR', 'Eroare la upload imagine', 500));
     }
@@ -3082,6 +3116,21 @@ export class InventoryController {
    * Body: { imageUrl: string }
    */
   async selectSearchedImage(req: Request, res: Response): Promise<void> {
+    let localPath: string | null = null;
+    let dbCommitted = false;
+    const cleanupDownloadedImage = async (): Promise<void> => {
+      if (!localPath?.startsWith('/uploads/products/')) {
+        return;
+      }
+
+      const filePath = path.resolve(process.cwd(), localPath.replace(/^\//, ''));
+      try {
+        await fs.promises.unlink(filePath);
+      } catch (unlinkError) {
+        this.logger.warn(`Failed to clean up selected image ${filePath}: ${unlinkError instanceof Error ? unlinkError.message : String(unlinkError)}`);
+      }
+    };
+
     try {
       const { productId } = req.params;
       const { imageUrl } = req.body;
@@ -3122,70 +3171,73 @@ export class InventoryController {
         return;
       }
 
-      const products = await this.dataSource.query(
-        'SELECT id, sku, name FROM products WHERE id = $1',
-        [productId],
-      );
+      const productRows = await this.dataSource.query('SELECT id, sku, name FROM products WHERE id = $1', [
+        productId,
+      ]);
 
-      if (products.length === 0) {
+      if (productRows.length === 0) {
         res.status(404).json(errorResponse('NOT_FOUND', 'Produs negasit', 404));
         return;
       }
 
-      const product = products[0];
+      const product = productRows[0];
 
       // Download the external image to local disk
-      const localPath = await this.imageSearchService.downloadExternalImage(
+      localPath = await this.imageSearchService.downloadExternalImage(
         imageUrl,
         product.id,
         product.sku,
       );
 
-      // Fallback: if direct download fails, keep external URL as product image
-      const selectedImagePath = localPath || imageUrl;
-
-      if (!selectedImagePath) {
+      if (!localPath) {
         res
           .status(422)
           .json(errorResponse('DOWNLOAD_FAILED', 'Nu s-a putut descarca imaginea', 422));
         return;
       }
 
-      // Unset other primaries
-      await this.dataSource.query(
-        'UPDATE product_images SET is_primary = false WHERE product_id = $1',
-        [productId],
-      );
+      const transactionResult = await this.dataSource.transaction(async (manager) => {
+        await manager.query('UPDATE product_images SET is_primary = false WHERE product_id = $1', [
+          productId,
+        ]);
 
-      // Insert into product_images
-      const result = await this.dataSource.query(
-        `INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order, created_at)
-         VALUES ($1, $2, $3, true, 0, NOW())
-         RETURNING id, image_url, alt_text, is_primary`,
-        [productId, selectedImagePath, product.name || product.sku],
-      );
+        const result = await manager.query(
+          `INSERT INTO product_images (product_id, image_url, alt_text, is_primary, sort_order, created_at)
+           VALUES ($1, $2, $3, true, 0, NOW())
+           RETURNING id, image_url, alt_text, is_primary`,
+          [productId, localPath, product.name || product.sku],
+        );
 
-      // Update product's image_url
-      await this.dataSource.query(
-        'UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2',
-        [selectedImagePath, productId],
-      );
+        await manager.query('UPDATE products SET image_url = $1, updated_at = NOW() WHERE id = $2', [
+          localPath,
+          productId,
+        ]);
 
-      await this.inventoryListCache?.invalidateAll();
+        return result[0];
+      });
 
-      this.logger.info(`Selected searched image for product ${productId}: ${selectedImagePath}`);
+      dbCommitted = true;
+
+      await this.inventoryListCache?.invalidateAll().catch((cacheError) => {
+        this.logger.warn(`Failed to invalidate inventory list cache after searched image selection: ${cacheError instanceof Error ? cacheError.message : String(cacheError)}`);
+      });
+
+      this.logger.info(`Selected searched image for product ${productId}: ${localPath}`);
 
       res.status(201).json(
         successResponse({
-          id: result[0].id,
-          image_url: selectedImagePath,
+          id: transactionResult.id,
+          image_url: localPath,
           alt_text: product.name || product.sku,
           is_primary: true,
           original_url: imageUrl,
-          downloaded: Boolean(localPath),
+          downloaded: true,
         }),
       );
     } catch (error) {
+      if (!dbCommitted) {
+        await cleanupDownloadedImage();
+      }
       this.logger.error('Error selecting searched image:', error);
       res.status(500).json(errorResponse('INTERNAL_ERROR', 'Eroare la salvarea imaginii', 500));
     }

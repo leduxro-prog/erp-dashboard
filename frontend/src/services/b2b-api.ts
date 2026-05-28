@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { useB2BAuthStore } from '../stores/b2b/b2b-auth.store';
+import { serializeB2BParams } from './b2b-params';
 
 export interface CartItem {
   id: string;
@@ -49,6 +50,16 @@ class B2BApiClient {
       createdAt: order?.createdAt ?? order?.created_at,
       totalAmount: order?.totalAmount ?? order?.total_amount ?? order?.total,
     };
+  }
+
+  private normalizeFilterOptions(items: any[] | undefined) {
+    return Array.isArray(items)
+      ? items.map((item: any) => ({
+          label: item?.label || item?.value,
+          value: String(item?.value),
+          count: Number(item?.count || 0),
+        }))
+      : [];
   }
 
   constructor() {
@@ -230,15 +241,26 @@ class B2BApiClient {
   async getProducts(params?: {
     page?: number;
     limit?: number;
+    compact?: boolean;
     search?: string;
     category?: string;
     kelvin?: string[];
     ip?: string[];
+    brand?: string[];
+    mountingType?: string[];
+    stripType?: string[];
+    ledVoltage?: string[];
+    lightColor?: string[];
     min_price?: number;
     max_price?: number;
     sort?: string;
-  }) {
-    const response = await this.client.get('/b2b/products', { params });
+    stock?: string;
+  }, config?: { signal?: AbortSignal }) {
+    const response = await this.client.get('/b2b/products', {
+      params,
+      paramsSerializer: (queryParams) => serializeB2BParams(queryParams),
+      signal: config?.signal,
+    });
     const data = this.unwrapData(response.data);
     return {
       ...data,
@@ -246,30 +268,19 @@ class B2BApiClient {
     };
   }
 
-  async getFilters() {
-    const response = await this.client.get('/b2b/products/filters');
+  async getFilters(params?: { category?: string }) {
+    const response = await this.client.get('/b2b/products/filters', { params });
     const data = this.unwrapData(response.data);
-
-    const kelvin = Array.isArray(data?.color_temperatures)
-      ? data.color_temperatures.map((item: any) => ({
-          label: item?.label || `${item?.value}K`,
-          value: String(item?.value),
-          count: Number(item?.count || 0),
-        }))
-      : [];
-
-    const ip = Array.isArray(data?.ip_ratings)
-      ? data.ip_ratings.map((item: any) => ({
-          label: item?.value,
-          value: item?.value,
-          count: Number(item?.count || 0),
-        }))
-      : [];
 
     return {
       ...data,
-      kelvin,
-      ip,
+      kelvin: this.normalizeFilterOptions(data?.color_temperatures),
+      ip: this.normalizeFilterOptions(data?.ip_ratings),
+      brand: this.normalizeFilterOptions(data?.brands),
+      mountingType: this.normalizeFilterOptions(data?.mounting_types),
+      stripType: this.normalizeFilterOptions(data?.strip_types),
+      ledVoltage: this.normalizeFilterOptions(data?.led_voltages),
+      lightColor: this.normalizeFilterOptions(data?.light_colors),
     };
   }
 
@@ -326,6 +337,21 @@ class B2BApiClient {
 
     const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
     window.open(url, '_blank');
+  }
+
+  async downloadOrderModelPdf(orderId: string, orderNumber: string): Promise<void> {
+    const response = await this.client.get(`/b2b/orders/${orderId}/model-pdf`, {
+      responseType: 'blob',
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Comanda_${orderNumber}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 
   async getCredit(): Promise<{

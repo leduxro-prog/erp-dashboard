@@ -232,7 +232,8 @@ export const B2BOrderDetailPage: React.FC = () => {
           <button
             className="inline-flex items-center px-3 sm:px-4 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors disabled:opacity-50"
             onClick={handleDownloadOrderModel}
-            disabled={downloadingModel}
+            disabled
+            title="Modelul PDF al comenzii nu este disponibil momentan"
           >
             {downloadingModel ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

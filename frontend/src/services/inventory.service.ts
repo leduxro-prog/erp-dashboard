@@ -8,7 +8,34 @@ import {
 } from '../types/inventory';
 import { PaginatedResponse, PaginationParams } from '../types/common';
 
+interface ProductImageUploadResult {
+  image_url: string;
+}
+
+interface ProductImageSearchCandidate {
+  url: string;
+  source: string;
+  confidence: string;
+}
+
+interface ProductImageSearchResult {
+  candidates: ProductImageSearchCandidate[];
+}
+
+interface BulkAutoSearchImagesResult {
+  searched: number;
+  imported: number;
+  notFound: number;
+  errors: string[];
+}
+
 class InventoryService {
+  private unwrapData<T>(payload: T | { data?: T }): T {
+    return (payload && typeof payload === 'object' && 'data' in payload
+      ? (payload as { data?: T }).data
+      : payload) as T;
+  }
+
   async getStockLevels(
     warehouseId?: string
   ): Promise<StockLevel[]> {
@@ -100,6 +127,58 @@ class InventoryService {
 
   async getLowStockItems(): Promise<StockLevel[]> {
     return apiClient.get<StockLevel[]>('/inventory/low-stock');
+  }
+
+  async uploadProductImage(
+    productId: string | number,
+    file: File,
+    options?: { isPrimary?: boolean }
+  ): Promise<ProductImageUploadResult> {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (options?.isPrimary !== undefined) {
+      formData.append('is_primary', String(options.isPrimary));
+    }
+
+    const response = await apiClient.upload<ProductImageUploadResult | { data?: ProductImageUploadResult }>(
+      `/inventory/products/${productId}/images/upload`,
+      formData
+    );
+    return this.unwrapData<ProductImageUploadResult>(response);
+  }
+
+  async searchProductImage(
+    productId: string | number,
+    query?: string
+  ): Promise<ProductImageSearchResult> {
+    const response = await apiClient.post<ProductImageSearchResult | { data?: ProductImageSearchResult }>(
+      `/inventory/products/${productId}/images/search`,
+      query ? { query } : {}
+    );
+    return this.unwrapData<ProductImageSearchResult>(response);
+  }
+
+  async selectSearchedImage(
+    productId: string | number,
+    imageUrl: string
+  ): Promise<ProductImageUploadResult> {
+    const response = await apiClient.post<ProductImageUploadResult | { data?: ProductImageUploadResult }>(
+      `/inventory/products/${productId}/images/select`,
+      { imageUrl }
+    );
+    return this.unwrapData<ProductImageUploadResult>(response);
+  }
+
+  async bulkAutoSearchImages(
+    productIds: Array<string | number>,
+    options?: { skipExisting?: boolean }
+  ): Promise<BulkAutoSearchImagesResult> {
+    const response = await apiClient.post<BulkAutoSearchImagesResult | { data?: BulkAutoSearchImagesResult }>(
+      '/inventory/products/images/auto-search',
+      { productIds },
+      { params: { skipExisting: options?.skipExisting ?? true } }
+    );
+    return this.unwrapData<BulkAutoSearchImagesResult>(response);
   }
 }
 

@@ -23,7 +23,7 @@ interface InventoryImageControllerDependencies {
 }
 
 export class InventoryImageControllerService {
-  private readonly allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.avif'];
+  private readonly allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
 
   constructor(private readonly deps: InventoryImageControllerDependencies) {}
 
@@ -757,7 +757,7 @@ export class InventoryImageControllerService {
     }
 
     for (const fileName of fs.readdirSync(productsDir)) {
-      const match = fileName.match(/^(\d+)-.+\.(jpg|jpeg|png|webp|gif|svg|avif)$/i);
+      const match = fileName.match(/^(\d+)-.+\.(jpg|jpeg|png|webp|gif)$/i);
       if (!match) {
         continue;
       }
@@ -786,7 +786,7 @@ export class InventoryImageControllerService {
 
     const escapedSku = this.escapeRegExp(String(sku || '').trim());
     const strictPattern = new RegExp(
-      `^${productId}-${escapedSku}(?:[-_.].+)?\\.(?:jpg|jpeg|png|webp|gif|svg|avif)$`,
+      `^${productId}-${escapedSku}(?:[-_.].+)?\\.(?:jpg|jpeg|png|webp|gif)$`,
       'i',
     );
 

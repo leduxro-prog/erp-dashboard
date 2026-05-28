@@ -10,8 +10,13 @@ export class InventoryControllerHelpers {
     '.png',
     '.webp',
     '.gif',
-    '.svg',
-    '.avif',
+  ]);
+
+  private readonly allowedRemoteImageMimeTypes = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
   ]);
 
   isValidProductImageUrl(imageUrl: unknown): boolean {
@@ -52,8 +57,11 @@ export class InventoryControllerHelpers {
 
     try {
       const checkResponse = async (response: globalThis.Response): Promise<boolean> => {
-        const contentType = (response.headers.get('content-type') || '').toLowerCase();
-        return response.ok && contentType.startsWith('image/');
+        const contentType = (response.headers.get('content-type') || '')
+          .split(';')[0]
+          .trim()
+          .toLowerCase();
+        return response.ok && this.allowedRemoteImageMimeTypes.has(contentType);
       };
 
       const headResponse = await fetch(imageUrl, {
