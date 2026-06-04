@@ -29,9 +29,10 @@ describe('deployment runtime policy', () => {
   it('preserves server-only runtime directories during rsync deploys', () => {
     const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
 
-    expect(workflow).toContain("--exclude 'backups'");
-    expect(workflow).toContain("--exclude 'config'");
-    expect(workflow).toContain("--exclude 'uploads'");
+    expect(workflow).toContain("--exclude '/backups'");
+    expect(workflow).toContain("--exclude '/config'");
+    expect(workflow).toContain("--exclude '/uploads'");
+    expect(workflow).not.toContain("--exclude 'config'");
   });
 
   it('does not expose internal production ports on all interfaces', () => {

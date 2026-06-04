@@ -234,11 +234,11 @@ jobs:
             --exclude '.git' \
             --exclude 'dist' \
             --exclude 'coverage' \
-            --exclude '.env' \
-            --exclude 'logs' \
-            --exclude 'backups' \
-            --exclude 'config' \
-            --exclude 'uploads' \
+            --exclude '/.env' \
+            --exclude '/logs' \
+            --exclude '/backups' \
+            --exclude '/config' \
+            --exclude '/uploads' \
             --exclude 'deployment/hetzner_key' \
             ./ ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:${{ secrets.HETZNER_TARGET_DIR }}
 
