@@ -180,9 +180,16 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
-          set -a
-          . ./.env
-          set +a
+          while IFS= read -r line; do
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+              continue
+            fi
+            key="${line%%=*}"
+            value="${line#*=}"
+            if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+              export "$key=$value"
+            fi
+          done < .env
           COMPOSE=(docker compose --env-file .env)
 
           BACKUP_DIR="backups/github-actions/$(date -u +%Y%m%dT%H%M%SZ)"
@@ -233,9 +240,16 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
-          set -a
-          . ./.env
-          set +a
+          while IFS= read -r line; do
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+              continue
+            fi
+            key="${line%%=*}"
+            value="${line#*=}"
+            if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+              export "$key=$value"
+            fi
+          done < .env
           COMPOSE=(docker compose --env-file .env)
           "${COMPOSE[@]}" ps app frontend
           REMOTE
@@ -249,9 +263,16 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
-          set -a
-          . ./.env
-          set +a
+          while IFS= read -r line; do
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+              continue
+            fi
+            key="${line%%=*}"
+            value="${line#*=}"
+            if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+              export "$key=$value"
+            fi
+          done < .env
           COMPOSE=(docker compose --env-file .env)
           "${COMPOSE[@]}" build app frontend
           "${COMPOSE[@]}" up -d app frontend
@@ -352,9 +373,16 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
-          set -a
-          . ./.env
-          set +a
+          while IFS= read -r line; do
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+              continue
+            fi
+            key="${line%%=*}"
+            value="${line#*=}"
+            if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+              export "$key=$value"
+            fi
+          done < .env
           COMPOSE=(docker compose --env-file .env)
           docker image inspect cypher-erp-app:gha-predeploy >/dev/null
           docker image inspect cypher-erp-frontend:gha-predeploy >/dev/null
