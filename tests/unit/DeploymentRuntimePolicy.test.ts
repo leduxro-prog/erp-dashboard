@@ -12,7 +12,8 @@ describe('deployment runtime policy', () => {
     const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
 
     expect(workflow).toContain('COMPOSE=(docker compose --env-file .env)');
-    expect(workflow).toContain('. ./.env');
+    expect(workflow).toContain('done < .env');
+    expect(workflow).toContain('export "$key=$value"');
     expect(workflow).toContain('"${COMPOSE[@]}" build app frontend');
     expect(workflow).toContain('"${COMPOSE[@]}" up -d app frontend');
     expect(workflow).toContain('Pre-deploy backup completed');
