@@ -11,8 +11,9 @@ describe('deployment runtime policy', () => {
   it('uses Docker Compose deployment commands for the Hetzner VPS runtime', () => {
     const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
 
-    expect(workflow).toContain('docker compose build app frontend');
-    expect(workflow).toContain('docker compose up -d app frontend');
+    expect(workflow).toContain('COMPOSE=(docker compose --env-file .env)');
+    expect(workflow).toContain('"${COMPOSE[@]}" build app frontend');
+    expect(workflow).toContain('"${COMPOSE[@]}" up -d app frontend');
     expect(workflow).toContain('Pre-deploy backup completed');
     expect(workflow).not.toContain('Pre-deploy DB backup failed (non-blocking)');
     expect(workflow).not.toContain('|| echo "::warning::Pre-deploy DB backup failed');

@@ -180,14 +180,15 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
+          COMPOSE=(docker compose --env-file .env)
 
           BACKUP_DIR="backups/github-actions/$(date -u +%Y%m%dT%H%M%SZ)"
           mkdir -p "$BACKUP_DIR"
 
-          docker compose ps > "$BACKUP_DIR/docker-compose-ps.txt"
+          "${COMPOSE[@]}" ps > "$BACKUP_DIR/docker-compose-ps.txt"
 
-          app_container="$(docker compose ps -q app)"
-          frontend_container="$(docker compose ps -q frontend)"
+          app_container="$("${COMPOSE[@]}" ps -q app)"
+          frontend_container="$("${COMPOSE[@]}" ps -q frontend)"
           if [ -n "$app_container" ]; then
             docker commit "$app_container" cypher-erp-app:gha-predeploy >/dev/null \
               || echo "::warning::Could not capture app image for rollback; DB and runtime file backups will still be enforced."
@@ -229,7 +230,8 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
-          docker compose ps app frontend
+          COMPOSE=(docker compose --env-file .env)
+          "${COMPOSE[@]}" ps app frontend
           REMOTE
 
       - name: Build images and roll out Docker Compose
@@ -241,9 +243,10 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
-          docker compose build app frontend
-          docker compose up -d app frontend
-          docker compose ps app frontend
+          COMPOSE=(docker compose --env-file .env)
+          "${COMPOSE[@]}" build app frontend
+          "${COMPOSE[@]}" up -d app frontend
+          "${COMPOSE[@]}" ps app frontend
           REMOTE
 
       - name: Wait for services to stabilize
@@ -340,12 +343,13 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
+          COMPOSE=(docker compose --env-file .env)
           docker image inspect cypher-erp-app:gha-predeploy >/dev/null
           docker image inspect cypher-erp-frontend:gha-predeploy >/dev/null
           docker image tag cypher-erp-app:gha-predeploy cypher-erp-app:latest
           docker image tag cypher-erp-frontend:gha-predeploy cypher-erp-frontend:latest
-          docker compose up -d app frontend
-          docker compose ps app frontend
+          "${COMPOSE[@]}" up -d app frontend
+          "${COMPOSE[@]}" ps app frontend
           REMOTE
           then
             echo "::error::Rollback failed - manual intervention required"
