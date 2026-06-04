@@ -55,4 +55,11 @@ describe('deployment runtime policy', () => {
     expect(gate).toContain('launch-smoke');
     expect(gate).toMatch(/case "\$GATE_MODE" in[\s\S]*launch-smoke/);
   });
+
+  it('checks the registered root health endpoint in Hetzner smoke tests', () => {
+    const smokeScript = readProjectFile('scripts/test/smoke-hetzner.sh');
+
+    expect(smokeScript).toContain('"$BASE_URL/health"');
+    expect(smokeScript).not.toContain('$BASE_URL/api/v1/health');
+  });
 });
