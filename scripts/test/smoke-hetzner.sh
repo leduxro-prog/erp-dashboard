@@ -123,8 +123,8 @@ if [ "${CHECK_DIRECT_BACKEND_3000}" = "true" ]; then
   check "Backend health (port 3000)" "$BASE_URL:3000/health"
 fi
 
-# API v1 health (via nginx proxy)
-check "API v1 health (via nginx)"  "$BASE_URL/api/v1/health"
+# Health endpoint (via nginx proxy)
+check "Health endpoint (via nginx)" "$BASE_URL/health"
 
 # Frontend root (nginx serves React)
 check "Frontend root"              "$BASE_URL/"
