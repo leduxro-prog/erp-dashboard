@@ -8,22 +8,25 @@ function readProjectFile(relativePath: string): string {
 }
 
 describe('deployment runtime policy', () => {
-  it('requires production pre-deploy backup to be blocking', () => {
+  it('uses Docker Compose deployment commands for the Hetzner VPS runtime', () => {
     const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
 
-    expect(workflow).toContain('systemctl start cypher-k8s-backup.service');
+    expect(workflow).toContain('docker compose build app frontend');
+    expect(workflow).toContain('docker compose up -d app frontend');
+    expect(workflow).toContain('Pre-deploy backup completed');
     expect(workflow).not.toContain('Pre-deploy DB backup failed (non-blocking)');
     expect(workflow).not.toContain('|| echo "::warning::Pre-deploy DB backup failed');
+    expect(workflow).not.toContain('cypher-k8s-backup.service');
+    expect(workflow).not.toContain('k3s ctr');
+    expect(workflow).not.toContain('kubectl');
   });
 
-  it('validates k8s overlays before applying them', () => {
+  it('preserves server-only runtime directories during rsync deploys', () => {
     const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
-    const kustomizeIndex = workflow.indexOf('kubectl kustomize orchestration/k8s/overlays/staging');
-    const applyIndex = workflow.indexOf('kubectl apply -k orchestration/k8s/overlays/staging');
 
-    expect(kustomizeIndex).toBeGreaterThan(-1);
-    expect(applyIndex).toBeGreaterThan(-1);
-    expect(kustomizeIndex).toBeLessThan(applyIndex);
+    expect(workflow).toContain("--exclude 'backups'");
+    expect(workflow).toContain("--exclude 'config'");
+    expect(workflow).toContain("--exclude 'uploads'");
   });
 
   it('does not expose internal production ports on all interfaces', () => {

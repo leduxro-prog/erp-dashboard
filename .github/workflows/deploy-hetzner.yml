@@ -177,7 +177,31 @@ jobs:
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "systemctl start cypher-k8s-backup.service"
+            'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd "${{ secrets.HETZNER_TARGET_DIR }}"
+
+          BACKUP_DIR="backups/github-actions/$(date -u +%Y%m%dT%H%M%SZ)"
+          mkdir -p "$BACKUP_DIR"
+
+          docker compose ps > "$BACKUP_DIR/docker-compose-ps.txt"
+
+          app_container="$(docker compose ps -q app)"
+          frontend_container="$(docker compose ps -q frontend)"
+          if [ -n "$app_container" ]; then
+            docker commit "$app_container" cypher-erp-app:gha-predeploy >/dev/null \
+              || echo "::warning::Could not capture app image for rollback; DB and runtime file backups will still be enforced."
+          fi
+          if [ -n "$frontend_container" ]; then
+            docker commit "$frontend_container" cypher-erp-frontend:gha-predeploy >/dev/null \
+              || echo "::warning::Could not capture frontend image for rollback; DB and runtime file backups will still be enforced."
+          fi
+
+          docker exec cypher-erp-db pg_dump -Fc -U cypher_user -d cypher_erp > "$BACKUP_DIR/cypher_erp.dump"
+          tar -czf "$BACKUP_DIR/runtime-files.tgz" --ignore-failed-read .env config uploads docker-compose.yml docker-compose.prod.yml
+
+          echo "Pre-deploy backup completed: $BACKUP_DIR"
+          REMOTE
 
       - name: Sync application files
         if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
@@ -190,41 +214,37 @@ jobs:
             --exclude 'coverage' \
             --exclude '.env' \
             --exclude 'logs' \
+            --exclude 'backups' \
+            --exclude 'config' \
+            --exclude 'uploads' \
             --exclude 'deployment/hetzner_key' \
             ./ ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:${{ secrets.HETZNER_TARGET_DIR }}
 
-      - name: Capture current deployment revisions
+      - name: Capture current Compose status
         if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: |
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "kubectl -n cypher get deploy cypher-app cypher-frontend -o wide"
+            'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd "${{ secrets.HETZNER_TARGET_DIR }}"
+          docker compose ps app frontend
+          REMOTE
 
-      - name: Build images and roll out Kubernetes
+      - name: Build images and roll out Docker Compose
         if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
         run: |
           ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "set -euo pipefail && \
-             APP_TAR=/tmp/cypher-erp-app.tar && \
-             FRONTEND_TAR=/tmp/cypher-erp-frontend.tar && \
-             trap 'rm -f \"$APP_TAR\" \"$FRONTEND_TAR\"' EXIT && \
-             cd ${{ secrets.HETZNER_TARGET_DIR }} && \
-             docker build --no-cache -t cypher-erp-app:latest . && \
-             docker build --no-cache -t cypher-erp-frontend:latest ./frontend && \
-             docker save cypher-erp-app:latest -o \"$APP_TAR\" && \
-             docker save cypher-erp-frontend:latest -o \"$FRONTEND_TAR\" && \
-             k3s ctr images import \"$APP_TAR\" && \
-             k3s ctr images import \"$FRONTEND_TAR\" && \
-             kubectl kustomize orchestration/k8s/overlays/staging >/tmp/cypher-kustomize-rendered.yaml && \
-             kubectl apply -k orchestration/k8s/overlays/staging && \
-             kubectl -n cypher rollout restart deployment/cypher-app deployment/cypher-frontend && \
-             kubectl -n cypher rollout status deployment/cypher-app --timeout=240s && \
-             kubectl -n cypher rollout status deployment/cypher-frontend --timeout=240s && \
-             bash orchestration/k8s/install-host-services.sh && \
-             systemctl start cypher-launch-readiness.service"
+            'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd "${{ secrets.HETZNER_TARGET_DIR }}"
+          docker compose build app frontend
+          docker compose up -d app frontend
+          docker compose ps app frontend
+          REMOTE
 
       - name: Wait for services to stabilize
         if: steps.deploy-preflight.outputs.deploy_enabled == 'true'
@@ -268,9 +288,28 @@ jobs:
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=10 \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            "set -euo pipefail && \
-             cd ${{ secrets.HETZNER_TARGET_DIR }} && \
-             bash scripts/recalculate-open-docs-vat-21.sh --dry-run --guard --k8s"
+            'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd "${{ secrets.HETZNER_TARGET_DIR }}"
+
+          raw_report="$(docker exec -i cypher-erp-db psql -X -qAt -F '|' -v ON_ERROR_STOP=1 -U cypher_user -d cypher_erp -f - < scripts/report-open-docs-vat-21.sql)"
+          echo "target|status_scope|mismatches|sample_ids"
+          printf '%s\n' "$raw_report"
+
+          total="0"
+          while IFS='|' read -r target _status_scope mismatches _sample_ids; do
+            if [ "$target" = "__TOTAL__" ]; then
+              total="${mismatches:-0}"
+            fi
+          done <<< "$raw_report"
+
+          if [ "${total:-0}" -gt 0 ]; then
+            echo "[ERROR] VAT guard failed: found $total open-doc VAT mismatch(es)."
+            exit 1
+          fi
+
+          echo "[OK] VAT open-doc check finished."
+          REMOTE
 
       - name: Cleanup SSH key (VAT guard)
         if: always()
@@ -294,16 +333,23 @@ jobs:
 
       - name: Rollback containers
         run: |
-          echo "::warning::Smoke tests failed - rolling back to previous containers"
-          ssh -i ~/.ssh/hetzner_deploy \
+          echo "::warning::Smoke tests failed - restoring pre-deploy Compose images"
+          if ! ssh -i ~/.ssh/hetzner_deploy \
             -o StrictHostKeyChecking=no \
             ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} \
-            'kubectl -n cypher rollout undo deployment/cypher-app && \
-             kubectl -n cypher rollout undo deployment/cypher-frontend && \
-             kubectl -n cypher rollout status deployment/cypher-app --timeout=240s && \
-             kubectl -n cypher rollout status deployment/cypher-frontend --timeout=240s && \
-             systemctl start cypher-launch-readiness.service' \
-          || echo "::error::Rollback failed - manual intervention required"
+            'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd "${{ secrets.HETZNER_TARGET_DIR }}"
+          docker image inspect cypher-erp-app:gha-predeploy >/dev/null
+          docker image inspect cypher-erp-frontend:gha-predeploy >/dev/null
+          docker image tag cypher-erp-app:gha-predeploy cypher-erp-app:latest
+          docker image tag cypher-erp-frontend:gha-predeploy cypher-erp-frontend:latest
+          docker compose up -d app frontend
+          docker compose ps app frontend
+          REMOTE
+          then
+            echo "::error::Rollback failed - manual intervention required"
+          fi
 
       - name: Cleanup SSH key
         if: always()
