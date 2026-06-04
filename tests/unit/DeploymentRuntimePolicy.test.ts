@@ -14,6 +14,8 @@ describe('deployment runtime policy', () => {
     expect(workflow).toContain('COMPOSE=(docker compose --env-file .env)');
     expect(workflow).toContain('done < .env');
     expect(workflow).toContain('export "$key=$value"');
+    expect(workflow).toContain('docker ps --filter label=com.docker.compose.service=app -q');
+    expect(workflow).toContain("docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}'");
     expect(workflow).toContain('"${COMPOSE[@]}" build app frontend');
     expect(workflow).toContain('"${COMPOSE[@]}" up -d app frontend');
     expect(workflow).toContain('Pre-deploy backup completed');

@@ -190,6 +190,17 @@ jobs:
               export "$key=$value"
             fi
           done < .env
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app -q)
+          runtime_env_container="${app_containers[0]:-}"
+          if [ -n "$runtime_env_container" ]; then
+            while IFS= read -r line; do
+              key="${line%%=*}"
+              value="${line#*=}"
+              if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                export "$key=$value"
+              fi
+            done < <(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$runtime_env_container")
+          fi
           COMPOSE=(docker compose --env-file .env)
 
           BACKUP_DIR="backups/github-actions/$(date -u +%Y%m%dT%H%M%SZ)"
@@ -250,6 +261,17 @@ jobs:
               export "$key=$value"
             fi
           done < .env
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app -q)
+          runtime_env_container="${app_containers[0]:-}"
+          if [ -n "$runtime_env_container" ]; then
+            while IFS= read -r line; do
+              key="${line%%=*}"
+              value="${line#*=}"
+              if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                export "$key=$value"
+              fi
+            done < <(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$runtime_env_container")
+          fi
           COMPOSE=(docker compose --env-file .env)
           "${COMPOSE[@]}" ps app frontend
           REMOTE
@@ -273,6 +295,17 @@ jobs:
               export "$key=$value"
             fi
           done < .env
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app -q)
+          runtime_env_container="${app_containers[0]:-}"
+          if [ -n "$runtime_env_container" ]; then
+            while IFS= read -r line; do
+              key="${line%%=*}"
+              value="${line#*=}"
+              if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                export "$key=$value"
+              fi
+            done < <(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$runtime_env_container")
+          fi
           COMPOSE=(docker compose --env-file .env)
           "${COMPOSE[@]}" build app frontend
           "${COMPOSE[@]}" up -d app frontend
@@ -383,6 +416,17 @@ jobs:
               export "$key=$value"
             fi
           done < .env
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app -q)
+          runtime_env_container="${app_containers[0]:-}"
+          if [ -n "$runtime_env_container" ]; then
+            while IFS= read -r line; do
+              key="${line%%=*}"
+              value="${line#*=}"
+              if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                export "$key=$value"
+              fi
+            done < <(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$runtime_env_container")
+          fi
           COMPOSE=(docker compose --env-file .env)
           docker image inspect cypher-erp-app:gha-predeploy >/dev/null
           docker image inspect cypher-erp-frontend:gha-predeploy >/dev/null
