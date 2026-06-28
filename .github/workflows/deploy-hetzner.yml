@@ -222,7 +222,13 @@ jobs:
               || echo "::warning::Could not capture frontend image for rollback; DB and runtime file backups will still be enforced."
           fi
 
-          docker exec cypher-erp-db pg_dump -Fc -U cypher_user -d cypher_erp > "$BACKUP_DIR/cypher_erp.dump"
+          mapfile -t db_containers < <(docker ps --filter label=com.docker.compose.service=db --filter status=running -q)
+          db_container="${db_containers[0]:-}"
+          if [ -z "$db_container" ]; then
+            echo "::error::No running Compose db container found for pre-deploy backup."
+            exit 1
+          fi
+          docker exec "$db_container" pg_dump -Fc -U cypher_user -d cypher_erp > "$BACKUP_DIR/cypher_erp.dump"
           tar -czf "$BACKUP_DIR/runtime-files.tgz" --ignore-failed-read .env config uploads docker-compose.yml docker-compose.prod.yml
 
           echo "Pre-deploy backup completed: $BACKUP_DIR"
@@ -361,7 +367,14 @@ jobs:
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
 
-          raw_report="$(docker exec -i cypher-erp-db psql -X -qAt -F '|' -v ON_ERROR_STOP=1 -U cypher_user -d cypher_erp -f - < scripts/report-open-docs-vat-21.sql)"
+          mapfile -t db_containers < <(docker ps --filter label=com.docker.compose.service=db --filter status=running -q)
+          db_container="${db_containers[0]:-}"
+          if [ -z "$db_container" ]; then
+            echo "[ERROR] No running Compose db container found for VAT guard."
+            exit 1
+          fi
+
+          raw_report="$(docker exec -i "$db_container" psql -X -qAt -F '|' -v ON_ERROR_STOP=1 -U cypher_user -d cypher_erp -f - < scripts/report-open-docs-vat-21.sql)"
           echo "target|status_scope|mismatches|sample_ids"
           printf '%s\n' "$raw_report"
 
