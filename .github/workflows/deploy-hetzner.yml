@@ -224,11 +224,21 @@ jobs:
 
           mapfile -t db_containers < <(docker ps --filter label=com.docker.compose.service=db --filter status=running -q)
           db_container="${db_containers[0]:-}"
-          if [ -z "$db_container" ]; then
-            echo "::error::No running Compose db container found for pre-deploy backup."
-            exit 1
+          if [ -n "$db_container" ]; then
+            docker exec "$db_container" pg_dump -Fc -U cypher_user -d cypher_erp > "$BACKUP_DIR/cypher_erp.dump"
+          else
+            if [ -z "$runtime_env_container" ]; then
+              echo "::error::No running Compose db container or app runtime container found for pre-deploy backup."
+              exit 1
+            fi
+            docker run --rm --network "container:$runtime_env_container" \
+              -e PGPASSWORD="${DB_PASSWORD:-${POSTGRES_PASSWORD:-}}" \
+              postgres:15-alpine pg_dump -Fc \
+              -h "${DB_HOST:-db}" \
+              -p "${DB_PORT:-5432}" \
+              -U "${DB_USER:-${DB_USERNAME:-cypher_user}}" \
+              -d "${DB_NAME:-cypher_erp}" > "$BACKUP_DIR/cypher_erp.dump"
           fi
-          docker exec "$db_container" pg_dump -Fc -U cypher_user -d cypher_erp > "$BACKUP_DIR/cypher_erp.dump"
           tar -czf "$BACKUP_DIR/runtime-files.tgz" --ignore-failed-read .env config uploads docker-compose.yml docker-compose.prod.yml
 
           echo "Pre-deploy backup completed: $BACKUP_DIR"
@@ -366,15 +376,46 @@ jobs:
             'bash -se' <<'REMOTE'
           set -euo pipefail
           cd "${{ secrets.HETZNER_TARGET_DIR }}"
+          while IFS= read -r line; do
+            if [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]]; then
+              continue
+            fi
+            key="${line%%=*}"
+            value="${line#*=}"
+            if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+              export "$key=$value"
+            fi
+          done < .env
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app --filter status=running -q)
+          runtime_env_container="${app_containers[0]:-}"
+          if [ -n "$runtime_env_container" ]; then
+            while IFS= read -r line; do
+              key="${line%%=*}"
+              value="${line#*=}"
+              if [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+                export "$key=$value"
+              fi
+            done < <(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$runtime_env_container")
+          fi
 
           mapfile -t db_containers < <(docker ps --filter label=com.docker.compose.service=db --filter status=running -q)
           db_container="${db_containers[0]:-}"
-          if [ -z "$db_container" ]; then
-            echo "[ERROR] No running Compose db container found for VAT guard."
-            exit 1
+          if [ -n "$db_container" ]; then
+            raw_report="$(docker exec -i "$db_container" psql -X -qAt -F '|' -v ON_ERROR_STOP=1 -U cypher_user -d cypher_erp -f - < scripts/report-open-docs-vat-21.sql)"
+          else
+            if [ -z "$runtime_env_container" ]; then
+              echo "[ERROR] No running Compose db container or app runtime container found for VAT guard."
+              exit 1
+            fi
+            raw_report="$(docker run --rm -i --network "container:$runtime_env_container" \
+              -e PGPASSWORD="${DB_PASSWORD:-${POSTGRES_PASSWORD:-}}" \
+              postgres:15-alpine psql -X -qAt -F '|' -v ON_ERROR_STOP=1 \
+              -h "${DB_HOST:-db}" \
+              -p "${DB_PORT:-5432}" \
+              -U "${DB_USER:-${DB_USERNAME:-cypher_user}}" \
+              -d "${DB_NAME:-cypher_erp}" \
+              -f - < scripts/report-open-docs-vat-21.sql)"
           fi
-
-          raw_report="$(docker exec -i "$db_container" psql -X -qAt -F '|' -v ON_ERROR_STOP=1 -U cypher_user -d cypher_erp -f - < scripts/report-open-docs-vat-21.sql)"
           echo "target|status_scope|mismatches|sample_ids"
           printf '%s\n' "$raw_report"
 

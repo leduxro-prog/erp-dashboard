@@ -44,20 +44,28 @@ describe('deployment runtime policy', () => {
     expect(workflow).not.toContain('frontend_container="$("${COMPOSE[@]}" ps -q frontend)"');
   });
 
-  it('runs pre-deploy database dumps against the running Compose db container', () => {
+  it('runs pre-deploy database dumps against Compose db or the app runtime database connection', () => {
     const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
 
     expect(workflow).toContain('docker ps --filter label=com.docker.compose.service=db --filter status=running -q');
     expect(workflow).toContain('db_container="${db_containers[0]:-}"');
     expect(workflow).toContain('docker exec "$db_container" pg_dump -Fc -U cypher_user -d cypher_erp');
+    expect(workflow).toContain('docker run --rm --network "container:$runtime_env_container"');
+    expect(workflow).toContain('postgres:15-alpine pg_dump -Fc');
+    expect(workflow).toContain('-h "${DB_HOST:-db}"');
+    expect(workflow).toContain('-p "${DB_PORT:-5432}"');
     expect(workflow).not.toContain('docker exec cypher-erp-db pg_dump');
+    expect(workflow).not.toContain('No running Compose db container found for pre-deploy backup.');
   });
 
-  it('runs post-deploy VAT guards against the running Compose db container', () => {
+  it('runs post-deploy VAT guards against Compose db or the app runtime database connection', () => {
     const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
 
     expect(workflow).toContain('docker exec -i "$db_container" psql -X -qAt -F');
+    expect(workflow).toContain('postgres:15-alpine psql -X -qAt -F');
+    expect(workflow).toContain('--network "container:$runtime_env_container"');
     expect(workflow).not.toContain('docker exec -i cypher-erp-db psql');
+    expect(workflow).not.toContain('No running Compose db container found for VAT guard.');
   });
 
   it('does not expose internal production ports on all interfaces', () => {
