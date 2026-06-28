@@ -190,7 +190,7 @@ jobs:
               export "$key=$value"
             fi
           done < .env
-          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app -q)
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app --filter status=running -q)
           runtime_env_container="${app_containers[0]:-}"
           if [ -n "$runtime_env_container" ]; then
             while IFS= read -r line; do
@@ -206,10 +206,13 @@ jobs:
           BACKUP_DIR="backups/github-actions/$(date -u +%Y%m%dT%H%M%SZ)"
           mkdir -p "$BACKUP_DIR"
 
-          "${COMPOSE[@]}" ps > "$BACKUP_DIR/docker-compose-ps.txt"
+          "${COMPOSE[@]}" ps > "$BACKUP_DIR/docker-compose-ps.txt" \
+            || echo "Could not capture Compose status before deploy." > "$BACKUP_DIR/docker-compose-ps.txt"
 
-          app_container="$("${COMPOSE[@]}" ps -q app)"
-          frontend_container="$("${COMPOSE[@]}" ps -q frontend)"
+          mapfile -t app_rollback_containers < <(docker ps --filter label=com.docker.compose.service=app --filter status=running -q)
+          mapfile -t frontend_rollback_containers < <(docker ps --filter label=com.docker.compose.service=frontend --filter status=running -q)
+          app_container="${app_rollback_containers[0]:-}"
+          frontend_container="${frontend_rollback_containers[0]:-}"
           if [ -n "$app_container" ]; then
             docker commit "$app_container" cypher-erp-app:gha-predeploy >/dev/null \
               || echo "::warning::Could not capture app image for rollback; DB and runtime file backups will still be enforced."
@@ -261,7 +264,7 @@ jobs:
               export "$key=$value"
             fi
           done < .env
-          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app -q)
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app --filter status=running -q)
           runtime_env_container="${app_containers[0]:-}"
           if [ -n "$runtime_env_container" ]; then
             while IFS= read -r line; do
@@ -295,7 +298,7 @@ jobs:
               export "$key=$value"
             fi
           done < .env
-          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app -q)
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app --filter status=running -q)
           runtime_env_container="${app_containers[0]:-}"
           if [ -n "$runtime_env_container" ]; then
             while IFS= read -r line; do
@@ -416,7 +419,7 @@ jobs:
               export "$key=$value"
             fi
           done < .env
-          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app -q)
+          mapfile -t app_containers < <(docker ps --filter label=com.docker.compose.service=app --filter status=running -q)
           runtime_env_container="${app_containers[0]:-}"
           if [ -n "$runtime_env_container" ]; then
             while IFS= read -r line; do

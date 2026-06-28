@@ -14,7 +14,7 @@ describe('deployment runtime policy', () => {
     expect(workflow).toContain('COMPOSE=(docker compose --env-file .env)');
     expect(workflow).toContain('done < .env');
     expect(workflow).toContain('export "$key=$value"');
-    expect(workflow).toContain('docker ps --filter label=com.docker.compose.service=app -q');
+    expect(workflow).toContain('docker ps --filter label=com.docker.compose.service=app --filter status=running -q');
     expect(workflow).toContain("docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}'");
     expect(workflow).toContain('"${COMPOSE[@]}" build app frontend');
     expect(workflow).toContain('"${COMPOSE[@]}" up -d app frontend');
@@ -33,6 +33,15 @@ describe('deployment runtime policy', () => {
     expect(workflow).toContain("--exclude '/config'");
     expect(workflow).toContain("--exclude '/uploads'");
     expect(workflow).not.toContain("--exclude 'config'");
+  });
+
+  it('selects only running containers for pre-deploy rollback image capture', () => {
+    const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
+
+    expect(workflow).toContain('docker ps --filter label=com.docker.compose.service=app --filter status=running -q');
+    expect(workflow).toContain('docker ps --filter label=com.docker.compose.service=frontend --filter status=running -q');
+    expect(workflow).not.toContain('app_container="$("${COMPOSE[@]}" ps -q app)"');
+    expect(workflow).not.toContain('frontend_container="$("${COMPOSE[@]}" ps -q frontend)"');
   });
 
   it('does not expose internal production ports on all interfaces', () => {
