@@ -44,6 +44,22 @@ describe('deployment runtime policy', () => {
     expect(workflow).not.toContain('frontend_container="$("${COMPOSE[@]}" ps -q frontend)"');
   });
 
+  it('runs pre-deploy database dumps against the running Compose db container', () => {
+    const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
+
+    expect(workflow).toContain('docker ps --filter label=com.docker.compose.service=db --filter status=running -q');
+    expect(workflow).toContain('db_container="${db_containers[0]:-}"');
+    expect(workflow).toContain('docker exec "$db_container" pg_dump -Fc -U cypher_user -d cypher_erp');
+    expect(workflow).not.toContain('docker exec cypher-erp-db pg_dump');
+  });
+
+  it('runs post-deploy VAT guards against the running Compose db container', () => {
+    const workflow = readProjectFile('.github/workflows/deploy-hetzner.yml');
+
+    expect(workflow).toContain('docker exec -i "$db_container" psql -X -qAt -F');
+    expect(workflow).not.toContain('docker exec -i cypher-erp-db psql');
+  });
+
   it('does not expose internal production ports on all interfaces', () => {
     const prodCompose = readProjectFile('docker-compose.prod.yml');
 
